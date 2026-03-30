@@ -1114,13 +1114,6 @@ const mx=(v,n)=>Math.max(v,n);
 const fmt=n=>n.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
 let currentCtry="brazil";
 
-// ── ACTIVE QUOTE DATA — used by PDF and chat ──────────
-let activeQuoteData = null;
-
-function setActiveQuote(data) {
-  activeQuoteData = data;
-}
-
 function nextQN(code){
   const n=new Date(),d=String(n.getDate()).padStart(2,"0"),mo=String(n.getMonth()+1).padStart(2,"0");
   // Use sessionStorage so counter persists in session but resets on reload
@@ -1710,11 +1703,8 @@ function doQuote(){
   const dv=getDVCheck(product,fob,type);
 
   // Find related cases
-  // Filter cases: ONLY show cases for the current destination country
-  const relCases=CASE_DB.filter(c=>
-    c.country.toLowerCase()===currentCtry ||
-    c.country.toLowerCase()===dest.toLowerCase().replace(/[^a-z]/g,'').slice(0,6)
-  ).slice(0,2);
+  const _cm={brazil:'brazil',mexico:'mexico',argentina:'argentina',colombia:'colombia',chile:'chile',peru:'peru',usa:'usa'};
+  const relCases=CASE_DB.filter(c=>(_cm[c.country.toLowerCase()]||c.country.toLowerCase())===currentCtry).slice(0,2);
 
   const flagColors={critical:"flag-red",high:"flag-red",medium:"flag-yellow",green:"flag-green",low:"flag-green"};
 
@@ -1795,18 +1785,6 @@ function doQuote(){
         <button class="btn btn-ghost" style="padding:12px 18px" onclick="resetQuote()">NEW</button>
       </div>
     </div>`;
-
-  // Store active quote data for PDF and chat
-  setActiveQuote({
-    qn, dest, product: product||'—', hs, coo: coo||'TBC',
-    fob, lbs, cif: r.cif, tot: r.tot, tr: r.tr,
-    country: currentCtry,
-    lines: r.li,
-    taxes: r.tx,
-    flags, dv,
-    origin: 'Miami, USA (DDP Global warehouse)',
-    type: type||'—'
-  });
 
   document.getElementById("quoter-form").style.display="none";
   document.getElementById("quoter-result").style.display="block";
@@ -2531,10 +2509,8 @@ function runFromAI() {
   const flags = getRegFlags(d.product, d.equipmentType, d.countryOfOrigin, ctry);
   const dv = getDVCheck(d.product, fob, d.equipmentType);
 
-  const relCases = CASE_DB.filter(c =>
-    c.country.toLowerCase() === ctry ||
-    (d.product && c.product.toLowerCase().includes(d.product.split(" ")[0].toLowerCase()))
-  ).slice(0, 2);
+  const _cm2={brazil:'brazil',mexico:'mexico',argentina:'argentina',colombia:'colombia',chile:'chile',peru:'peru',usa:'usa'};
+  const relCases=CASE_DB.filter(c=>(_cm2[c.country.toLowerCase()]||c.country.toLowerCase())===ctry).slice(0,2);
 
   const flagColors = { critical:"flag-red", high:"flag-red", medium:"flag-yellow", green:"flag-green", low:"flag-green" };
 
@@ -2676,15 +2652,6 @@ function runFromAI() {
         <button class="btn btn-ghost" style="padding:12px 18px" onclick="resetAI()">NUEVO EMAIL</button>
       </div>
     </div>`;
-
-  // Store active quote data
-  setActiveQuote({
-    qn, dest, product: d.product||'—', hs: d.hsCode||'8517.62',
-    coo: d.countryOfOrigin||'TBC', fob, lbs, cif: r.cif, tot: r.tot, tr: r.tr,
-    country: ctry, lines: r.li, taxes: r.tx, flags, dv,
-    origin: 'Miami, USA (DDP Global warehouse)',
-    type: d.equipmentType||'—', qty: d.quantity||1
-  });
 
   document.getElementById("ai-input-section").style.display = "none";
   document.getElementById("ai-quote-result").style.display = "block";
@@ -2900,79 +2867,21 @@ async function doChat(msg, msgsId, history, context) {
   // Show thinking
   addChatMsg(msgsId, 'assistant', '...');
   try {
-    const sysPrompt = `You are a logistics expert assistant for DDP Global LLC helping refine a shipping quotation.
-
-Current quote context:
+    const sysPrompt = `You are a logistics expert assistant for DDP Global LLC, helping refine a shipping quotation. 
+Here is the current quote context:
 ${context}
 
-IMPORTANT: When the user asks to modify numbers (discounts, price changes, adding costs, etc), you MUST:
-1. Calculate the new values precisely
-2. Return your response with explanation first, then a JSON block like this:
-
-QUOTE_UPDATE:{"lines":[[\"Service name\",\"basis\",number],...], "taxes":[[\"Tax name\",number],...], "tot":total_number, "note":"what changed"}
-
-All amounts must be plain numbers (no $ signs). Only include QUOTE_UPDATE when numbers actually change.
-For questions or advice only, just respond normally without QUOTE_UPDATE.
-Always respond in the same language the user writes in (Spanish or English).`;
+Help the user adjust the quote, answer questions about the shipment, flag compliance issues, or provide logistics advice. Be concise and practical. Respond in the same language the user writes in (Spanish or English).`;
     const r = await fetch('https://ddp-proxy.nicolasjuarezroldan.workers.dev',{method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,system:sysPrompt,messages:history})});
     const d = await r.json();
-    const fullReply = d.content?.[0]?.text || 'No response';
+    const reply = d.content?.[0]?.text || 'No response';
     // Remove the "..." message
     const el = document.getElementById(msgsId);
     el.removeChild(el.lastChild);
-
-    // Check for QUOTE_UPDATE in response
-    const updateMatch = fullReply.match(/QUOTE_UPDATE:(\{[\s\S]+?\})/);
-    let displayReply = fullReply;
-
-    if (updateMatch && activeQuoteData) {
-      try {
-        const update = JSON.parse(updateMatch[1]);
-        // Apply update to activeQuoteData
-        if (update.lines) activeQuoteData.lines = update.lines;
-        if (update.taxes) activeQuoteData.taxes = update.taxes;
-        if (update.tot !== undefined) activeQuoteData.tot = update.tot;
-
-        // Update the total shown in UI
-        const totEls = document.querySelectorAll('.total-val');
-        totEls.forEach(el2 => {
-          el2.textContent = '$' + update.tot.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
-        });
-
-        // Rebuild pricing rows in UI
-        const tableWraps = document.querySelectorAll('#quoter-result .table-wrap, #ai-quote-result .table-wrap');
-        if (tableWraps[0] && update.lines) {
-          const hdr = tableWraps[0].querySelector('.table-head');
-          let rowsHtml = hdr ? hdr.outerHTML : '';
-          update.lines.forEach(([l,b,v],i) => {
-            const bg = i%2===1 ? 'background:rgba(255,255,255,.015)' : '';
-            rowsHtml += `<div class="table-row" style="grid-template-columns:1fr 160px 90px;${bg}"><div style="font-size:12px;color:var(--tx2)">${l}</div><div style="font-size:10px;color:var(--tx5)">${b}</div><div style="font-size:12px;text-align:right">$${parseFloat(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</div></div>`;
-          });
-          tableWraps[0].innerHTML = rowsHtml;
-        }
-
-        if (tableWraps[1] && update.taxes) {
-          const hdr2 = tableWraps[1].querySelector('.table-head');
-          let rowsHtml2 = hdr2 ? hdr2.outerHTML : '';
-          update.taxes.forEach(([l,v],i) => {
-            const bg = i%2===1 ? 'background:rgba(255,255,255,.015)' : '';
-            rowsHtml2 += `<div class="table-row" style="grid-template-columns:1fr 90px;${bg}"><div style="font-size:12px;color:var(--tx3)">${l}</div><div style="font-size:12px;color:var(--tx3);text-align:right">$${parseFloat(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</div></div>`;
-          });
-          tableWraps[1].innerHTML = rowsHtml2;
-        }
-
-        // Remove the QUOTE_UPDATE block from display
-        displayReply = fullReply.replace(/QUOTE_UPDATE:\{[\s\S]+?\}/, '').trim();
-        displayReply += '\n\n✓ Cotizacion actualizada en pantalla y PDF.';
-      } catch(e) {
-        console.log('Update parse error:', e);
-      }
-    }
-
-    addChatMsg(msgsId, 'assistant', displayReply);
-    history.push({role:'assistant', content: fullReply});
+    addChatMsg(msgsId, 'assistant', reply);
+    history.push({role:'assistant', content: reply});
   } catch(e) {
     const el = document.getElementById(msgsId);
     el.removeChild(el.lastChild);
@@ -3193,281 +3102,120 @@ function initLog(){renderLogStats();renderLog();}
 // ════════════════════════════════════════════════════════
 function downloadQuotePDF() {
   const q = activeQuoteData;
-  if (!q) { alert("No hay cotizacion activa."); return; }
-
+  if (!q) { alert("Genera una cotizacion primero."); return; }
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-  const W = 210, ML = 14, MR = 14, CW = W - ML - MR;
+  const W=210,ML=14,MR=14,CW=W-ML-MR;
+  const NAVY=[10,22,40],CYAN=[0,180,216],WHITE=[255,255,255];
+  const LGRAY=[241,245,249],MGRAY=[226,232,240],DGRAY=[100,116,139],MIDNAV=[15,36,64];
+  const RED=[220,38,38],REDBG=[254,242,242],ORANGE=[234,88,12],ORANGEBG=[255,247,237];
+  const GREEN=[22,163,74],GREENBG=[240,253,244],BLUE=[14,165,233],BLUEBG=[240,249,255];
+  const san=s=>String(s||'').replace(/\u2192/g,'->').replace(/[^\x00-\x7F]/g,'').trim();
+  const fmtN=n=>{const v=parseFloat(String(n).replace(/[^0-9.-]/g,''));return isNaN(v)?String(n):v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});};
+  const today=new Date(),vd=new Date(today);vd.setDate(vd.getDate()+7);
+  const fmtD=d=>d.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+  let y=0;
 
-  // Colors
-  const NAVY = [10, 22, 40], CYAN = [0, 180, 216], WHITE = [255,255,255];
-  const LGRAY = [241, 245, 249], MGRAY = [226, 232, 240], DGRAY = [100, 116, 139];
-  const MIDNAV = [15, 36, 64], RED = [220, 38, 38], REDBG = [254, 242, 242];
-  const ORANGE = [234, 88, 12], ORANGEBG = [255, 247, 237];
-  const GREEN = [22, 163, 74], GREENBG = [240, 253, 244];
-  const BLUE = [14, 165, 233], BLUEBG = [240, 249, 255];
-
-  const today = new Date();
-  const validDate = new Date(today); validDate.setDate(validDate.getDate() + 7);
-  const fmtDate = d => d.toLocaleDateString('en-US', {month:'long', day:'numeric', year:'numeric'});
-  const fmtUSD = n => {
-    const num = parseFloat(String(n).replace(/[^0-9.-]/g, ''));
-    if (isNaN(num)) return String(n);
-    return num.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+  const dHdr2=()=>{
+    doc.setFillColor(...NAVY);doc.rect(0,0,W,30,'F');
+    doc.setFont('helvetica','bold');doc.setFontSize(20);doc.setTextColor(...WHITE);
+    doc.text('DDP GLOBAL LLC',ML,14);
+    doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(...CYAN);
+    doc.text('Data Center & AI Infrastructure Logistics  |  U.S. Exporter & Importer of Record',ML,21);
+    doc.setFont('helvetica','bold');doc.setFontSize(13);doc.setTextColor(...CYAN);
+    doc.text('QUOTATION',W-MR,13,{align:'right'});
+    doc.setFontSize(10);doc.setTextColor(...WHITE);
+    doc.text(q.qn||'',W-MR,21,{align:'right'});
+    y=36;
+  };
+  const dFtr=(pg,tot)=>{
+    doc.setFillColor(...NAVY);doc.rect(0,284,W,14,'F');
+    doc.setFont('helvetica','bold');doc.setFontSize(7.5);doc.setTextColor(...WHITE);doc.text('DDP GLOBAL LLC',ML,290);
+    doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(...CYAN);
+    doc.text('Data Center & AI Infrastructure Logistics  |  Miami, Florida, USA  |  U.S. Exporter & Importer of Record',ML,294.5);
+    doc.setFont('helvetica','bold');doc.setFontSize(7.5);doc.setTextColor(...WHITE);doc.text(q.qn||'',W-MR,290,{align:'right'});
+    doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(...CYAN);doc.text('Page '+pg+' of '+tot,W-MR,294.5,{align:'right'});
+  };
+  const sb=t=>{doc.setFillColor(...MIDNAV);doc.rect(ML,y,CW,7,'F');doc.setDrawColor(...CYAN);doc.setLineWidth(0.4);doc.line(ML,y+7,ML+CW,y+7);doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(...CYAN);doc.text(t,ML+3,y+4.8);y+=9;};
+  const mg=rows=>rows.forEach(row=>{
+    const cw2=CW/row.length,rh=9;doc.setFillColor(...LGRAY);doc.rect(ML,y,CW,rh,'F');
+    row.forEach(([lbl,val],i)=>{
+      const x=ML+i*cw2+3;
+      doc.setFont('helvetica','bold');doc.setFontSize(6.5);doc.setTextColor(...DGRAY);doc.text(san(lbl).toUpperCase(),x,y+3.5);
+      doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(...NAVY);
+      const ln=doc.splitTextToSize(san(val),cw2-5);doc.text(ln[0]||'',x,y+7);
+    });
+    doc.setDrawColor(...MGRAY);doc.setLineWidth(0.2);doc.line(ML,y+rh,ML+CW,y+rh);y+=rh;
+  });
+  const ph=()=>{doc.setFillColor(...NAVY);doc.rect(ML,y,CW,7,'F');doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(...WHITE);doc.text('SERVICE',ML+3,y+4.8);doc.text('BASIS',ML+CW*0.58,y+4.8,{align:'center'});doc.text('USD',ML+CW-2,y+4.8,{align:'right'});y+=7;};
+  const pr=(svc,basis,amt,shade)=>{
+    const h=7.5;if(shade){doc.setFillColor(...LGRAY);doc.rect(ML,y,CW,h,'F');}
+    doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(...NAVY);doc.text(san(svc),ML+3,y+5);
+    doc.setFontSize(7.5);doc.setTextColor(...DGRAY);doc.text(san(basis),ML+CW*0.58,y+5,{align:'center'});
+    doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.setTextColor(...NAVY);doc.text('$'+fmtN(amt),ML+CW-2,y+5,{align:'right'});
+    doc.setDrawColor(...MGRAY);doc.setLineWidth(0.2);doc.line(ML,y+h,ML+CW,y+h);y+=h;
+  };
+  const dh=()=>{doc.setFillColor(...MIDNAV);doc.rect(ML,y,CW,7,'F');doc.setFont('helvetica','bold');doc.setFontSize(7.5);doc.setTextColor(...WHITE);doc.text('DUTIES & TAXES  (PASS-THROUGH, PAID IN ADVANCE)',ML+3,y+4.8);doc.text('USD',ML+CW-2,y+4.8,{align:'right'});y+=7;};
+  const dr=(lbl,amt,shade)=>{
+    const h=6.5;if(shade){doc.setFillColor(...LGRAY);doc.rect(ML,y,CW,h,'F');}
+    doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(...DGRAY);doc.text(san(lbl),ML+3,y+4.5);doc.text('$'+fmtN(amt),ML+CW-2,y+4.5,{align:'right'});
+    doc.setDrawColor(...MGRAY);doc.setLineWidth(0.2);doc.line(ML,y+h,ML+CW,y+h);y+=h;
+  };
+  const tb=(lbl,amt)=>{doc.setFillColor(...CYAN);doc.rect(ML,y,CW,14,'F');doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(...NAVY);doc.text(lbl,ML+4,y+9);doc.setFontSize(18);doc.text('USD '+fmtN(amt),ML+CW-2,y+10,{align:'right'});y+=17;};
+  const fl=(title,body,bdr,bg)=>{
+    const txt=san((body||'').replace(/<[^>]+>/g,'').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>'));
+    const lines=doc.splitTextToSize(txt,CW-10);const h=Math.max(15,lines.length*4+10);
+    if(y+h>278){doc.addPage();dHdr2();}
+    doc.setFillColor(...bg);doc.rect(ML,y,CW,h,'F');doc.setFillColor(...bdr);doc.rect(ML,y,2.5,h,'F');
+    doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(...bdr);doc.text(san(title),ML+5,y+5.5);
+    doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(30,41,59);
+    lines.forEach((line,i)=>doc.text(line,ML+5,y+10+i*4));y+=h+3;
   };
 
-  let y = 0;
+  // PAGE 1
+  dHdr2();
+  sb('QUOTE INFORMATION');
+  mg([[['Date',fmtD(today)],['Valid Until',fmtD(vd)]],[['Quote Ref',q.qn||''],['Payment Terms','D&T advance / balance on delivery']],[['Prepared By','Nick - DDP Global LLC'],['','']]]);
+  y+=3;
+  sb('SHIPMENT DETAILS');
+  const dn=san(q.dest||'').replace(/^\S+\s+/,'');
+  mg([[['Origin','Miami, USA (DDP Global warehouse)'],['Destination',dn]],[['Service','DDP - Delivered Duty Paid (full IOR)'],['Mode','Air Freight']],[['Goods',san(q.product||'-')],['Incoterms','DDP '+(dn.split(' ')[0]||'')]],[['HS Code',q.hs||'8517.62'],['Cargo Class','L1 Standard']],[['Weight',(q.lbs||'-')+' lbs'],['Declared FOB','USD '+fmtN(q.fob)]],[['Transit Est.',q.tr||'-'],['COO',q.coo||'TBC']]]);
+  y+=4;
+  sb('PRICING');ph();
+  (q.lines||[]).forEach(([s,b,a],i)=>pr(s,b,a,i%2===1));
+  y+=2;
+  if(q.taxes&&q.taxes.length){dh();q.taxes.forEach(([l,a],i)=>dr(l,a,i%2===1));y+=2;}
+  tb('TOTAL DDP',q.tot);
+  doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(...DGRAY);
+  doc.text('Duties & Taxes are pass-through costs paid in advance and are non-negotiable.',ML,y+4);
+  dFtr(1,2);
 
-  function drawHeader() {
-    doc.setFillColor(...NAVY);
-    doc.rect(0, 0, W, 30, 'F');
-    // Logo left
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(20); doc.setTextColor(...WHITE);
-    doc.text('DDP GLOBAL LLC', ML, 14);
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...CYAN);
-    doc.text('Data Center & AI Infrastructure Logistics  |  U.S. Exporter & Importer of Record', ML, 21);
-    // Quote ref right
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(...CYAN);
-    doc.text('QUOTATION', W - MR, 13, { align: 'right' });
-    doc.setFontSize(10); doc.setTextColor(...WHITE);
-    doc.text(q.qn, W - MR, 21, { align: 'right' });
-    y = 36;
-  }
-
-  function drawFooter(pageNum, totalPages) {
-    doc.setFillColor(...NAVY);
-    doc.rect(0, 284, W, 14, 'F');
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(...WHITE);
-    doc.text('DDP GLOBAL LLC', ML, 290);
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(...CYAN);
-    doc.text('Data Center & AI Infrastructure Logistics  |  Miami, Florida, USA  |  U.S. Exporter & Importer of Record', ML, 294.5);
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(...WHITE);
-    doc.text(q.qn, W - MR, 290, { align: 'right' });
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(...CYAN);
-    doc.text('Page ' + pageNum + ' of ' + totalPages, W - MR, 294.5, { align: 'right' });
-  }
-
-  function secBar(title) {
-    doc.setFillColor(...MIDNAV);
-    doc.rect(ML, y, CW, 7, 'F');
-    doc.setDrawColor(...CYAN); doc.setLineWidth(0.4);
-    doc.line(ML, y + 7, ML + CW, y + 7);
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(7); doc.setTextColor(...CYAN);
-    doc.text(title, ML + 3, y + 4.8);
-    y += 9;
-  }
-
-  function metaGrid(rows) {
-    rows.forEach(row => {
-      const colW = CW / row.length;
-      const rowH = 9;
-      doc.setFillColor(...LGRAY);
-      doc.rect(ML, y, CW, rowH, 'F');
-      row.forEach(([lbl, val], i) => {
-        const x = ML + i * colW + 3;
-        doc.setFont('helvetica', 'bold'); doc.setFontSize(6.5); doc.setTextColor(...DGRAY);
-        doc.text(lbl.toUpperCase(), x, y + 3.5);
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(...NAVY);
-        const lines = doc.splitTextToSize(String(val), colW - 5);
-        doc.text(lines[0], x, y + 7);
-      });
-      doc.setDrawColor(...MGRAY); doc.setLineWidth(0.2);
-      doc.line(ML, y + rowH, ML + CW, y + rowH);
-      y += rowH;
-    });
-  }
-
-  function pricingHeader() {
-    doc.setFillColor(...NAVY);
-    doc.rect(ML, y, CW, 7, 'F');
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...WHITE);
-    doc.text('SERVICE', ML + 3, y + 4.8);
-    doc.text('BASIS', ML + 110, y + 4.8, { align: 'center' });
-    doc.text('USD', ML + CW - 2, y + 4.8, { align: 'right' });
-    y += 7;
-  }
-
-  function pricingRow(svc, basis, amt, shade) {
-    const h = 7.5;
-    if (shade) { doc.setFillColor(...LGRAY); doc.rect(ML, y, CW, h, 'F'); }
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(...NAVY);
-    doc.text(String(svc), ML + 3, y + 5);
-    doc.setFontSize(7.5); doc.setTextColor(...DGRAY);
-    doc.text(String(basis), ML + 110, y + 5, { align: 'center' });
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(...NAVY);
-    doc.text('$' + fmtUSD(amt), ML + CW - 2, y + 5, { align: 'right' });
-    doc.setDrawColor(...MGRAY); doc.setLineWidth(0.2);
-    doc.line(ML, y + h, ML + CW, y + h);
-    y += h;
-  }
-
-  function dutyHeader() {
-    doc.setFillColor(...MIDNAV);
-    doc.rect(ML, y, CW, 7, 'F');
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(...WHITE);
-    doc.text('DUTIES & TAXES  (PASS-THROUGH, PAID IN ADVANCE)', ML + 3, y + 4.8);
-    doc.text('USD', ML + CW - 2, y + 4.8, { align: 'right' });
-    y += 7;
-  }
-
-  function dutyRow(lbl, amt, shade) {
-    const h = 6.5;
-    if (shade) { doc.setFillColor(...LGRAY); doc.rect(ML, y, CW, h, 'F'); }
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...DGRAY);
-    doc.text(String(lbl), ML + 3, y + 4.5);
-    doc.text('$' + fmtUSD(amt), ML + CW - 2, y + 4.5, { align: 'right' });
-    doc.setDrawColor(...MGRAY); doc.setLineWidth(0.2);
-    doc.line(ML, y + h, ML + CW, y + h);
-    y += h;
-  }
-
-  function totalBar(label, amt) {
-    doc.setFillColor(...CYAN);
-    doc.rect(ML, y, CW, 14, 'F');
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(...NAVY);
-    doc.text(label, ML + 4, y + 9);
-    doc.setFontSize(18);
-    doc.text('USD ' + fmtUSD(amt), ML + CW - 2, y + 10, { align: 'right' });
-    y += 17;
-  }
-
-  function flagBlock(title, body, border, bg) {
-    const lines = doc.splitTextToSize(body, CW - 10);
-    const h = Math.max(14, lines.length * 4 + 9);
-    if (y + h > 278) { doc.addPage(); y = 36; drawHeader(); }
-    doc.setFillColor(...bg);
-    doc.rect(ML, y, CW, h, 'F');
-    doc.setFillColor(...border);
-    doc.rect(ML, y, 2.5, h, 'F');
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...border);
-    doc.text(title, ML + 5, y + 5.5);
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(30, 41, 59);
-    lines.forEach((line, i) => doc.text(line, ML + 5, y + 10 + i * 4));
-    y += h + 3;
-  }
-
-  function noteRow(num, text) {
-    const lines = doc.splitTextToSize(text, CW - 10);
-    const h = lines.length * 4 + 3;
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(...CYAN);
-    doc.text(num, ML + 1, y + 4);
-    doc.setFont('helvetica', 'normal'); doc.setTextColor(30, 41, 59);
-    lines.forEach((line, i) => doc.text(line, ML + 7, y + 4 + i * 4));
-    y += h;
-  }
-
-  // ═══════════════ PAGE 1 — QUOTATION ═══════════════
-  drawHeader();
-
-  secBar('QUOTE INFORMATION');
-  metaGrid([
-    [['Date', fmtDate(today)], ['Valid Until', fmtDate(validDate)]],
-    [['Quote Ref', q.qn], ['Payment Terms', 'D&T advance / balance on delivery']],
-    [['Prepared By', 'Nick — DDP Global LLC'], ['', '']],
-  ]);
-  y += 3;
-
-  secBar('SHIPMENT DETAILS');
-  metaGrid([
-    [['Origin', q.origin || 'Miami, USA (DDP Global warehouse)'], ['Destination', q.dest]],
-    [['Service', 'DDP — Delivered Duty Paid (full IOR)'], ['Mode', 'Air Freight']],
-    [['Goods', q.product], ['Incoterms', 'DDP ' + (q.dest || '').replace(/[^a-zA-Z\s]/g,'').trim()]],
-    [['HS Code', q.hs || '8517.62'], ['Cargo Class', 'L1 Standard']],
-    [['Weight', q.lbs + ' lbs'], ['Declared FOB', 'USD ' + fmtUSD(q.fob)]],
-    [['Transit Est.', q.tr], ['COO', q.coo || 'TBC']],
-  ]);
-  y += 4;
-
-  secBar('PRICING');
-  pricingHeader();
-  (q.lines || []).forEach(([svc, basis, amt], i) => pricingRow(svc, basis, amt, i % 2 === 1));
-  y += 2;
-
-  if (q.taxes && q.taxes.length > 0) {
-    dutyHeader();
-    q.taxes.forEach(([lbl, amt], i) => dutyRow(lbl, amt, i % 2 === 1));
-    y += 2;
-  }
-
-  totalBar('TOTAL DDP', q.tot);
-
-  doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(...DGRAY);
-  doc.text('Duties & Taxes are pass-through costs paid in advance on behalf of the consignee and are non-negotiable.', ML, y + 4);
-  y += 10;
-
-  drawFooter(1, 2);
-
-  // ═══════════════ PAGE 2 — FLAGS & CONDITIONS ═══════════════
-  doc.addPage();
-  drawHeader();
-
-  // Flags section
-  secBar('IMPORTANT NOTICES');
-  y += 2;
-
-  let hasFlags = false;
-
-  // Declared value flag
-  if (q.dv) {
-    const dvLevel = q.dv.level;
-    const border = dvLevel === 'critical' ? RED : dvLevel === 'high' ? ORANGE : dvLevel === 'green' ? GREEN : ORANGE;
-    const bg = dvLevel === 'critical' ? REDBG : dvLevel === 'high' ? ORANGEBG : dvLevel === 'green' ? GREENBG : ORANGEBG;
-    const icon = dvLevel === 'green' ? 'DECLARED VALUE - ACCEPTABLE' : dvLevel === 'critical' ? 'DECLARED VALUE - CRITICAL - ACTION REQUIRED' : 'DECLARED VALUE - VERIFY BEFORE SHIPPING';
-    // Strip HTML tags from msg
-    const msg = (q.dv.msg || '').replace(/<[^>]+>/g, '').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>');
-    flagBlock(icon, msg, border, bg);
-    hasFlags = true;
-  }
-
-  // Regulatory flags
-  (q.flags || []).forEach(f => {
-    const level = f.level;
-    const border = level === 'critical' ? RED : level === 'high' ? ORANGE : level === 'green' ? GREEN : level === 'medium' ? ORANGE : BLUE;
-    const bg = level === 'critical' ? REDBG : level === 'high' ? ORANGEBG : level === 'green' ? GREENBG : level === 'medium' ? ORANGEBG : BLUEBG;
-    const msg = (f.msg || '').replace(/<[^>]+>/g, '').replace(/&amp;/g,'&');
-    const title = level === 'critical' ? 'CRITICAL NOTICE' : level === 'high' ? 'IMPORTANT NOTICE' : level === 'green' ? 'COMPLIANCE NOTE' : 'NOTICE';
-    flagBlock(title, msg, border, bg);
-    hasFlags = true;
+  // PAGE 2
+  doc.addPage();dHdr2();
+  sb('IMPORTANT NOTICES');y+=2;
+  let hf=false;
+  if(q.dv){const lv=q.dv.level;fl(lv==='green'?'DECLARED VALUE - ACCEPTABLE':lv==='critical'?'DECLARED VALUE - CRITICAL':'DECLARED VALUE - VERIFY',q.dv.msg||'',lv==='critical'?RED:lv==='high'?ORANGE:lv==='green'?GREEN:ORANGE,lv==='critical'?REDBG:lv==='high'?ORANGEBG:lv==='green'?GREENBG:ORANGEBG);hf=true;}
+  (q.flags||[]).forEach(f=>{const lv=f.level;fl(lv==='critical'?'CRITICAL NOTICE':lv==='high'?'IMPORTANT NOTICE':lv==='green'?'COMPLIANCE NOTE':'NOTICE',f.msg||'',lv==='critical'?RED:lv==='high'?ORANGE:lv==='green'?GREEN:BLUE,lv==='critical'?REDBG:lv==='high'?ORANGEBG:lv==='green'?GREENBG:BLUEBG);hf=true;});
+  if(!hf){doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(...DGRAY);doc.text('No specific compliance flags for this shipment.',ML+3,y+5);y+=12;}
+  y+=4;sb('NOTES & CONDITIONS');y+=3;
+  [['1.','SCOPE: This quote covers DDP service from DDP Global Miami warehouse to the final delivery address, including air freight, customs clearance, full IOR services, and all duties & taxes.'],
+   ['2.','DUTIES & TAXES: Import taxes calculated on CIF value, paid in advance on behalf of the consignee. Non-negotiable.'],
+   ['3.','PAYMENT: Duties & Taxes paid in advance before clearance. Service fees due upon delivery.'],
+   ['4.','WEIGHT: Final freight adjusted based on actual gross or volumetric weight, whichever is greater.'],
+   ['5.','INSURANCE: Not included. Available on request.'],
+   ['6.','TRANSIT: Estimated time as shown. Subject to airline availability and customs processing.'],
+   ['7.','VALIDITY: Valid for 7 days from date of issue.'],
+   ['8.','ACCEPTANCE: Reply referencing '+san(q.qn||'')+' confirming COO, delivery address, and commercial invoice.']
+  ].forEach(([num,text])=>{
+    if(y>265)return;
+    const lines=doc.splitTextToSize(text,CW-10);const h=lines.length*4+3;
+    doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.setTextColor(...CYAN);doc.text(num,ML+1,y+4);
+    doc.setFont('helvetica','normal');doc.setTextColor(30,41,59);lines.forEach((ln,i)=>doc.text(ln,ML+7,y+4+i*4));y+=h;
   });
-
-  if (!hasFlags) {
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...DGRAY);
-    doc.text('No specific compliance flags for this shipment.', ML + 3, y + 5);
-    y += 12;
-  }
-
-  y += 4;
-  secBar('NOTES & CONDITIONS');
-  y += 3;
-
-  const notes = [
-    ['1.', 'SCOPE: This quote covers DDP service from DDP Global\'s Miami warehouse to the final delivery address, including air freight, destination customs clearance, full IOR (Importer of Record) services, and all duties & taxes.'],
-    ['2.', 'DUTIES & TAXES: Import taxes are calculated on the CIF value and are pass-through costs paid in advance on behalf of the consignee. Non-negotiable and subject to final confirmation by customs.'],
-    ['3.', 'PAYMENT: Duties & Taxes must be paid in advance before clearance begins. Service fees due upon delivery (Net 30 or as agreed).'],
-    ['4.', 'WEIGHT: Freight cost is based on estimated/declared weight. Final charges adjusted based on actual gross or volumetric weight, whichever is greater.'],
-    ['5.', 'INSURANCE: Not included. Available on request.'],
-    ['6.', 'TRANSIT: Estimated transit time as shown. Subject to airline availability and customs processing.'],
-    ['7.', 'VALIDITY: This quotation is valid for 7 days from the date of issue. Rates subject to change after this date.'],
-    ['8.', 'ACCEPTANCE: To proceed, please reply referencing ' + q.qn + ' confirming COO, delivery address, and commercial invoice value.'],
-  ];
-
-  notes.forEach(([num, text]) => {
-    if (y > 265) return;
-    noteRow(num, text);
-  });
-
-  y += 5;
-  if (y < 268) {
-    doc.setFillColor(...LGRAY);
-    doc.rect(ML, y, CW, 10, 'F');
-    doc.setFillColor(...CYAN); doc.rect(ML, y, 2.5, 10, 'F');
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(...NAVY);
-    doc.text('To accept this quotation, please reply referencing ' + q.qn + ' with COO confirmation and delivery details.', ML + 5, y + 6.5);
-  }
-
-  drawFooter(2, 2);
-
-  doc.save(q.qn + '.pdf');
+  y+=5;
+  if(y<268){doc.setFillColor(...LGRAY);doc.rect(ML,y,CW,10,'F');doc.setFillColor(...CYAN);doc.rect(ML,y,2.5,10,'F');doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(...NAVY);doc.text('To accept, reply referencing '+san(q.qn||'')+' with COO confirmation and delivery details.',ML+5,y+6.5);}
+  dFtr(2,2);
+  doc.save((q.qn||'quote')+'.pdf');
 }
 
 </script>
