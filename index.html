@@ -2138,8 +2138,9 @@ async function parseEmail() {
       extracted._source = "ai-online";
     }
   } catch(e) {
-    // fallthrough to local parser
-    console.log("API unavailable, using local parser:", e.message);
+    console.log("API error:", e.message);
+    // Show the error so user knows
+    document.getElementById("ai-status-text").textContent = "⚡ Proxy no disponible — usando parser local...";
   }
 
   // ── INTENTO 2: Parser local (offline fallback) ────────
@@ -2897,37 +2898,47 @@ Help the user adjust the quote, answer questions about the shipment, flag compli
 
 
 function openAIChat() {
-  // Build context from current AI quote
+  const panel = document.getElementById('ai-chat-panel');
+  if (!panel) { alert('El chat solo está disponible después de generar una cotización.'); return; }
   const qEl = document.querySelector('#ai-quote-result [style*="font-size:15px"]');
   const totEl = document.querySelector('#ai-quote-result .total-val');
   const rows = document.querySelectorAll('#ai-quote-result .table-row');
   let ctx = 'Quote: ' + (qEl?qEl.textContent:'') + '\n';
   ctx += 'Total DDP: ' + (totEl?totEl.textContent:'') + '\n';
-  if (aiExtracted) {
-    ctx += 'Product: '+(aiExtracted.product||'')+'\n';
-    ctx += 'FOB: $'+(aiExtracted.fobValue||'')+'\n';
-    ctx += 'Weight: '+(aiExtracted.weightLbs||'')+' lbs\n';
-    ctx += 'COO: '+(aiExtracted.countryOfOrigin||'')+'\n';
-    ctx += 'Destination: '+(aiExtracted.destination||'')+'\n';
+  if (activeQuoteData) {
+    ctx += 'Product: '+(activeQuoteData.product||'')+'\n';
+    ctx += 'FOB: $'+(activeQuoteData.fob||'')+'\n';
+    ctx += 'Weight: '+(activeQuoteData.lbs||'')+' lbs\n';
+    ctx += 'COO: '+(activeQuoteData.coo||'')+'\n';
+    ctx += 'Destination: '+(activeQuoteData.dest||'')+'\n';
+    ctx += 'Total: $'+(activeQuoteData.tot||'')+'\n';
   }
-  rows.forEach(r=>{const c=r.querySelectorAll('div');if(c.length>=2)ctx+=(c[0].textContent+': '+c[c.length-1].textContent+'\n');});
+  rows.forEach(r=>{const cells=r.querySelectorAll('div');if(cells.length>=2)ctx+=(cells[0].textContent+': '+cells[cells.length-1].textContent+'\n');});
   chatQuoteContext = ctx;
   initChat(ctx, 'ai-chat-panel', chatHistory);
 }
 
 function openQuoterChat() {
-  // Build context from current quoter result
+  const panel = document.getElementById('q-chat-panel');
+  if (!panel) { alert('El chat solo está disponible después de generar una cotización.'); return; }
   const qEl = document.querySelector('#quoter-result [style*="font-size:15px"]');
   const totEl = document.querySelector('#quoter-result .total-val');
   const rows = document.querySelectorAll('#quoter-result .table-row');
-  let ctx = 'Quote: ' + (qEl?qEl.textContent:'') + '\n';
-  ctx += 'Destination: ' + currentCtry + '\n';
-  ctx += 'Total DDP: ' + (totEl?totEl.textContent:'') + '\n';
-  ctx += 'Product: ' + (document.getElementById('q-product').value||'') + '\n';
-  ctx += 'FOB: $' + (document.getElementById('q-fob').value||'') + '\n';
-  ctx += 'Weight: ' + (document.getElementById('q-wt').value||'') + ' lbs\n';
-  ctx += 'COO: ' + (document.getElementById('q-coo').value||'') + '\n';
-  rows.forEach(r=>{const c=r.querySelectorAll('div');if(c.length>=2)ctx+=(c[0].textContent+': '+c[c.length-1].textContent+'\n');});
+  let ctx = '';
+  if (activeQuoteData) {
+    ctx += 'Quote: '+activeQuoteData.qn+'\n';
+    ctx += 'Destination: '+activeQuoteData.dest+'\n';
+    ctx += 'Product: '+activeQuoteData.product+'\n';
+    ctx += 'FOB: $'+activeQuoteData.fob+'\n';
+    ctx += 'Weight: '+activeQuoteData.lbs+' lbs\n';
+    ctx += 'COO: '+(activeQuoteData.coo||'TBC')+'\n';
+    ctx += 'Total DDP: $'+activeQuoteData.tot+'\n';
+    (activeQuoteData.lines||[]).forEach(([l,b,v])=>{ ctx+=l+': $'+v+'\n'; });
+  } else {
+    ctx = 'Quote for ' + currentCtry + '\n';
+    ctx += 'Total: ' + (totEl?totEl.textContent:'') + '\n';
+    rows.forEach(r=>{const cells=r.querySelectorAll('div');if(cells.length>=2)ctx+=(cells[0].textContent+': '+cells[cells.length-1].textContent+'\n');});
+  }
   quoterChatContext = ctx;
   initChat(ctx, 'q-chat-panel', quoterChatHistory);
 }
