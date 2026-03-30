@@ -1114,6 +1114,12 @@ const mx=(v,n)=>Math.max(v,n);
 const fmt=n=>n.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
 let currentCtry="brazil";
 
+// ── GLOBAL STATE ──────────────────────────────────────
+let activeQuoteData = null;
+let aiExtracted = null;
+
+function setActiveQuote(data) { activeQuoteData = data; }
+
 function nextQN(code){
   const n=new Date(),d=String(n.getDate()).padStart(2,"0"),mo=String(n.getMonth()+1).padStart(2,"0");
   // Use sessionStorage so counter persists in session but resets on reload
@@ -1789,6 +1795,7 @@ function doQuote(){
   document.getElementById("quoter-form").style.display="none";
   document.getElementById("quoter-result").style.display="block";
   document.getElementById("quoter-result").innerHTML=html;
+  setActiveQuote({qn,dest,product:product||'—',hs,coo:coo||'TBC',fob,lbs,cif:r.cif,tot:r.tot,tr:r.tr,country:currentCtry,lines:r.li,taxes:r.tx,flags,dv,origin:'Miami, USA (DDP Global warehouse)',type:type||'—'});
   window.scrollTo(0,0);
 }
 
@@ -2070,8 +2077,6 @@ init();
 // ════════════════════════════════════════════════════════
 // AI EMAIL PARSER
 // ════════════════════════════════════════════════════════
-
-let aiExtracted = null;
 
 
 const AI_SYSTEM_PROMPT = `You are an expert logistics data extractor for DDP Global LLC, a Miami-based IOR/DDP logistics company specializing in IT hardware shipments worldwide.
@@ -2656,6 +2661,7 @@ function runFromAI() {
   document.getElementById("ai-input-section").style.display = "none";
   document.getElementById("ai-quote-result").style.display = "block";
   document.getElementById("ai-quote-result").innerHTML = html;
+  setActiveQuote({qn,dest,product:d.product||'—',hs:d.hsCode||'8517.62',coo:d.countryOfOrigin||'TBC',fob,lbs,cif:r.cif,tot:r.tot,tr:r.tr,country:ctry,lines:r.li,taxes:r.tx,flags,dv,origin:'Miami, USA (DDP Global warehouse)',type:d.equipmentType||'—',qty:d.quantity||1});
   window.scrollTo(0, 0);
 }
 
