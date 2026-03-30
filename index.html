@@ -2897,48 +2897,35 @@ Help the user adjust the quote, answer questions about the shipment, flag compli
 
 function openAIChat() {
   const panel = document.getElementById('ai-chat-panel');
-  if (!panel) { alert('El chat solo está disponible después de generar una cotización.'); return; }
-  const qEl = document.querySelector('#ai-quote-result [style*="font-size:15px"]');
-  const totEl = document.querySelector('#ai-quote-result .total-val');
-  const rows = document.querySelectorAll('#ai-quote-result .table-row');
-  let ctx = 'Quote: ' + (qEl?qEl.textContent:'') + '\n';
-  ctx += 'Total DDP: ' + (totEl?totEl.textContent:'') + '\n';
+  if (!panel) return;
+  // Build context
+  let ctx = '';
   if (activeQuoteData) {
-    ctx += 'Product: '+(activeQuoteData.product||'')+'\n';
-    ctx += 'FOB: $'+(activeQuoteData.fob||'')+'\n';
-    ctx += 'Weight: '+(activeQuoteData.lbs||'')+' lbs\n';
-    ctx += 'COO: '+(activeQuoteData.coo||'')+'\n';
-    ctx += 'Destination: '+(activeQuoteData.dest||'')+'\n';
-    ctx += 'Total: $'+(activeQuoteData.tot||'')+'\n';
+    ctx = 'Quote: '+activeQuoteData.qn+'\nProduct: '+activeQuoteData.product+'\nFOB: $'+activeQuoteData.fob+'\nWeight: '+activeQuoteData.lbs+' lbs\nCOO: '+(activeQuoteData.coo||'TBC')+'\nDestination: '+activeQuoteData.dest+'\nTotal DDP: $'+activeQuoteData.tot+'\n';
+    (activeQuoteData.lines||[]).forEach(([l,b,v])=>{ ctx+=l+': $'+v+'\n'; });
   }
-  rows.forEach(r=>{const cells=r.querySelectorAll('div');if(cells.length>=2)ctx+=(cells[0].textContent+': '+cells[cells.length-1].textContent+'\n');});
   chatQuoteContext = ctx;
-  initChat(ctx, 'ai-chat-panel', chatHistory);
+  chatHistory = [];
+  panel.style.display = 'block';
+  document.getElementById('ai-chat-messages').innerHTML = '';
+  addChatMsg('ai-chat-messages', 'assistant', 'Hola! Tengo el contexto completo de esta cotizacion. Que queres ajustar?');
+  panel.scrollIntoView({behavior:'smooth', block:'start'});
 }
 
 function openQuoterChat() {
   const panel = document.getElementById('q-chat-panel');
-  if (!panel) { alert('El chat solo está disponible después de generar una cotización.'); return; }
-  const qEl = document.querySelector('#quoter-result [style*="font-size:15px"]');
-  const totEl = document.querySelector('#quoter-result .total-val');
-  const rows = document.querySelectorAll('#quoter-result .table-row');
+  if (!panel) return;
   let ctx = '';
   if (activeQuoteData) {
-    ctx += 'Quote: '+activeQuoteData.qn+'\n';
-    ctx += 'Destination: '+activeQuoteData.dest+'\n';
-    ctx += 'Product: '+activeQuoteData.product+'\n';
-    ctx += 'FOB: $'+activeQuoteData.fob+'\n';
-    ctx += 'Weight: '+activeQuoteData.lbs+' lbs\n';
-    ctx += 'COO: '+(activeQuoteData.coo||'TBC')+'\n';
-    ctx += 'Total DDP: $'+activeQuoteData.tot+'\n';
+    ctx = 'Quote: '+activeQuoteData.qn+'\nProduct: '+activeQuoteData.product+'\nFOB: $'+activeQuoteData.fob+'\nWeight: '+activeQuoteData.lbs+' lbs\nCOO: '+(activeQuoteData.coo||'TBC')+'\nDestination: '+activeQuoteData.dest+'\nTotal DDP: $'+activeQuoteData.tot+'\n';
     (activeQuoteData.lines||[]).forEach(([l,b,v])=>{ ctx+=l+': $'+v+'\n'; });
-  } else {
-    ctx = 'Quote for ' + currentCtry + '\n';
-    ctx += 'Total: ' + (totEl?totEl.textContent:'') + '\n';
-    rows.forEach(r=>{const cells=r.querySelectorAll('div');if(cells.length>=2)ctx+=(cells[0].textContent+': '+cells[cells.length-1].textContent+'\n');});
   }
   quoterChatContext = ctx;
-  initChat(ctx, 'q-chat-panel', quoterChatHistory);
+  quoterChatHistory = [];
+  panel.style.display = 'block';
+  document.getElementById('q-chat-messages').innerHTML = '';
+  addChatMsg('q-chat-messages', 'assistant', 'Hola! Tengo el contexto completo de esta cotizacion. Que queres ajustar?');
+  panel.scrollIntoView({behavior:'smooth', block:'start'});
 }
 function saveApiKey(val) {
   if (val && val.startsWith('sk-ant-')) {
