@@ -184,6 +184,53 @@ a{color:var(--teal);text-decoration:none}
   <div class="page-sub">Paste a client email. The AI extracts all shipment details, pre-fills the quoter, and runs the full intelligence report automatically.</div>
 
   <div id="ai-input-section">
+
+    <!-- INPUT MODE TABS -->
+    <div style="display:flex;gap:0;margin-bottom:16px;border-bottom:1px solid var(--bd)">
+      <button id="aitab-email-btn" onclick="aiInputTab('email')"
+        style="background:var(--teal);color:var(--bg);border:none;padding:9px 22px;font-family:Barlow,sans-serif;font-weight:700;font-size:11px;letter-spacing:1px;cursor:pointer">
+        ✉ EMAIL / TEXTO
+      </button>
+      <button id="aitab-file-btn" onclick="aiInputTab('file')"
+        style="background:var(--bg2);color:var(--tx4);border:none;border-left:1px solid var(--bd);padding:9px 22px;font-family:Barlow,sans-serif;font-weight:700;font-size:11px;letter-spacing:1px;cursor:pointer">
+        📎 SUBIR ARCHIVO
+      </button>
+    </div>
+
+    <!-- FILE UPLOAD TAB -->
+    <div id="aitab-file" style="display:none">
+      <div class="card">
+        <div class="card-title">CARGAR DOCUMENTO</div>
+        <input type="file" id="ai-file-input" accept=".pdf,.xlsx,.xls,.csv,.jpg,.jpeg,.png,.webp,.docx,.txt"
+          style="display:none" onchange="onAIFileChosen(this)"/>
+        <button onclick="document.getElementById('ai-file-input').click()" id="ai-file-pick-btn"
+          style="width:100%;padding:22px;background:var(--bg);border:2px dashed var(--bd);color:var(--tx3);font-family:Barlow,sans-serif;font-weight:700;font-size:13px;cursor:pointer;letter-spacing:1px;transition:all .2s;margin-bottom:12px"
+          onmouseover="this.style.borderColor='var(--teal)';this.style.color='var(--teal)'"
+          onmouseout="this.style.borderColor=this._sel?'var(--green)':'var(--bd)';this.style.color=this._sel?'var(--green)':'var(--tx3)'">
+          📎 &nbsp; SELECCIONAR ARCHIVO (PDF, Excel, imagen, Word...)
+        </button>
+        <div id="ai-file-info" style="display:none;background:var(--bg3);border:1px solid var(--green);border-left:3px solid var(--green);padding:10px 14px;margin-bottom:12px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div id="ai-file-name" style="font-family:Barlow,sans-serif;font-weight:700;color:#fff;font-size:13px"></div>
+              <div id="ai-file-size" style="font-size:10px;color:var(--green);margin-top:2px"></div>
+            </div>
+            <button onclick="clearAIFile()" style="background:none;border:1px solid var(--bd);color:var(--tx5);padding:4px 12px;font-size:10px;cursor:pointer;font-family:Barlow,sans-serif">✕ QUITAR</button>
+          </div>
+        </div>
+        <div class="field" style="margin-bottom:12px">
+          <div class="field-label">Contexto adicional (opcional)</div>
+          <textarea id="ai-file-ctx" style="min-height:45px;font-size:12px" placeholder="Ej: destino Brazil, peso no está en el doc, moneda EUR..."></textarea>
+        </div>
+        <button id="ai-file-btn" onclick="parseFileAI()" disabled
+          style="width:100%;padding:14px;background:var(--bd);color:var(--tx5);border:none;font-family:Barlow,sans-serif;font-weight:800;font-size:12px;letter-spacing:2px;cursor:not-allowed">
+          ✦ &nbsp; EXTRAER DATOS CON IA →
+        </button>
+      </div>
+    </div>
+
+    <!-- EMAIL TAB -->
+    <div id="aitab-email">
     <div class="card">
       <div class="card-title">CONFIGURACIÓN IA</div>
       <div class="field" style="margin-bottom:12px">
@@ -217,6 +264,8 @@ Please advise on DDP cost and transit time. Thanks"></textarea>
       </button>
     </div>
 
+    </div><!-- end aitab-email -->
+
     <!-- Extracted data preview (shown after parsing) -->
     <div id="ai-extracted" style="display:none">
       <div class="card">
@@ -243,6 +292,25 @@ Please advise on DDP cost and transit time. Thanks"></textarea>
 
   <!-- Full quote result (shown after running) -->
   <div id="ai-quote-result" style="display:none"></div>
+
+  <!-- CLAUDE CHAT PANEL -->
+  <div id="ai-chat-panel" style="display:none;margin-top:16px">
+    <div class="card">
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+        <span>✦ CHAT CON CLAUDE — AJUSTAR COTIZACIÓN</span>
+        <button onclick="document.getElementById('ai-chat-panel').style.display='none'"
+          style="background:none;border:none;color:var(--tx5);cursor:pointer;font-size:16px">✕</button>
+      </div>
+      <div id="ai-chat-messages" style="min-height:120px;max-height:340px;overflow-y:auto;margin-bottom:12px;display:flex;flex-direction:column;gap:8px"></div>
+      <div style="display:flex;gap:8px">
+        <textarea id="ai-chat-input" style="flex:1;min-height:44px;max-height:120px;font-size:12px;resize:vertical;background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:10px"
+          placeholder="Ej: cambiá el peso a 30 lbs, el cliente confirma COO Taiwan, agregá seguro de $200..."
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMsg();}"></textarea>
+        <button onclick="sendChatMsg()" class="btn btn-primary" style="padding:10px 18px;align-self:flex-end">ENVIAR →</button>
+      </div>
+      <div style="font-size:9px;color:var(--tx5);margin-top:6px">Enter para enviar · Shift+Enter para nueva línea · El chat tiene contexto completo de la cotización</div>
+    </div>
+  </div>
 </div>
 
 <!-- ════════════════════════════════════════════════ -->
@@ -347,6 +415,25 @@ Please advise on DDP cost and transit time. Thanks"></textarea>
   </div>
 
   <div id="quoter-result" style="display:none"></div>
+
+  <!-- CLAUDE CHAT PANEL (QUOTER) -->
+  <div id="q-chat-panel" style="display:none;margin-top:16px">
+    <div class="card">
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+        <span>✦ CHAT CON CLAUDE — AJUSTAR COTIZACIÓN</span>
+        <button onclick="document.getElementById('q-chat-panel').style.display='none'"
+          style="background:none;border:none;color:var(--tx5);cursor:pointer;font-size:16px">✕</button>
+      </div>
+      <div id="q-chat-messages" style="min-height:120px;max-height:340px;overflow-y:auto;margin-bottom:12px;display:flex;flex-direction:column;gap:8px"></div>
+      <div style="display:flex;gap:8px">
+        <textarea id="q-chat-input" style="flex:1;min-height:44px;max-height:120px;font-size:12px;resize:vertical;background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:10px"
+          placeholder="Ej: cambiá el peso a 30 lbs, el cliente confirma COO Taiwan, agregá nota de seguro..."
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendQuoterChatMsg();}"></textarea>
+        <button onclick="sendQuoterChatMsg()" class="btn btn-primary" style="padding:10px 18px;align-self:flex-end">ENVIAR →</button>
+      </div>
+      <div style="font-size:9px;color:var(--tx5);margin-top:6px">Enter para enviar · Shift+Enter para nueva línea</div>
+    </div>
+  </div>
 </div>
 
 <!-- ════════════════════════════════════════════════ -->
@@ -1029,7 +1116,11 @@ let currentCtry="brazil";
 
 function nextQN(code){
   const n=new Date(),d=String(n.getDate()).padStart(2,"0"),mo=String(n.getMonth()+1).padStart(2,"0");
-  const s=String((SEQ[code]=(SEQ[code]||0)+1)).padStart(2,"0");
+  // Use sessionStorage so counter persists in session but resets on reload
+  const key='ddp_seq_'+code;
+  const cur=parseInt(sessionStorage.getItem(key)||'0')+1;
+  sessionStorage.setItem(key,cur);
+  const s=String(cur).padStart(2,"0");
   return `${code}-2026-${d}${mo}${s}`;
 }
 
@@ -1690,6 +1781,7 @@ function doQuote(){
       <!-- Actions -->
       <div style="display:flex;gap:8px">
         <button class="btn btn-primary" style="flex:1;padding:12px" onclick="downloadQuotePDF()">⬇ DESCARGAR PDF</button>
+        <button class="btn btn-ghost" style="padding:12px" onclick="openQuoterChat()">💬 CHAT</button>
         <button class="btn btn-ghost" style="padding:12px" onclick="copyQuote('${qn}','${dest}','${product||"—"}','${hs}','${coo||"TBC"}',${fob},${lbs},${r.cif},${r.tot},'${r.tr}')">COPY TEXT</button>
         <button class="btn btn-ghost" style="padding:12px 18px" onclick="saveQuoteToLog('${qn}','${dest}','${product||"—"}',${fob},${r.tot},${r.cif})">📋 LOG</button>
         <button class="btn btn-ghost" style="padding:12px 18px" onclick="resetQuote()">NEW</button>
@@ -2564,6 +2656,7 @@ function runFromAI() {
       <!-- Actions -->
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-primary" style="padding:12px 18px" onclick="downloadQuotePDF()">⬇ DESCARGAR PDF</button>
+        <button class="btn btn-ghost" style="padding:12px 16px" onclick="openAIChat()">💬 CHAT</button>
         <button class="btn btn-ghost" style="flex:1;padding:12px;min-width:160px" onclick="copyAIQuote('${qn}','${dest}',${fob},${lbs},${r.cif},${r.tot},'${r.tr}','${(d.product||"").replace(/'/g,"\\'")}','${d.hsCode||"8517.62"}','${d.countryOfOrigin||"TBC"}')">COPY QUOTE TEXT</button>
         <button class="btn btn-ghost" style="padding:12px 18px;background:var(--greenbg);border-color:var(--green);color:var(--green);font-weight:800" onclick="saveAIQuoteToLog('${qn}','${dest}','${(d.product||"—").replace(/'/g,"\\'")}',${fob},${r.tot},${r.cif},'${(d.client||"").replace(/'/g,"\\'")}')">📋 GUARDAR EN LOG</button>
         <button class="btn btn-ghost" style="padding:12px 18px" onclick="resetAI()">NUEVO EMAIL</button>
@@ -2601,6 +2694,247 @@ function copyAIQuote(qn, dest, fob, lbs, cif, tot, tr, product, hs, coo) {
   });
 }
 
+
+// ════════════════════════════════════════════════════════
+// AI INPUT TAB SWITCHER
+// ════════════════════════════════════════════════════════
+function aiInputTab(tab) {
+  const isEmail = tab === 'email';
+  document.getElementById('aitab-email').style.display = isEmail ? 'block' : 'none';
+  document.getElementById('aitab-file').style.display  = isEmail ? 'none'  : 'block';
+  document.getElementById('aitab-email-btn').style.background = isEmail ? 'var(--teal)' : 'var(--bg2)';
+  document.getElementById('aitab-email-btn').style.color = isEmail ? 'var(--bg)' : 'var(--tx4)';
+  document.getElementById('aitab-file-btn').style.background  = isEmail ? 'var(--bg2)' : 'var(--teal)';
+  document.getElementById('aitab-file-btn').style.color  = isEmail ? 'var(--tx4)' : 'var(--bg)';
+}
+
+// ── FILE UPLOAD ─────────────────────────────────────────
+let currentAIFile = null;
+
+function onAIFileChosen(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  currentAIFile = file;
+  const kb = (file.size/1024).toFixed(1);
+  document.getElementById('ai-file-info').style.display = 'block';
+  document.getElementById('ai-file-name').textContent = file.name;
+  document.getElementById('ai-file-size').textContent = kb + ' KB  ·  ' + file.name.split('.').pop().toUpperCase();
+  const pb = document.getElementById('ai-file-pick-btn');
+  pb._sel = true;
+  pb.textContent = '✓  ' + file.name + '  (click para cambiar)';
+  pb.style.borderColor = 'var(--green)';
+  pb.style.color = 'var(--green)';
+  const btn = document.getElementById('ai-file-btn');
+  btn.disabled = false;
+  btn.style.background = 'var(--teal)';
+  btn.style.color = 'var(--bg)';
+  btn.style.cursor = 'pointer';
+}
+
+function clearAIFile() {
+  currentAIFile = null;
+  document.getElementById('ai-file-input').value = '';
+  document.getElementById('ai-file-info').style.display = 'none';
+  const pb = document.getElementById('ai-file-pick-btn');
+  pb._sel = false;
+  pb.textContent = '📎   SELECCIONAR ARCHIVO (PDF, Excel, imagen, Word...)';
+  pb.style.borderColor = 'var(--bd)'; pb.style.color = 'var(--tx3)';
+  const btn = document.getElementById('ai-file-btn');
+  btn.disabled = true; btn.style.background = 'var(--bd)';
+  btn.style.color = 'var(--tx5)'; btn.style.cursor = 'not-allowed';
+  document.getElementById('ai-file-ctx').value = '';
+}
+
+async function parseFileAI() {
+  if (!currentAIFile) return;
+  const ext = currentAIFile.name.split('.').pop().toLowerCase();
+  const ctx = (document.getElementById('ai-file-ctx').value||'').trim();
+  const apiKey = localStorage.getItem('ddp_api_key')||'';
+
+  document.getElementById('ai-status').style.display = 'block';
+  document.getElementById('ai-error').style.display = 'none';
+  document.getElementById('ai-extracted').style.display = 'none';
+  document.getElementById('ai-file-btn').disabled = true;
+  document.getElementById('ai-status-text').textContent = 'Procesando ' + ext.toUpperCase() + '...';
+
+  try {
+    let extracted;
+    if (['jpg','jpeg','png','webp','pdf'].includes(ext)) {
+      if (!apiKey) throw new Error('Necesitás ingresar tu API key para analizar imágenes y PDFs.');
+      extracted = await parseVisionFile(currentAIFile, ext, ctx, apiKey);
+    } else {
+      // Text-based: CSV, TXT, DOCX fallback — read as text then use local parser or API
+      document.getElementById('ai-status-text').textContent = 'Leyendo archivo...';
+      let text = '';
+      try { text = await currentAIFile.text(); } catch(e) {}
+      if (!text) throw new Error('No se pudo leer el archivo. Probá guardarlo como CSV o TXT.');
+      const combined = text.slice(0, 6000) + (ctx ? '\n\nContexto: '+ctx : '');
+      if (apiKey) {
+        extracted = await callAnthropicAPI(combined, apiKey);
+      } else {
+        extracted = extractFromEmail(combined);
+        extracted._source = 'local-file';
+      }
+    }
+    aiExtracted = extracted;
+    showExtracted(extracted);
+  } catch(err) {
+    document.getElementById('ai-status').style.display = 'none';
+    document.getElementById('ai-error').style.display = 'block';
+    document.getElementById('ai-error').innerHTML = '⚠ <strong>Error:</strong> ' + err.message;
+  } finally {
+    document.getElementById('ai-file-btn').disabled = false;
+    document.getElementById('ai-file-btn').style.background = 'var(--teal)';
+    document.getElementById('ai-file-btn').style.color = 'var(--bg)';
+  }
+}
+
+async function parseVisionFile(file, ext, ctx, apiKey) {
+  document.getElementById('ai-status-text').textContent = 'Enviando a Claude Vision...';
+  const b64 = await new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result.split(',')[1]); r.onerror=rej; r.readAsDataURL(file); });
+  const mime = {pdf:'application/pdf',png:'image/png',webp:'image/webp',jpg:'image/jpeg',jpeg:'image/jpeg'}[ext]||'image/jpeg';
+  const prompt = (ctx?'Context: '+ctx+'\n\n':'') + 'Extract ALL shipment details from this document and return ONLY raw JSON (no markdown): {product, equipmentType, quantity, fobValue, weightLbs, countryOfOrigin, destination, hsCode, notes, confidence, missingFields}. destination must be one of the country ids like: brazil, mexico, colombia, usa, uk, france, germany, dubai, etc.';
+  const content = ext==='pdf'
+    ? [{type:'document',source:{type:'base64',media_type:mime,data:b64}},{type:'text',text:prompt}]
+    : [{type:'image',source:{type:'base64',media_type:mime,data:b64}},{type:'text',text:prompt}];
+  const r = await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
+    headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-calls':'true'},
+    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1200,messages:[{role:'user',content}]})});
+  if(!r.ok) throw new Error('API error '+r.status);
+  const d = await r.json();
+  const p = JSON.parse((d.content?.[0]?.text||'').replace(/```json|```/g,'').trim());
+  p._source='ai-vision'; return p;
+}
+
+async function callAnthropicAPI(text, apiKey) {
+  document.getElementById('ai-status-text').textContent = 'Analizando con Claude...';
+  const r = await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
+    headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-calls':'true'},
+    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1200,
+      system:'You are a logistics data extractor. Extract shipment details and return ONLY raw JSON: {product, equipmentType, quantity, fobValue, weightLbs, countryOfOrigin, destination, hsCode, notes, confidence, missingFields}',
+      messages:[{role:'user',content:'Extract from:\n\n'+text}]})});
+  if(!r.ok) throw new Error('API error '+r.status);
+  const d = await r.json();
+  const p = JSON.parse((d.content?.[0]?.text||'').replace(/```json|```/g,'').trim());
+  p._source='ai-text'; return p;
+}
+
+// ════════════════════════════════════════════════════════
+// CHAT WITH CLAUDE
+// ════════════════════════════════════════════════════════
+let chatHistory = [];
+let chatQuoteContext = '';
+let quoterChatHistory = [];
+let quoterChatContext = '';
+
+function initChat(quoteContext, panelId, historyRef) {
+  const panel = document.getElementById(panelId);
+  panel.style.display = 'block';
+  panel.scrollIntoView({behavior:'smooth', block:'nearest'});
+  historyRef.length = 0;
+  // Add welcome message
+  const msgsId = panelId === 'ai-chat-panel' ? 'ai-chat-messages' : 'q-chat-messages';
+  document.getElementById(msgsId).innerHTML = '';
+  addChatMsg(msgsId, 'assistant', 'Hola! Tengo el contexto completo de esta cotización. ¿Qué querés ajustar? Podés pedirme cambiar el peso, COO, agregar notas, modificar el servicio, o lo que necesites.');
+  return quoteContext;
+}
+
+function addChatMsg(containerId, role, text) {
+  const el = document.getElementById(containerId);
+  const isUser = role === 'user';
+  const div = document.createElement('div');
+  div.style.cssText = `padding:10px 14px;font-size:12px;line-height:1.7;border-left:3px solid ${isUser?'var(--teal)':'var(--bd)'};background:${isUser?'rgba(0,181,200,.08)':'var(--bg3)'};color:var(--tx2);white-space:pre-wrap`;
+  div.innerHTML = `<span style="font-size:9px;color:${isUser?'var(--teal)':'var(--tx5)'};letter-spacing:2px;display:block;margin-bottom:4px">${isUser?'VOS':'CLAUDE'}</span>${text}`;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+}
+
+async function sendChatMsg() {
+  const input = document.getElementById('ai-chat-input');
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+  addChatMsg('ai-chat-messages', 'user', msg);
+  await doChat(msg, 'ai-chat-messages', chatHistory, chatQuoteContext);
+}
+
+async function sendQuoterChatMsg() {
+  const input = document.getElementById('q-chat-input');
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+  addChatMsg('q-chat-messages', 'user', msg);
+  await doChat(msg, 'q-chat-messages', quoterChatHistory, quoterChatContext);
+}
+
+async function doChat(msg, msgsId, history, context) {
+  const apiKey = localStorage.getItem('ddp_api_key')||'';
+  if (!apiKey) {
+    addChatMsg(msgsId, 'assistant', '⚠ Necesitás configurar tu API key en la pestaña AI EMAIL para usar el chat.');
+    return;
+  }
+  history.push({role:'user', content: msg});
+  // Show thinking
+  addChatMsg(msgsId, 'assistant', '...');
+  try {
+    const sysPrompt = `You are a logistics expert assistant for DDP Global LLC, helping refine a shipping quotation. 
+Here is the current quote context:
+${context}
+
+Help the user adjust the quote, answer questions about the shipment, flag compliance issues, or provide logistics advice. Be concise and practical. Respond in the same language the user writes in (Spanish or English).`;
+    const r = await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-calls':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,system:sysPrompt,messages:history})});
+    const d = await r.json();
+    const reply = d.content?.[0]?.text || 'No response';
+    // Remove the "..." message
+    const el = document.getElementById(msgsId);
+    el.removeChild(el.lastChild);
+    addChatMsg(msgsId, 'assistant', reply);
+    history.push({role:'assistant', content: reply});
+  } catch(e) {
+    const el = document.getElementById(msgsId);
+    el.removeChild(el.lastChild);
+    addChatMsg(msgsId, 'assistant', '⚠ Error: ' + e.message);
+  }
+}
+
+
+function openAIChat() {
+  // Build context from current AI quote
+  const qEl = document.querySelector('#ai-quote-result [style*="font-size:15px"]');
+  const totEl = document.querySelector('#ai-quote-result .total-val');
+  const rows = document.querySelectorAll('#ai-quote-result .table-row');
+  let ctx = 'Quote: ' + (qEl?qEl.textContent:'') + '\n';
+  ctx += 'Total DDP: ' + (totEl?totEl.textContent:'') + '\n';
+  if (aiExtracted) {
+    ctx += 'Product: '+(aiExtracted.product||'')+'\n';
+    ctx += 'FOB: $'+(aiExtracted.fobValue||'')+'\n';
+    ctx += 'Weight: '+(aiExtracted.weightLbs||'')+' lbs\n';
+    ctx += 'COO: '+(aiExtracted.countryOfOrigin||'')+'\n';
+    ctx += 'Destination: '+(aiExtracted.destination||'')+'\n';
+  }
+  rows.forEach(r=>{const c=r.querySelectorAll('div');if(c.length>=2)ctx+=(c[0].textContent+': '+c[c.length-1].textContent+'\n');});
+  chatQuoteContext = ctx;
+  initChat(ctx, 'ai-chat-panel', chatHistory);
+}
+
+function openQuoterChat() {
+  // Build context from current quoter result
+  const qEl = document.querySelector('#quoter-result [style*="font-size:15px"]');
+  const totEl = document.querySelector('#quoter-result .total-val');
+  const rows = document.querySelectorAll('#quoter-result .table-row');
+  let ctx = 'Quote: ' + (qEl?qEl.textContent:'') + '\n';
+  ctx += 'Destination: ' + currentCtry + '\n';
+  ctx += 'Total DDP: ' + (totEl?totEl.textContent:'') + '\n';
+  ctx += 'Product: ' + (document.getElementById('q-product').value||'') + '\n';
+  ctx += 'FOB: $' + (document.getElementById('q-fob').value||'') + '\n';
+  ctx += 'Weight: ' + (document.getElementById('q-wt').value||'') + ' lbs\n';
+  ctx += 'COO: ' + (document.getElementById('q-coo').value||'') + '\n';
+  rows.forEach(r=>{const c=r.querySelectorAll('div');if(c.length>=2)ctx+=(c[0].textContent+': '+c[c.length-1].textContent+'\n');});
+  quoterChatContext = ctx;
+  initChat(ctx, 'q-chat-panel', quoterChatHistory);
+}
 function saveApiKey(val) {
   if (val && val.startsWith('sk-ant-')) {
     localStorage.setItem('ddp_api_key', val);
