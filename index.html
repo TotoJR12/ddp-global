@@ -231,7 +231,7 @@ a{color:var(--teal);text-decoration:none}
 
     <!-- EMAIL TAB -->
     <div id="aitab-email">
-    <div class="card">
+    <div class="card" style="display:none">
       <div class="card-title">CONFIGURACIÓN IA</div>
       <div class="field" style="margin-bottom:12px">
         <div class="field-label">Anthropic API Key</div>
@@ -2113,15 +2113,11 @@ async function parseEmail() {
 
   // ── INTENTO 1: API de Anthropic (online) ──────────────
   try {
-    const apiKey = localStorage.getItem("ddp_api_key") || "";
-    if (!apiKey) throw new Error("no-key");
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+    // API key is handled by the Cloudflare proxy
+    const response = await fetch("https://ddp-proxy.nicolasjuarezroldan.workers.dev", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-        "anthropic-dangerous-direct-browser-calls": "true"
       },
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
@@ -2139,9 +2135,7 @@ async function parseEmail() {
       extracted._source = "ai-online";
     }
   } catch(e) {
-    if (e.message === "no-key") {
-      document.getElementById("ai-status-text").textContent = "⚡ Sin API key — procesando localmente...";
-    }
+    // fallthrough to local parser
     console.log("API unavailable, using local parser:", e.message);
   }
 
@@ -2760,7 +2754,7 @@ async function parseFileAI() {
   try {
     let extracted;
     if (['jpg','jpeg','png','webp','pdf'].includes(ext)) {
-      if (!apiKey) throw new Error('Necesitás ingresar tu API key para analizar imágenes y PDFs.');
+      // API key handled by proxy
       extracted = await parseVisionFile(currentAIFile, ext, ctx, apiKey);
     } else {
       // Text-based: CSV, TXT, DOCX fallback — read as text then use local parser or API
@@ -2770,7 +2764,7 @@ async function parseFileAI() {
       if (!text) throw new Error('No se pudo leer el archivo. Probá guardarlo como CSV o TXT.');
       const combined = text.slice(0, 6000) + (ctx ? '\n\nContexto: '+ctx : '');
       if (apiKey) {
-        extracted = await callAnthropicAPI(combined, apiKey);
+        extracted = await callAnthropicAPI(combined);
       } else {
         extracted = extractFromEmail(combined);
         extracted._source = 'local-file';
@@ -2789,7 +2783,7 @@ async function parseFileAI() {
   }
 }
 
-async function parseVisionFile(file, ext, ctx, apiKey) {
+async function parseVisionFile(file, ext, ctx) {
   document.getElementById('ai-status-text').textContent = 'Enviando a Claude Vision...';
   const b64 = await new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result.split(',')[1]); r.onerror=rej; r.readAsDataURL(file); });
   const mime = {pdf:'application/pdf',png:'image/png',webp:'image/webp',jpg:'image/jpeg',jpeg:'image/jpeg'}[ext]||'image/jpeg';
@@ -2797,8 +2791,8 @@ async function parseVisionFile(file, ext, ctx, apiKey) {
   const content = ext==='pdf'
     ? [{type:'document',source:{type:'base64',media_type:mime,data:b64}},{type:'text',text:prompt}]
     : [{type:'image',source:{type:'base64',media_type:mime,data:b64}},{type:'text',text:prompt}];
-  const r = await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
-    headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-calls':'true'},
+  const r = await fetch('https://ddp-proxy.nicolasjuarezroldan.workers.dev',{method:'POST',
+    headers:{'Content-Type':'application/json'},
     body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1200,messages:[{role:'user',content}]})});
   if(!r.ok) throw new Error('API error '+r.status);
   const d = await r.json();
@@ -2806,10 +2800,10 @@ async function parseVisionFile(file, ext, ctx, apiKey) {
   p._source='ai-vision'; return p;
 }
 
-async function callAnthropicAPI(text, apiKey) {
+async function callAnthropicAPI(text) {
   document.getElementById('ai-status-text').textContent = 'Analizando con Claude...';
-  const r = await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
-    headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-calls':'true'},
+  const r = await fetch('https://ddp-proxy.nicolasjuarezroldan.workers.dev',{method:'POST',
+    headers:{'Content-Type':'application/json'},
     body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1200,
       system:'You are a logistics data extractor. Extract shipment details and return ONLY raw JSON: {product, equipmentType, quantity, fobValue, weightLbs, countryOfOrigin, destination, hsCode, notes, confidence, missingFields}',
       messages:[{role:'user',content:'Extract from:\n\n'+text}]})});
@@ -2882,8 +2876,8 @@ Here is the current quote context:
 ${context}
 
 Help the user adjust the quote, answer questions about the shipment, flag compliance issues, or provide logistics advice. Be concise and practical. Respond in the same language the user writes in (Spanish or English).`;
-    const r = await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-calls':'true'},
+    const r = await fetch('https://ddp-proxy.nicolasjuarezroldan.workers.dev',{method:'POST',
+      headers:{'Content-Type':'application/json'},
       body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,system:sysPrompt,messages:history})});
     const d = await r.json();
     const reply = d.content?.[0]?.text || 'No response';
