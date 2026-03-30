@@ -2056,6 +2056,30 @@ function estimateFreight(){
 // ════════════════════════════════════════════════════════
 // INIT
 // ════════════════════════════════════════════════════════
+const AI_SYSTEM_PROMPT = `You are an expert logistics data extractor for DDP Global LLC, a Miami-based IOR/DDP logistics company specializing in IT hardware shipments worldwide.
+
+Extract shipment details from the client email and return ONLY a raw JSON object — no markdown, no explanation, no backticks.
+
+Fields to extract:
+- product: string (product name/model, e.g. "Cisco Catalyst 9300-48T")
+- equipmentType: one of: "Switch / Router", "Server", "GPU / AI Hardware", "Storage", "Cable / Accessory", "Refurbished Hardware", "Other"
+- quantity: number (default 1)
+- fobValue: number in USD total (if per-unit, multiply by qty)
+- weightLbs: number in lbs (convert kg × 2.205 if needed)
+- countryOfOrigin: string (infer from brand if not stated: Cisco/HPE/Dell = Taiwan or USA)
+- destination: one of: "brazil","mexico","argentina","colombia","chile","peru","ecuador","costarica","panama","domrep","guatemala","honduras","bolivia","paraguay","uruguay","dubai","qatar","saudiarabia","bahrain","israel","uk","spain","france","germany","netherlands","turkey","india","singapore","japan","australia","canada","usa"
+- hsCode: infer from type (switch/router=8517.62, server=8471.49, storage=8471.70, gpu=8473.30, cable=8544.42)
+- notes: any special instructions from the email (max 200 chars)
+- confidence: 0-100 (deduct for missing/ambiguous fields)
+- missingFields: array of field names that were guessed or missing
+
+Return ONLY the JSON object.`;
+
+let chatHistory = [];
+let chatQuoteContext = '';
+let quoterChatHistory = [];
+let quoterChatContext = '';
+
 function init(){
   initTabs();
   loadApiKey();
@@ -2078,25 +2102,6 @@ init();
 // AI EMAIL PARSER
 // ════════════════════════════════════════════════════════
 
-
-const AI_SYSTEM_PROMPT = `You are an expert logistics data extractor for DDP Global LLC, a Miami-based IOR/DDP logistics company specializing in IT hardware shipments worldwide.
-
-Extract shipment details from the client email and return ONLY a raw JSON object — no markdown, no explanation, no backticks.
-
-Fields to extract:
-- product: string (product name/model, e.g. "Cisco Catalyst 9300-48T")
-- equipmentType: one of: "Switch / Router", "Server", "GPU / AI Hardware", "Storage", "Cable / Accessory", "Refurbished Hardware", "Other"
-- quantity: number (default 1)
-- fobValue: number in USD total (if per-unit, multiply by qty)
-- weightLbs: number in lbs (convert kg × 2.205 if needed)
-- countryOfOrigin: string (infer from brand if not stated: Cisco/HPE/Dell = Taiwan or USA)
-- destination: one of: "brazil","mexico","argentina","colombia","chile","peru","ecuador","costarica","panama","domrep","guatemala","honduras","bolivia","paraguay","uruguay","dubai","qatar","saudiarabia","bahrain","israel","uk","spain","france","germany","netherlands","turkey","india","singapore","japan","australia","canada","usa"
-- hsCode: infer from type (switch/router=8517.62, server=8471.49, storage=8471.70, gpu=8473.30, cable=8544.42)
-- notes: any special instructions from the email (max 200 chars)
-- confidence: 0-100 (deduct for missing/ambiguous fields)
-- missingFields: array of field names that were guessed or missing
-
-Return ONLY the JSON object.`;
 
 async function parseEmail() {
   const email = document.getElementById("ai-email-input").value.trim();
@@ -2823,10 +2828,6 @@ async function callAnthropicAPI(text) {
 // ════════════════════════════════════════════════════════
 // CHAT WITH CLAUDE
 // ════════════════════════════════════════════════════════
-let chatHistory = [];
-let chatQuoteContext = '';
-let quoterChatHistory = [];
-let quoterChatContext = '';
 
 function initChat(quoteContext, panelId, historyRef) {
   const panel = document.getElementById(panelId);
