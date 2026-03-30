@@ -2114,14 +2114,11 @@ async function parseEmail() {
 
   let extracted = null;
 
-  // ── INTENTO 1: API de Anthropic (online) ──────────────
+  // ── INTENTO 1: API via Cloudflare Proxy ──────────────
   try {
-    // API key is handled by the Cloudflare proxy
     const response = await fetch("https://ddp-proxy.nicolasjuarezroldan.workers.dev", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
         max_tokens: 1000,
@@ -2130,17 +2127,24 @@ async function parseEmail() {
       })
     });
 
-    if (response.ok) {
-      const data = await response.json();
-      const text = data.content?.[0]?.text || "";
+    const data = await response.json();
+
+    // Check for API error in response body
+    if (data.error) {
+      throw new Error("API error: " + (data.error.message || JSON.stringify(data.error)));
+    }
+
+    if (response.ok && data.content?.[0]?.text) {
+      const text = data.content[0].text;
       const clean = text.replace(/```json|```/g,"").trim();
       extracted = JSON.parse(clean);
       extracted._source = "ai-online";
+    } else {
+      throw new Error("Response: " + JSON.stringify(data).slice(0,200));
     }
   } catch(e) {
-    console.log("API error:", e.message);
-    // Show the error so user knows
-    document.getElementById("ai-status-text").textContent = "⚡ Proxy no disponible — usando parser local...";
+    console.error("Proxy error:", e.message);
+    document.getElementById("ai-status-text").textContent = "⚠ " + e.message.slice(0,80) + " — usando parser local";
   }
 
   // ── INTENTO 2: Parser local (offline fallback) ────────
@@ -2865,13 +2869,7 @@ async function sendQuoterChatMsg() {
 }
 
 async function doChat(msg, msgsId, history, context) {
-  const apiKey = localStorage.getItem('ddp_api_key')||'';
-  if (!apiKey) {
-    addChatMsg(msgsId, 'assistant', '⚠ Necesitás configurar tu API key en la pestaña AI EMAIL para usar el chat.');
-    return;
-  }
   history.push({role:'user', content: msg});
-  // Show thinking
   addChatMsg(msgsId, 'assistant', '...');
   try {
     const sysPrompt = `You are a logistics expert assistant for DDP Global LLC, helping refine a shipping quotation. 
@@ -2883,15 +2881,15 @@ Help the user adjust the quote, answer questions about the shipment, flag compli
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,system:sysPrompt,messages:history})});
     const d = await r.json();
+    if (d.error) throw new Error(d.error.message || JSON.stringify(d.error));
     const reply = d.content?.[0]?.text || 'No response';
-    // Remove the "..." message
     const el = document.getElementById(msgsId);
     el.removeChild(el.lastChild);
     addChatMsg(msgsId, 'assistant', reply);
     history.push({role:'assistant', content: reply});
   } catch(e) {
     const el = document.getElementById(msgsId);
-    el.removeChild(el.lastChild);
+    if (el.lastChild) el.removeChild(el.lastChild);
     addChatMsg(msgsId, 'assistant', '⚠ Error: ' + e.message);
   }
 }
