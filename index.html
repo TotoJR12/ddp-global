@@ -2873,21 +2873,84 @@ async function doChat(msg, msgsId, history, context) {
   history.push({role:'user', content: msg});
   addChatMsg(msgsId, 'assistant', '...');
   try {
-    const sysPrompt = `You are a logistics expert assistant for DDP Global LLC, helping refine a shipping quotation. 
-Here is the current quote context:
+    const sysPrompt = `You are a logistics expert assistant for DDP Global LLC helping refine a shipping quotation.
+
+Current quote context:
 ${context}
 
-Help the user adjust the quote, answer questions about the shipment, flag compliance issues, or provide logistics advice. Be concise and practical. Respond in the same language the user writes in (Spanish or English).`;
+When the user asks to modify numbers (discounts, price changes, adding costs, etc), calculate the new values and include a JSON update block at the END of your response in this exact format:
+QUOTE_UPDATE:{"lines":[["Service name","basis",number],...],"taxes":[["Tax name",number],...],"tot":total_number}
+
+Rules for QUOTE_UPDATE:
+- All amounts must be plain numbers (no $ signs, no commas)
+- Include ALL service lines, not just changed ones
+- Include ALL tax lines
+- tot = sum of all lines + all taxes
+- Only include QUOTE_UPDATE when numbers actually change
+- Put QUOTE_UPDATE at the very end after your explanation
+
+Respond in the same language the user writes in (Spanish or English). Be concise.`;
+
     const r = await fetch('https://ddp-proxy.nicolasjuarezroldan.workers.dev',{method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,system:sysPrompt,messages:history})});
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1500,system:sysPrompt,messages:history})});
     const d = await r.json();
     if (d.error) throw new Error(d.error.message || JSON.stringify(d.error));
-    const reply = d.content?.[0]?.text || 'No response';
+    const fullReply = d.content?.[0]?.text || 'No response';
     const el = document.getElementById(msgsId);
     el.removeChild(el.lastChild);
-    addChatMsg(msgsId, 'assistant', reply);
-    history.push({role:'assistant', content: reply});
+
+    // Check for QUOTE_UPDATE
+    const updateMatch = fullReply.match(/QUOTE_UPDATE:\s*(\{[\s\S]+\})\s*$/);
+    let displayReply = fullReply;
+
+    if (updateMatch && activeQuoteData) {
+      try {
+        const update = JSON.parse(updateMatch[1]);
+
+        // Apply to activeQuoteData
+        if (update.lines) activeQuoteData.lines = update.lines;
+        if (update.taxes) activeQuoteData.taxes = update.taxes;
+        if (update.tot !== undefined) activeQuoteData.tot = update.tot;
+
+        // Update total in UI
+        document.querySelectorAll('.total-val').forEach(el2 => {
+          el2.textContent = '$' + Number(update.tot).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+        });
+
+        // Update service rows in UI
+        const tableWraps = document.querySelectorAll('#quoter-result .table-wrap, #ai-quote-result .table-wrap');
+        if (tableWraps[0] && update.lines) {
+          const hdr = tableWraps[0].querySelector('.table-head');
+          let html = hdr ? hdr.outerHTML : '';
+          update.lines.forEach(([l,b,v],i) => {
+            const bg = i%2===1 ? 'background:rgba(255,255,255,.015)' : '';
+            const vFmt = Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+            html += `<div class="table-row" style="grid-template-columns:1fr 160px 90px;${bg}"><div style="font-size:12px;color:var(--tx2)">${l}</div><div style="font-size:10px;color:var(--tx5)">${b}</div><div style="font-size:12px;text-align:right">$${vFmt}</div></div>`;
+          });
+          tableWraps[0].innerHTML = html;
+        }
+        if (tableWraps[1] && update.taxes) {
+          const hdr2 = tableWraps[1].querySelector('.table-head');
+          let html2 = hdr2 ? hdr2.outerHTML : '';
+          update.taxes.forEach(([l,v],i) => {
+            const bg = i%2===1 ? 'background:rgba(255,255,255,.015)' : '';
+            const vFmt = Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+            html2 += `<div class="table-row" style="grid-template-columns:1fr 90px;${bg}"><div style="font-size:12px;color:var(--tx3)">${l}</div><div style="font-size:12px;color:var(--tx3);text-align:right">$${vFmt}</div></div>`;
+          });
+          tableWraps[1].innerHTML = html2;
+        }
+
+        // Clean the QUOTE_UPDATE from display
+        displayReply = fullReply.replace(/QUOTE_UPDATE:\s*\{[\s\S]+\}\s*$/, '').trim();
+        displayReply += '\n\n✓ Cotizacion actualizada. El PDF tambien refleja estos cambios.';
+      } catch(parseErr) {
+        console.log('QUOTE_UPDATE parse error:', parseErr.message);
+      }
+    }
+
+    addChatMsg(msgsId, 'assistant', displayReply);
+    history.push({role:'assistant', content: fullReply});
   } catch(e) {
     const el = document.getElementById(msgsId);
     if (el.lastChild) el.removeChild(el.lastChild);
