@@ -1,0 +1,3080 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>DDP Global — Intelligence System</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Barlow:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0D1F3C;--bg2:#071428;--bg3:#0a1829;--bg4:#081220;
+  --bd:#1e3a5f;--bd2:#0f2744;
+  --teal:#00B5C8;--teal2:#00d4ea;
+  --tx:#e2e8f0;--tx2:#cbd5e1;--tx3:#94a3b8;--tx4:#64748b;--tx5:#475569;
+  --red:#ef4444;--redbg:#450a0a;
+  --yellow:#f59e0b;--yellowbg:#431407;
+  --green:#22c55e;--greenbg:#052e16;
+  --orange:#f97316;--orangebg:#431407;
+}
+body{background:var(--bg);color:var(--tx);font-family:'DM Mono',monospace;min-height:100vh}
+input,select,textarea{outline:none;font-family:'DM Mono',monospace}
+input:focus,select:focus,textarea:focus{border-color:var(--teal)!important;box-shadow:0 0 0 2px rgba(0,181,200,.12)}
+button{cursor:pointer;font-family:'Barlow',sans-serif}
+a{color:var(--teal);text-decoration:none}
+
+/* ── LAYOUT ── */
+.app{display:flex;flex-direction:column;min-height:100vh}
+.topbar{background:var(--bg2);border-bottom:1px solid var(--bd);padding:0 24px;display:flex;align-items:center;height:52px;flex-shrink:0;position:sticky;top:0;z-index:100}
+.logo{display:flex;flex-direction:column}
+.logo-name{font-family:Barlow,sans-serif;font-weight:800;font-size:15px;color:#fff;letter-spacing:.5px}
+.logo-sub{font-size:7px;color:var(--teal);letter-spacing:3px;margin-top:1px}
+.nav{display:flex;gap:2px;margin-left:32px}
+.nav-btn{background:transparent;border:none;color:var(--tx4);padding:6px 14px;font-family:Barlow,sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;transition:all .15s;border-bottom:2px solid transparent}
+.nav-btn.active{color:var(--teal);border-bottom-color:var(--teal)}
+.nav-btn:hover:not(.active){color:var(--tx2)}
+.version{margin-left:auto;background:var(--teal);color:var(--bg);padding:2px 9px;font-size:8px;font-weight:700;letter-spacing:2px}
+
+.page{display:none;flex:1;padding:24px 20px;max-width:900px;margin:0 auto;width:100%}
+.page.active{display:block}
+
+/* ── COMPONENTS ── */
+.card{background:var(--bg2);border:1px solid var(--bd);padding:20px;margin-bottom:16px}
+.card-title{font-family:Barlow,sans-serif;font-weight:700;font-size:10px;letter-spacing:3px;color:var(--teal);margin-bottom:16px;text-transform:uppercase}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+
+.field{display:flex;flex-direction:column;gap:5px}
+.field-label{font-size:9px;color:var(--tx4);letter-spacing:2px;text-transform:uppercase}
+.field input,.field select,.field textarea{background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:9px 10px;font-size:12px;width:100%}
+.field textarea{resize:vertical;min-height:60px;font-size:11px;line-height:1.6}
+.field select option{background:var(--bg2)}
+
+.btn{border:none;padding:10px 20px;font-family:Barlow,sans-serif;font-weight:800;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;transition:all .15s}
+.btn-primary{background:var(--teal);color:var(--bg)}
+.btn-primary:hover{background:var(--teal2)}
+.btn-ghost{background:transparent;color:var(--tx3);border:1px solid var(--bd)}
+.btn-ghost:hover{border-color:var(--teal);color:var(--teal)}
+.btn-full{width:100%;padding:13px}
+.btn-sm{padding:6px 14px;font-size:10px}
+
+.flag{padding:10px 14px;font-size:11px;line-height:1.7;margin-bottom:10px}
+.flag strong{font-weight:700}
+.flag-red{background:var(--redbg);border-left:3px solid var(--red);color:#fca5a5}
+.flag-yellow{background:var(--yellowbg);border-left:3px solid var(--yellow);color:#fde68a}
+.flag-green{background:var(--greenbg);border-left:3px solid var(--green);color:#86efac}
+.flag-blue{background:#0c1a2e;border-left:3px solid var(--teal);color:#7dd3fc}
+
+.table-wrap{border:1px solid var(--bd);margin-bottom:4px}
+.table-head{background:var(--bg2);padding:7px 14px;display:grid;gap:8px;font-size:8px;color:var(--tx5);letter-spacing:2px;text-transform:uppercase}
+.table-row{padding:9px 14px;display:grid;gap:8px;border-top:1px solid var(--bd2);transition:background .1s}
+.table-row:nth-child(even){background:rgba(255,255,255,.015)}
+.table-row:hover{background:rgba(0,181,200,.04)}
+
+.total-bar{background:var(--teal);padding:13px 18px;display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.total-lbl{font-family:Barlow,sans-serif;font-weight:800;font-size:10px;color:var(--bg);letter-spacing:2px}
+.total-val{font-family:Barlow,sans-serif;font-weight:800;font-size:24px;color:var(--bg)}
+
+.meta-bar{background:var(--bg3);border-left:3px solid var(--teal);padding:10px 16px;margin-bottom:12px;display:grid;gap:10px}
+.meta-item .ml{font-size:8px;color:var(--tx5);letter-spacing:2px}
+.meta-item .mv{font-family:Barlow,sans-serif;font-weight:700;font-size:13px;color:var(--tx)}
+
+.risk-badge{display:inline-block;padding:2px 8px;font-size:9px;font-weight:700;letter-spacing:1px;font-family:Barlow,sans-serif}
+.risk-low{background:var(--greenbg);color:var(--green)}
+.risk-med{background:var(--yellowbg);color:var(--yellow)}
+.risk-high{background:var(--redbg);color:var(--red)}
+.risk-critical{background:#3b0000;color:#ff6b6b}
+
+.search-box{background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:10px 14px;font-size:12px;width:100%;margin-bottom:14px;font-family:'DM Mono',monospace}
+.search-box:focus{border-color:var(--teal);outline:none}
+
+.tag{display:inline-block;background:var(--bg3);border:1px solid var(--bd);color:var(--tx4);padding:2px 8px;font-size:9px;letter-spacing:1px;margin:2px;font-family:Barlow,sans-serif;font-weight:600}
+
+.divider{border:none;border-top:1px solid var(--bd);margin:16px 0}
+
+.page-title{font-family:Barlow,sans-serif;font-weight:800;font-size:20px;color:#fff;margin-bottom:4px}
+.page-sub{font-size:11px;color:var(--tx4);margin-bottom:20px}
+
+/* ── TABS ── */
+.tab-row{display:flex;gap:6px;margin-bottom:20px;flex-wrap:wrap}
+.ctry-tab{background:transparent;border:1px solid var(--bd);color:var(--tx4);padding:7px 13px;font-family:Barlow,sans-serif;font-size:11px;font-weight:700;transition:all .15s}
+.ctry-tab.active{background:var(--teal);color:var(--bg);border-color:var(--teal)}
+.ctry-tab:hover:not(.active){border-color:var(--teal);color:var(--teal)}
+
+/* ── SCORE METER ── */
+.score-meter{display:flex;align-items:center;gap:10px;margin:8px 0}
+.score-bar-bg{flex:1;height:6px;background:var(--bd);border-radius:3px;overflow:hidden}
+.score-bar-fill{height:100%;border-radius:3px;transition:width .4s}
+.score-label{font-size:11px;font-weight:700;font-family:Barlow,sans-serif;min-width:40px;text-align:right}
+
+/* ── AI ANALYSIS BOX ── */
+.ai-box{background:var(--bg4);border:1px solid var(--bd);border-left:3px solid var(--teal);padding:16px;margin-top:14px}
+.ai-box-title{font-size:9px;color:var(--teal);letter-spacing:3px;margin-bottom:10px;font-family:Barlow,sans-serif;font-weight:700}
+.ai-box-content{font-size:12px;color:var(--tx2);line-height:1.8}
+.ai-thinking{display:flex;align-items:center;gap:8px;color:var(--tx4);font-size:11px}
+.dot-pulse{display:flex;gap:4px}
+.dot-pulse span{width:5px;height:5px;background:var(--teal);border-radius:50%;animation:pulse 1.2s infinite}
+.dot-pulse span:nth-child(2){animation-delay:.2s}
+.dot-pulse span:nth-child(3){animation-delay:.4s}
+@keyframes pulse{0%,80%,100%{opacity:.3}40%{opacity:1}}
+
+/* ── CASE CARD ── */
+.case-card{background:var(--bg2);border:1px solid var(--bd);padding:16px;margin-bottom:10px;transition:border-color .15s}
+.case-card:hover{border-color:var(--bd2);border-left-color:var(--teal)}
+.case-card{border-left:3px solid var(--bd)}
+.case-id{font-size:9px;color:var(--teal);letter-spacing:2px;font-family:Barlow,sans-serif;font-weight:700}
+.case-title{font-family:Barlow,sans-serif;font-weight:700;font-size:13px;color:#fff;margin:4px 0}
+.case-meta{font-size:10px;color:var(--tx4);margin-bottom:8px}
+.case-section{margin-top:8px}
+.case-section-label{font-size:9px;color:var(--tx5);letter-spacing:2px;text-transform:uppercase;margin-bottom:3px}
+.case-section-text{font-size:11px;color:var(--tx2);line-height:1.7}
+.case-lesson{background:var(--bg3);border-left:2px solid var(--yellow);padding:8px 12px;margin-top:8px;font-size:11px;color:#fde68a;line-height:1.6}
+
+/* ── HW CARD ── */
+.hw-card{background:var(--bg2);border:1px solid var(--bd);padding:14px;margin-bottom:8px}
+.hw-model{font-family:Barlow,sans-serif;font-weight:700;font-size:13px;color:#fff}
+.hw-mfr{font-size:10px;color:var(--teal);margin-bottom:6px}
+.hw-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+.hw-stat{font-size:10px;color:var(--tx4)}
+.hw-stat span{display:block;color:var(--tx2);font-size:11px;margin-top:1px}
+
+/* ── NOTES ── */
+.notes-block{font-size:11px;color:var(--tx5);line-height:1.9;margin-bottom:16px}
+.notes-block li{margin-left:14px;margin-bottom:2px}
+
+/* ── RESPONSIVE ── */
+@media(max-width:600px){
+  .grid2,.grid3{grid-template-columns:1fr}
+  .nav{display:none}
+  .meta-bar{grid-template-columns:1fr 1fr}
+}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+<div class="app">
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-name">DDP GLOBAL</div>
+    <div class="logo-sub">LOGISTICS FOR GLOBAL INFRASTRUCTURE</div>
+  </div>
+  <nav class="nav">
+    <button class="nav-btn" onclick="showPage('ai')" id="nav-ai" style="color:var(--teal);border-bottom:2px solid var(--teal)">✦ AI EMAIL</button>
+    <button class="nav-btn active" onclick="showPage('quoter')">QUOTER</button>
+    <button class="nav-btn" onclick="showPage('analyzer')">VALUE ANALYZER</button>
+    <button class="nav-btn" onclick="showPage('hardware')">HARDWARE DB</button>
+    <button class="nav-btn" onclick="showPage('regulatory')">REGULATORY</button>
+    <button class="nav-btn" onclick="showPage('cases')">CASE LIBRARY</button>
+    <button class="nav-btn" onclick="showPage('freight')">FREIGHT INTEL</button>
+    <button class="nav-btn" onclick="showPage('log')" style="color:#22c55e">📋 SHIP LOG</button>
+  </nav>
+  <div class="version" style="display:flex;flex-direction:column;align-items:center;line-height:1.4;padding:3px 10px"><span style="font-size:9px;font-weight:700;letter-spacing:2px">v2.2</span><span style="font-size:7px;opacity:.75">2026-03-29</span></div>
+</div>
+
+<!-- ════════════════════════════════════════════════ -->
+<!-- PAGE: AI EMAIL PARSER                            -->
+<!-- ════════════════════════════════════════════════ -->
+<div class="page" id="page-ai">
+  <div class="page-title" style="display:flex;align-items:center;gap:12px">
+    <span style="color:var(--teal)">✦</span> AI EMAIL → QUOTE
+  </div>
+  <div class="page-sub">Paste a client email. The AI extracts all shipment details, pre-fills the quoter, and runs the full intelligence report automatically.</div>
+
+  <div id="ai-input-section">
+    <div class="card">
+      <div class="card-title">CONFIGURACIÓN IA</div>
+      <div class="field" style="margin-bottom:12px">
+        <div class="field-label">Anthropic API Key</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="ai-api-key" type="password" placeholder="sk-ant-..." 
+            style="flex:1;background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px 10px;font-size:12px"
+            oninput="saveApiKey(this.value)"/>
+          <div id="api-key-status" style="font-size:10px;color:var(--tx5);white-space:nowrap">—</div>
+        </div>
+        <div style="font-size:9px;color:var(--tx5);margin-top:4px">La key se guarda localmente. Sin key usa el parser local.</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">PASTE CLIENT EMAIL</div>
+      <div class="field" style="margin-bottom:14px">
+        <div class="field-label">Client Email Content</div>
+        <textarea id="ai-email-input" style="min-height:180px;font-size:12px;line-height:1.7" placeholder="Paste the full email here...
+
+Example:
+Hi Toto, hope you're well. We need to ship the following to our datacenter in São Paulo:
+- 6x Cisco Catalyst 9300-48T switches
+- Declared value: $54,000 total
+- Weight: approx 120 lbs
+- Origin: Miami warehouse
+- Destination: Brazil (GRU)
+Please advise on DDP cost and transit time. Thanks"></textarea>
+      </div>
+      <button class="btn btn-primary btn-full" id="ai-parse-btn" onclick="parseEmail()" style="font-size:13px;padding:14px;letter-spacing:2px">
+        ✦ &nbsp; ANALYZE EMAIL WITH AI →
+      </button>
+    </div>
+
+    <!-- Extracted data preview (shown after parsing) -->
+    <div id="ai-extracted" style="display:none">
+      <div class="card">
+        <div class="card-title" style="color:var(--green)">✓ EXTRACTION COMPLETE — REVIEW & CONFIRM</div>
+        <div class="grid2" id="ai-fields-grid"></div>
+        <div style="margin-top:16px;display:flex;gap:8px">
+          <button class="btn btn-primary" style="flex:1;padding:13px;font-size:13px" onclick="runFromAI()">RUN FULL INTELLIGENCE REPORT →</button>
+          <button class="btn btn-ghost" style="padding:13px 20px" onclick="resetAI()">CLEAR</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI analysis status -->
+    <div id="ai-status" style="display:none" class="flag flag-blue">
+      <div class="ai-thinking">
+        <div class="dot-pulse"><span></span><span></span><span></span></div>
+        <span id="ai-status-text">Reading email and extracting shipment details...</span>
+      </div>
+    </div>
+
+    <!-- AI error -->
+    <div id="ai-error" style="display:none" class="flag flag-yellow"></div>
+  </div>
+
+  <!-- Full quote result (shown after running) -->
+  <div id="ai-quote-result" style="display:none"></div>
+</div>
+
+<!-- ════════════════════════════════════════════════ -->
+<!-- PAGE: QUOTER                                     -->
+<!-- ════════════════════════════════════════════════ -->
+<div class="page active" id="page-quoter">
+  <div class="page-title">DDP QUOTER</div>
+  <div class="page-sub">Cost calculation with integrated intelligence — declared value analysis, regulatory flags, and freight estimation</div>
+
+  <div id="quoter-form">
+    <!-- Country autocomplete -->
+    <div style="position:relative;margin-bottom:20px">
+      <div style="display:flex;align-items:center;gap:10px;background:var(--bg2);border:1px solid var(--bd);padding:10px 14px">
+        <span style="font-size:9px;color:var(--tx5);letter-spacing:2px;font-family:Barlow,sans-serif;font-weight:700;white-space:nowrap">DESTINO</span>
+        <span id="ctry-flag" style="font-size:20px;flex-shrink:0">🇧🇷</span>
+        <input id="ctry-search" type="text" placeholder="Escribí el país... (ej: Brazil, Dubai, UK)"
+          autocomplete="off"
+          style="flex:1;background:transparent;border:none;color:var(--tx);font-size:13px;font-family:'DM Mono',monospace;outline:none"
+          oninput="ctrySearch(this.value)"
+          onkeydown="ctryKey(event)"
+          onfocus="ctrySearch(this.value)"/>
+        <span id="ctry-clear" onclick="clearCtrySearch()" style="color:var(--tx5);cursor:pointer;font-size:14px;display:none">✕</span>
+      </div>
+      <!-- Dropdown results -->
+      <div id="ctry-results" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg2);border:1px solid var(--teal);border-top:none;z-index:200;max-height:260px;overflow-y:auto"></div>
+    </div>
+
+    <div class="grid2">
+      <div class="card" style="margin-bottom:0">
+        <div class="card-title">SHIPMENT DETAILS</div>
+        <div style="display:grid;gap:12px">
+          <div class="field">
+            <div class="field-label">Product / Model</div>
+            <input id="q-product" type="text" placeholder="e.g. Cisco Catalyst 9300-48T"/>
+          </div>
+          <div class="grid2">
+            <div class="field">
+              <div class="field-label">Equipment Type</div>
+              <select id="q-type">
+                <option value="">Select type...</option>
+                <option>Switch / Router</option>
+                <option>Server</option>
+                <option>GPU / AI Hardware</option>
+                <option>Storage</option>
+                <option>Cable / Accessory</option>
+                <option>Refurbished Hardware</option>
+                <option>Other</option>
+              </select>
+            </div>
+            <div class="field">
+              <div class="field-label">Quantity</div>
+              <input id="q-qty" type="number" placeholder="1" value="1"/>
+            </div>
+          </div>
+          <div class="grid2">
+            <div class="field">
+              <div class="field-label">Declared FOB (USD)</div>
+              <input id="q-fob" type="number" placeholder="0.00"/>
+            </div>
+            <div class="field">
+              <div class="field-label">Weight (lbs)</div>
+              <input id="q-wt" type="number" placeholder="0"/>
+            </div>
+          </div>
+          <div class="grid2">
+            <div class="field">
+              <div class="field-label">Country of Origin</div>
+              <input id="q-coo" type="text" placeholder="e.g. China, Taiwan, USA"/>
+            </div>
+            <div class="field">
+              <div class="field-label">HS Code (optional)</div>
+              <input id="q-hs" type="text" placeholder="8517.62" value="8517.62"/>
+            </div>
+          </div>
+          <div class="field" id="freight-field" style="display:none">
+            <div class="field-label">Known Freight (USD) — leave blank to estimate</div>
+            <input id="q-freight" type="number" placeholder="Auto-estimate"/>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <!-- Declared Value Quick Check -->
+        <div class="card" style="margin-bottom:0;flex:1">
+          <div class="card-title">DECLARED VALUE CHECK</div>
+          <div id="dv-check-inline">
+            <div style="font-size:11px;color:var(--tx5);line-height:1.7">Enter product and FOB value to see<br/>declared value risk assessment.</div>
+          </div>
+        </div>
+        <!-- Regulatory Quick Flags -->
+        <div class="card" style="margin-bottom:0;flex:1">
+          <div class="card-title">REGULATORY FLAGS</div>
+          <div id="reg-flags-inline">
+            <div style="font-size:11px;color:var(--tx5)">Select destination and product type<br/>to see applicable regulations.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="height:14px"></div>
+    <button class="btn btn-primary btn-full" id="calc-btn" onclick="doQuote()">CALCULATE QUOTE + INTELLIGENCE REPORT →</button>
+  </div>
+
+  <div id="quoter-result" style="display:none"></div>
+</div>
+
+<!-- ════════════════════════════════════════════════ -->
+<!-- PAGE: VALUE ANALYZER                             -->
+<!-- ════════════════════════════════════════════════ -->
+<div class="page" id="page-analyzer">
+  <div class="page-title">DECLARED VALUE ANALYZER</div>
+  <div class="page-sub">Compare declared value against market intelligence and historical customs acceptance data</div>
+
+  <div class="card">
+    <div class="card-title">PRODUCT ANALYSIS INPUT</div>
+    <div class="grid3">
+      <div class="field">
+        <div class="field-label">Product Model</div>
+        <input id="av-product" type="text" placeholder="e.g. Cisco C9300-48T"/>
+      </div>
+      <div class="field">
+        <div class="field-label">Equipment Type</div>
+        <select id="av-type">
+          <option value="">Select...</option>
+          <option>Switch / Router</option>
+          <option>Server</option>
+          <option>GPU / AI Hardware</option>
+          <option>Storage</option>
+          <option>Cable / Accessory</option>
+          <option>Refurbished Hardware</option>
+        </select>
+      </div>
+      <div class="field">
+        <div class="field-label">Destination Country</div>
+        <select id="av-dest">
+          <option value="">Select...</option>
+          <option>Brazil</option>
+          <option>Mexico</option>
+          <option>Argentina</option>
+          <option>Colombia</option>
+          <option>Chile</option>
+          <option>Peru</option>
+          <option>Ecuador</option>
+          <option>Costa Rica</option>
+          <option>Panama</option>
+          <option>Dom. Rep.</option>
+          <option>Guatemala</option>
+          <option>Honduras</option>
+          <option>Bolivia</option>
+          <option>Paraguay</option>
+          <option>Uruguay</option>
+          <option>USA</option>
+          <option>Other LATAM</option>
+        </select>
+      </div>
+    </div>
+    <div class="grid3" style="margin-top:12px">
+      <div class="field">
+        <div class="field-label">Declared Value (USD)</div>
+        <input id="av-declared" type="number" placeholder="0.00"/>
+      </div>
+      <div class="field">
+        <div class="field-label">Quantity</div>
+        <input id="av-qty" type="number" placeholder="1" value="1"/>
+      </div>
+      <div class="field">
+        <div class="field-label">Condition</div>
+        <select id="av-condition">
+          <option>New</option>
+          <option>Refurbished</option>
+          <option>Used</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-top:14px">
+      <button class="btn btn-primary" style="padding:11px 28px" onclick="analyzeValue()">ANALYZE DECLARED VALUE →</button>
+    </div>
+  </div>
+
+  <div id="av-result"></div>
+</div>
+
+<!-- ════════════════════════════════════════════════ -->
+<!-- PAGE: HARDWARE DB                                -->
+<!-- ════════════════════════════════════════════════ -->
+<div class="page" id="page-hardware">
+  <div class="page-title">HARDWARE INTELLIGENCE</div>
+  <div class="page-sub">Market values, HS codes, customs history, and operational notes by product</div>
+
+  <input class="search-box" placeholder="Search by model, manufacturer, or type..." oninput="filterHW(this.value)"/>
+  <div id="hw-list"></div>
+</div>
+
+<!-- ════════════════════════════════════════════════ -->
+<!-- PAGE: REGULATORY                                 -->
+<!-- ════════════════════════════════════════════════ -->
+<div class="page" id="page-regulatory">
+  <div class="page-title">REGULATORY RADAR</div>
+  <div class="page-sub">Compliance requirements, import restrictions, and risk flags by country and equipment type</div>
+
+  <div class="grid2" style="margin-bottom:14px">
+    <div class="field">
+      <div class="field-label">Filter by Country</div>
+      <select id="reg-ctry-filter" onchange="filterReg()">
+        <option value="">All Countries</option>
+        <option>Brazil</option>
+        <option>Mexico</option>
+        <option>Argentina</option>
+        <option>Colombia</option>
+        <option>USA</option>
+        <option>Chile</option>
+      </select>
+    </div>
+    <div class="field">
+      <div class="field-label">Filter by Risk Level</div>
+      <select id="reg-risk-filter" onchange="filterReg()">
+        <option value="">All Risk Levels</option>
+        <option>Critical</option>
+        <option>High</option>
+        <option>Medium</option>
+        <option>Low</option>
+      </select>
+    </div>
+  </div>
+
+  <div id="reg-list"></div>
+</div>
+
+<!-- ════════════════════════════════════════════════ -->
+<!-- PAGE: CASE LIBRARY                               -->
+<!-- ════════════════════════════════════════════════ -->
+<div class="page" id="page-cases">
+  <div class="page-title">CASE LIBRARY</div>
+  <div class="page-sub">Real operational cases — problems, solutions, and lessons learned</div>
+
+  <input class="search-box" placeholder="Search cases by country, product, problem, or keyword..." oninput="filterCases(this.value)" id="case-search"/>
+
+  <div class="grid2" style="margin-bottom:14px">
+    <div class="field">
+      <div class="field-label">Filter by Country</div>
+      <select onchange="filterCases(document.getElementById('case-search').value)" id="case-ctry">
+        <option value="">All Countries</option>
+        <option>Brazil</option>
+        <option>Mexico</option>
+        <option>Argentina</option>
+        <option>Colombia</option>
+        <option>USA</option>
+      </select>
+    </div>
+    <div class="field">
+      <div class="field-label">Filter by Type</div>
+      <select onchange="filterCases(document.getElementById('case-search').value)" id="case-type">
+        <option value="">All Types</option>
+        <option>Customs Inspection</option>
+        <option>Valuation Dispute</option>
+        <option>Regulatory Compliance</option>
+        <option>Freight Issue</option>
+        <option>Documentation</option>
+      </select>
+    </div>
+  </div>
+
+  <div id="case-list"></div>
+</div>
+
+<!-- ════════════════════════════════════════════════ -->
+<!-- PAGE: FREIGHT INTEL                              -->
+<!-- ════════════════════════════════════════════════ -->
+<div class="page" id="page-freight">
+  <div class="page-title">FREIGHT INTELLIGENCE</div>
+  <div class="page-sub">Historical freight data and rate estimation by route, mode, and cargo type</div>
+
+  <div class="card">
+    <div class="card-title">ESTIMATE FREIGHT</div>
+    <div class="grid3">
+      <div class="field">
+        <div class="field-label">Origin</div>
+        <select id="fi-origin">
+          <option>Miami, USA</option>
+          <option>New York, USA</option>
+          <option>Los Angeles, USA</option>
+          <option>Europe</option>
+          <option>China</option>
+          <option>Taiwan</option>
+          <option>Singapore</option>
+        </select>
+      </div>
+      <div class="field">
+        <div class="field-label">Destination</div>
+        <select id="fi-dest">
+          <option>Brazil (GRU)</option>
+          <option>Mexico (MEX)</option>
+          <option>Argentina (EZE)</option>
+          <option>Colombia (BOG)</option>
+          <option>Chile (SCL)</option>
+          <option>USA (Miami)</option>
+          <option>UAE (DXB)</option>
+        </select>
+      </div>
+      <div class="field">
+        <div class="field-label">Mode</div>
+        <select id="fi-mode">
+          <option>Air</option>
+          <option>Ocean</option>
+          <option>Courier (DHL/FedEx)</option>
+        </select>
+      </div>
+    </div>
+    <div class="grid2" style="margin-top:12px">
+      <div class="field">
+        <div class="field-label">Weight (lbs)</div>
+        <input id="fi-wt" type="number" placeholder="0"/>
+      </div>
+      <div class="field">
+        <div class="field-label">Cargo Type</div>
+        <select id="fi-cargo">
+          <option>IT Hardware (standard)</option>
+          <option>High-value equipment (&gt;$50k)</option>
+          <option>Batteries / hazmat</option>
+          <option>Oversized / heavy</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-top:14px">
+      <button class="btn btn-primary" style="padding:11px 28px" onclick="estimateFreight()">ESTIMATE FREIGHT →</button>
+    </div>
+  </div>
+
+  <div id="fi-result"></div>
+
+  <div class="card">
+    <div class="card-title">HISTORICAL RATE REFERENCE</div>
+    <div class="table-wrap">
+      <div class="table-head" style="grid-template-columns:1fr 1fr 80px 100px 90px 90px">
+        <span>ROUTE</span><span>MODE</span><span>WEIGHT</span><span>RATE</span><span>PERIOD</span><span>NOTES</span>
+      </div>
+      <div id="freight-history"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════ -->
+<!-- PAGE: SHIPMENT LOG                               -->
+<!-- ════════════════════════════════════════════════ -->
+<div class="page" id="page-log">
+  <div class="page-title" style="display:flex;align-items:center;justify-content:space-between">
+    <span>📋 SHIPMENT LOG</span>
+    <button class="btn btn-ghost btn-sm" onclick="clearLog()" style="font-size:10px;color:var(--red);border-color:var(--red)">CLEAR ALL</button>
+  </div>
+  <div class="page-sub">Historial de cotizaciones — guardadas automáticamente, persistentes entre sesiones</div>
+
+  <!-- Stats bar -->
+  <div id="log-stats" class="meta-bar" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px"></div>
+
+  <!-- Search + filter -->
+  <div class="grid2" style="margin-bottom:12px">
+    <input class="search-box" id="log-search" placeholder="Buscar por cliente, producto, país, QN..." oninput="renderLog()" style="margin-bottom:0"/>
+    <select id="log-filter-ctry" onchange="renderLog()" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:10px 14px;font-size:12px;font-family:'DM Mono',monospace">
+      <option value="">Todos los países</option>
+    </select>
+  </div>
+
+  <!-- Manual entry form -->
+  <div class="card" id="log-form-card">
+    <div class="card-title" style="cursor:pointer;display:flex;justify-content:space-between" onclick="toggleLogForm()">
+      ＋ AGREGAR COTIZACIÓN MANUAL
+      <span id="log-form-arrow" style="color:var(--teal)">▼</span>
+    </div>
+    <div id="log-form-body" style="display:none;margin-top:12px">
+      <div class="grid3" style="gap:10px;margin-bottom:10px">
+        <div class="field"><div class="field-label">Nro. Cotización (QN)</div><input id="lf-qn" placeholder="BRA-2026-0101"/></div>
+        <div class="field"><div class="field-label">Cliente</div><input id="lf-client" placeholder="Nombre del cliente"/></div>
+        <div class="field"><div class="field-label">Destino</div><input id="lf-dest" placeholder="Brazil, Dubai, etc."/></div>
+      </div>
+      <div class="grid3" style="gap:10px;margin-bottom:10px">
+        <div class="field"><div class="field-label">Producto</div><input id="lf-product" placeholder="Cisco 9300-48T x6"/></div>
+        <div class="field"><div class="field-label">FOB (USD)</div><input id="lf-fob" type="number" placeholder="0"/></div>
+        <div class="field"><div class="field-label">Total DDP (USD)</div><input id="lf-total" type="number" placeholder="0"/></div>
+      </div>
+      <div class="grid2" style="gap:10px;margin-bottom:10px">
+        <div class="field"><div class="field-label">Estado</div>
+          <select id="lf-status">
+            <option value="quote">Cotización enviada</option>
+            <option value="won">Ganada ✓</option>
+            <option value="lost">Perdida</option>
+            <option value="pending">En proceso</option>
+            <option value="delivered">Entregada ✓</option>
+          </select>
+        </div>
+        <div class="field"><div class="field-label">Notas</div><input id="lf-notes" placeholder="Observaciones opcionales"/></div>
+      </div>
+      <button class="btn btn-primary" onclick="saveManualLog()" style="padding:10px 24px">GUARDAR EN LOG →</button>
+    </div>
+  </div>
+
+  <!-- Log list -->
+  <div id="log-list"></div>
+</div>
+
+</div><!-- end .app -->
+
+<script>
+// ════════════════════════════════════════════════════════
+// KNOWLEDGE BASE
+// ════════════════════════════════════════════════════════
+
+// ── HARDWARE DATABASE ──────────────────────────────────
+const HW_DB = [
+  // SWITCHES / ROUTERS
+  { id:"HW001", model:"Cisco Catalyst 9300-48T", mfr:"Cisco", type:"Switch / Router",
+    hsCode:"8517.62.00", newLow:8000, newHigh:18000, refLow:2500, refHigh:6000,
+    typicalDeclared:"$8,000–$18,000 new / $2,500–$6,000 refurb",
+    countries:{brazil:{accepted:true,notes:"ANATEL required. Canal cinza risk if declared below $5k on 48-port units."},mexico:{accepted:true,notes:"Standard. IFT homologation may apply for wireless-capable models."},argentina:{accepted:true,notes:"AFIP scrutiny on Cisco equipment. Market value well-known."}},
+    hsNote:"8517.62 covers switches, routers, network hubs. Use 8517.69 for multifunction.",
+    anatel:true, exportControl:false,
+    notes:"Cisco Catalyst 9300 series — one of the most-shipped items in LATAM. Custom aduana agents are very familiar with pricing. Declaring below $6k for 48-port units will trigger inspection in Brazil. COO usually Taiwan or Mexico." },
+
+  { id:"HW002", model:"Arista 7050CX3-32S", mfr:"Arista", type:"Switch / Router",
+    hsCode:"8517.62.00", newLow:15000, newHigh:40000, refLow:5000, refHigh:14000,
+    typicalDeclared:"$15,000–$40,000 new",
+    countries:{brazil:{accepted:true,notes:"No ANATEL for wireline. High value — always verify with Arista invoice."},usa:{accepted:true,notes:"No issues. Standard clearance."}},
+    hsNote:"High-density datacenter switch. Pure wireline — ANATEL exempt.",
+    anatel:false, exportControl:false,
+    notes:"Arista datacenter switches — typically destined for hyperscalers and colo providers (Equinix, etc.). Very high unit values. Refurb market is strong but declared values must be defensible with LOE or purchase history." },
+
+  { id:"HW003", model:"Cisco ASR 1001-X", mfr:"Cisco", type:"Switch / Router",
+    hsCode:"8517.62.00", newLow:12000, newHigh:28000, refLow:3000, refHigh:9000,
+    typicalDeclared:"$12,000–$28,000 new",
+    countries:{brazil:{accepted:true,notes:"ANATEL required. Large routers scrutinized."},mexico:{accepted:true,notes:"No issues typically."}},
+    anatel:true, exportControl:false,
+    notes:"Enterprise edge router. ANATEL certification required for Brazil — verify before shipping. Popular in LATAM ISP and enterprise market." },
+
+  // SERVERS
+  { id:"HW004", model:"HPE ProLiant DL380 Gen10", mfr:"HPE", type:"Server",
+    hsCode:"8471.49.00", newLow:8000, newHigh:35000, refLow:2000, refHigh:9000,
+    typicalDeclared:"$8,000–$35,000 depending on config",
+    countries:{brazil:{accepted:true,notes:"NO ANATEL required for servers. Channel verde common for well-documented shipments."},mexico:{accepted:true,notes:"Standard."},argentina:{accepted:true,notes:"High import duty scrutiny — AFIP database cross-reference."}},
+    hsNote:"8471.49 for servers. NOT 8517 series.",
+    anatel:false, exportControl:false,
+    notes:"HPE ProLiant Gen10 — most common server in LATAM enterprise. Configuration dramatically affects value — memory and drives are key variables. Always request full BOM. Dual socket with 512GB RAM can exceed $40k." },
+
+  { id:"HW005", model:"Dell PowerEdge R750", mfr:"Dell", type:"Server",
+    hsCode:"8471.49.00", newLow:7000, newHigh:32000, refLow:2000, refHigh:8000,
+    typicalDeclared:"$7,000–$32,000 new / $2,000–$8,000 refurb",
+    countries:{brazil:{accepted:true,notes:"No ANATEL. Common at Equinix Brazil IBX."},usa:{accepted:true,notes:"No issues."}},
+    anatel:false, exportControl:false,
+    notes:"Dell PowerEdge R750 — current generation 2U server. Very common in Equinix colocation deployments. GPU configurations (for AI workloads) can push value well above $50k. Always specify config in commercial invoice." },
+
+  { id:"HW006", model:"Supermicro SuperServer 6029P", mfr:"Supermicro", type:"Server",
+    hsCode:"8471.49.00", newLow:5000, newHigh:20000, refLow:1500, refHigh:6000,
+    typicalDeclared:"$5,000–$20,000",
+    countries:{brazil:{accepted:true,notes:"Aduana less familiar with Supermicro — may require additional documentation."},usa:{accepted:true,notes:"No issues."}},
+    anatel:false, exportControl:false,
+    notes:"Supermicro — less brand recognition at customs than HPE/Dell. Good to include detailed tech specs. Often used in AI/GPU configurations." },
+
+  // GPU / AI HARDWARE
+  { id:"HW007", model:"NVIDIA A100 80GB PCIe", mfr:"NVIDIA", type:"GPU / AI Hardware",
+    hsCode:"8473.30.00", newLow:10000, newHigh:15000, refLow:6000, refHigh:10000,
+    typicalDeclared:"$10,000–$15,000 per unit new",
+    countries:{brazil:{accepted:true,notes:"High value — thorough inspection expected. Export license may be required from USA."},usa:{accepted:true,notes:"BIS export control applies for certain destinations."}},
+    hsNote:"GPUs classify under 8473.30 (parts for computing machines). NOT 8517.",
+    anatel:false, exportControl:true,
+    notes:"NVIDIA A100 — subject to BIS Export Administration Regulations. Check current Entity List and country restrictions before quoting. Multi-unit shipments ($100k+) require elevated scrutiny. Market volatile — verify current pricing." },
+
+  { id:"HW008", model:"NVIDIA H100 SXM5 80GB", mfr:"NVIDIA", type:"GPU / AI Hardware",
+    hsCode:"8473.30.00", newLow:25000, newHigh:40000, refLow:15000, refHigh:25000,
+    typicalDeclared:"$25,000–$40,000 per unit",
+    countries:{brazil:{accepted:false,notes:"CRITICAL: Export license required. Strict BIS controls. Do not ship without compliance review."},mexico:{accepted:false,notes:"Same — BIS controls apply."}},
+    hsNote:"8473.30. Highest-tier BIS control currently.",
+    anatel:false, exportControl:true,
+    notes:"NVIDIA H100 — MAXIMUM RISK. Subject to strict BIS export controls effective Oct 2023. Cannot ship to many countries without specific export license. Always escalate to compliance review before quoting. Market price highly volatile." },
+
+  // STORAGE
+  { id:"HW009", model:"NetApp AFF A400", mfr:"NetApp", type:"Storage",
+    hsCode:"8471.70.00", newLow:80000, newHigh:300000, refLow:20000, refHigh:80000,
+    typicalDeclared:"$80,000–$300,000 (highly config dependent)",
+    countries:{brazil:{accepted:true,notes:"Very high declared values — thorough documentation required. Often multi-shipment."},usa:{accepted:true,notes:"No issues."}},
+    hsNote:"8471.70 for storage units. Disk arrays, NAS, SAN.",
+    anatel:false, exportControl:false,
+    notes:"NetApp AFF — enterprise all-flash storage. Value is EXTREMELY config-dependent. A base AFF A400 vs fully configured with 24x NVMe drives is 3x different in value. Always require full BOM from client. El Salvador Concentrix/BPO client — active account." },
+
+  { id:"HW010", model:"Pure Storage FlashArray//X70", mfr:"Pure Storage", type:"Storage",
+    hsCode:"8471.70.00", newLow:100000, newHigh:400000, refLow:25000, refHigh:100000,
+    typicalDeclared:"$100,000–$400,000",
+    countries:{brazil:{accepted:true,notes:"Extremely high value. Requires dedicated customs broker and full documentation pack."}},
+    anatel:false, exportControl:false,
+    notes:"Pure Storage — premium all-flash. High FOB values mean significant Brazilian tax exposure. Always run full tax calculation before quoting." },
+
+  // CABLES / ACCESSORIES
+  { id:"HW011", model:"Cisco StackWise-480 Cable 1m", mfr:"Cisco", type:"Cable / Accessory",
+    hsCode:"8544.42.90", newLow:100, newHigh:300, refLow:30, refHigh:80,
+    typicalDeclared:"$100–$300 each",
+    countries:{brazil:{accepted:true,notes:"Cables often shipped with main equipment. If separate shipment, HS 8544 applies."},mexico:{accepted:true,notes:"No issues."}},
+    anatel:false, exportControl:false,
+    notes:"Cisco proprietary stacking cables. Often bundled with switch shipments. Declare separately if mixed with equipment to avoid HS code confusion." },
+
+  { id:"HW012", model:"QSFP-100G-SR4-S Transceiver", mfr:"Cisco", type:"Cable / Accessory",
+    hsCode:"8517.62.00", newLow:400, newHigh:1200, refLow:80, refHigh:300,
+    typicalDeclared:"$400–$1,200 each",
+    countries:{brazil:{accepted:true,notes:"Optical transceivers may require ANATEL if branded wireless-capable. Cisco optics typically exempt."},mexico:{accepted:true,notes:"Standard."}},
+    anatel:false, exportControl:false,
+    notes:"100G optical transceivers — common in datacenter builds. Per-unit value low but quantities can be large. 100 units = $40-120k total. Declare accurately — mismatch with invoice very common on these." },
+
+  // RAHI / SPECIALIZED
+  { id:"HW013", model:"Rahi 42U Server Cabinet", mfr:"Rahi Systems", type:"Switch / Router",
+    hsCode:"8517.62.00", newLow:2000, newHigh:8000, refLow:500, refHigh:2000,
+    typicalDeclared:"$2,000–$8,000",
+    countries:{brazil:{accepted:true,notes:"ANATEL required for Rahi switches/routers. Confirm model before shipping."}},
+    anatel:true, exportControl:false,
+    notes:"Rahi Systems — frequently in DDP Global shipments to Brazil. ANATEL applies to networking equipment. Racks/cabinets are HS 9403 and don't require ANATEL. Confirm equipment type for correct HS." },
+];
+
+// ── REGULATORY DATABASE ────────────────────────────────
+const REG_DB = [
+  // BRAZIL
+  { id:"REG001", country:"Brazil", regulation:"ANATEL Homologation",
+    equipType:"Wireless networking equipment (routers, APs, wireless switches)",
+    risk:"Critical",
+    summary:"Brazil's ANATEL requires homologation certificates for all wireless-capable equipment before import.",
+    practical:"Equipment shipped without ANATEL certification will be detained at customs. Pure wireline switches and servers are EXEMPT. Always verify if the model has wireless capability before shipping. Certificate must match exact model number.",
+    flag:"⚠️ Cisco Catalyst 9300 with wireless module REQUIRES ANATEL. Base models without wireless = EXEMPT." },
+
+  { id:"REG002", country:"Brazil", regulation:"Canal Cinza (Gray Channel)",
+    equipType:"High-value IT hardware (servers, storage, networking)",
+    risk:"High",
+    summary:"Brazil customs uses 4 channels (verde/amarelo/vermelho/cinza). Canal Cinza is the most severe — full physical inspection plus suspected fraud investigation.",
+    practical:"Canal Cinza triggered by: (1) declared value significantly below market, (2) importer history issues, (3) suspicious commercial invoice, (4) mismatch between tech specs and declared value. Can delay shipment 30-90 days.",
+    flag:"RED FLAG: Declared values below market by 40%+ almost guarantees Canal Cinza in Brazil." },
+
+  { id:"REG003", country:"Brazil", regulation:"II/IPI/PIS/COFINS/ICMS Tax Cascade",
+    equipType:"All IT hardware",
+    risk:"High",
+    summary:"Brazil has a cascading import tax system that can total 60-80% of CIF value for IT hardware.",
+    practical:"Total effective tax rate for HS 8517.62 equipment: ~71% CIF. Never quote Brazil without running full tax calculation. Client often shocked by tax amount. Always show breakdown. Duties & Taxes must be paid in advance.",
+    flag:"Brazil taxes on $100k CIF = ~$71,000 in duties. Always pre-calculate and confirm client understands." },
+
+  { id:"REG004", country:"Brazil", regulation:"ANVISA (Pharmaceutical/Medical)",
+    equipType:"Any equipment with medical or health applications",
+    risk:"High",
+    summary:"ANVISA controls medical devices and health-related equipment. Not typical for IT hardware but can apply to biometric equipment.",
+    practical:"Rarely applies to standard IT hardware. Flag if client describes equipment as having health monitoring features.",
+    flag:"ANVISA does not apply to standard IT networking/server equipment." },
+
+  { id:"REG005", country:"USA", regulation:"BIS Export Controls (EAR)",
+    equipType:"High-performance GPUs, advanced semiconductors, encryption equipment",
+    risk:"Critical",
+    summary:"Bureau of Industry and Security controls export of dual-use technology. NVIDIA H100, A100, and similar GPUs now subject to strict controls.",
+    practical:"Export license required for many GPU shipments to non-approved countries. Penalties for violations are severe. Always check Entity List before quoting GPU shipments. H100 to LATAM requires specific license.",
+    flag:"CRITICAL: Never quote H100 or A800 exports without BIS compliance review. Post Oct 2023 rules are strict." },
+
+  { id:"REG006", country:"USA", regulation:"Section 301 Tariffs (China)",
+    equipType:"IT hardware manufactured in China",
+    risk:"High",
+    summary:"Section 301 tariffs impose 25% additional duty on IT hardware imported to USA from China.",
+    practical:"25% Section 301 + 20% IEEPA Reciprocal = 45% total duties on China-origin goods entering USA. US brand/label does NOT change Country of Origin for CBP. COO is where the product was manufactured.",
+    flag:"China-made equipment entering USA: 45% total tariff. Client must be warned explicitly." },
+
+  { id:"REG007", country:"USA", regulation:"OFAC Sanctions",
+    equipType:"All shipments involving sanctioned entities or countries",
+    risk:"Critical",
+    summary:"OFAC maintains list of sanctioned countries, companies, and individuals. Any transaction touching sanctioned parties is prohibited.",
+    practical:"Check SDN list before confirming any unusual destination or client. Iran, North Korea, Russia (partial), Cuba, Syria = absolute prohibition. Penalties include criminal charges.",
+    flag:"OFAC compliance is non-negotiable. Screen all parties before quoting." },
+
+  // MEXICO
+  { id:"REG008", country:"Mexico", regulation:"IFT Homologation",
+    equipType:"Wireless telecommunications equipment",
+    risk:"Medium",
+    summary:"Mexico's IFT (Instituto Federal de Telecomunicaciones) requires approval for wireless equipment.",
+    practical:"Similar to Brazil's ANATEL but enforcement is less strict. Mainly affects WiFi APs, routers with wireless, cellular equipment. Wireline switches generally exempt.",
+    flag:"IFT applies primarily to wireless-capable equipment. Wireline switches and servers = no IFT." },
+
+  { id:"REG009", country:"Mexico", regulation:"DTA (Derecho de Trámite Aduanero)",
+    equipType:"All imports",
+    risk:"Low",
+    summary:"0.93% fee on CIF value. Standard for all commercial imports.",
+    practical:"Always include in tax calculation. Small amount but required.",
+    flag:"Standard 0.93% DTA on CIF — include in all Mexico quotes." },
+
+  // ARGENTINA
+  { id:"REG010", country:"Argentina", regulation:"SIRA Import Authorization",
+    equipType:"All imports over threshold",
+    risk:"High",
+    summary:"Argentina's Sistema de Importaciones requires pre-authorization for most imports. System changes frequently.",
+    practical:"Argentina import restrictions change often with government policy. Always verify current status before committing to a quote. AFIP scrutinizes declared values carefully against international databases.",
+    flag:"Argentina import rules change frequently. Verify current SIRA status before accepting shipment." },
+
+  { id:"REG011", country:"Argentina", regulation:"AFIP Valuation Control",
+    equipType:"High-value IT hardware",
+    risk:"High",
+    summary:"AFIP cross-references declared values against international price databases. Undervaluation triggers investigation.",
+    practical:"AFIP uses Reuters and other price databases to verify declared values. Cisco, HPE, Dell prices are well-known. Declaring below standard market prices will trigger investigation and potential confiscation.",
+    flag:"AFIP is sophisticated — they know market prices for major IT brands. Declare correctly." },
+
+  // COLOMBIA
+  { id:"REG012", country:"Colombia", regulation:"DIAN Import Declaration",
+    equipType:"All commercial imports",
+    risk:"Low",
+    summary:"Standard Colombian customs declaration via DIAN portal.",
+    practical:"Colombia is relatively straightforward for IT hardware. Main risk is with used equipment and spare parts misclassification.",
+    flag:"Colombia — standard process. Key risk is correct HS code classification and used equipment." },
+
+  { id:"REG013", country:"Colombia", regulation:"Antidumping Duties (some electronics)",
+    equipType:"Consumer electronics, some computer peripherals",
+    risk:"Medium",
+    summary:"Colombia has antidumping measures on some Chinese electronics.",
+    practical:"Mainly affects consumer electronics, not enterprise IT hardware. Verify for specific models.",
+    flag:"Antidumping primarily for consumer electronics. Enterprise IT hardware generally not affected." },
+];
+
+// ── CASE LIBRARY ───────────────────────────────────────
+const CASE_DB = [
+  { id:"BRA-2024-001",
+    country:"Brazil", type:"Customs Inspection", product:"Cisco Catalyst 9300-48U (wireless module)",
+    title:"ANATEL Certification Missing on Wireless Switch — 45-day Detention",
+    desc:"Shipment of 12x Cisco Catalyst 9300-48U switches to datacenter client in São Paulo. Equipment detained at GRU customs.",
+    problem:"Client failed to confirm wireless module presence. The 9300-48U has built-in wireless management — ANATEL required. Shipped without certificate.",
+    analysis:"Cisco Catalyst 9300-48U has integrated wireless LC that triggers ANATEL requirement. Client assumed all 9300 models were the same as the wireline-only 9300-48T they had shipped before.",
+    solution:"Engaged local customs broker to apply for emergency ANATEL certificate. Certificate process took 38 days. Shipment held in GRU bonded warehouse. Client incurred storage fees.",
+    outcome:"Equipment released after 38 days. Additional cost to client: $4,200 in storage + $2,800 in emergency ANATEL processing. Client relationship strained.",
+    lesson:"CRITICAL: Always verify exact Cisco 9300 model suffix. -48U and -48UX have wireless — require ANATEL. -48T and -48P wireline only — EXEMPT. Never assume ANATEL status without checking the specific model number against Cisco's ANATEL database.",
+    tags:["ANATEL","Brazil","Cisco","Wireless","Detention"] },
+
+  { id:"BRA-2024-002",
+    country:"Brazil", type:"Valuation Dispute", product:"HPE ProLiant DL360 Gen10 (refurbished)",
+    title:"Canal Cinza — Declared Value 60% Below Market on HPE Servers",
+    desc:"10x HPE ProLiant DL360 Gen10 servers, configured with dual Xeon Gold + 256GB RAM. Client declared at $1,200/unit ($12,000 total). Market value: ~$4,500–$6,000/unit.",
+    problem:"Client insisted on low declared value 'to save on taxes'. Shipment selected for Canal Cinza at GRU.",
+    analysis:"Canal Cinza triggered by: declared value of $1,200/unit on a server with 256GB RAM and dual Xeon Gold — this combination retails/refurbs for $4,500-$6,000. SEFAZ cross-referenced Mercado Libre and HP Brazil pricing.",
+    solution:"Hired specialized customs lawyer in São Paulo. Provided LOE (Letter of Explanation) with detailed refurb valuation, age of equipment, purchase history. Negotiated declared value of $3,200/unit which customs accepted.",
+    outcome:"Delay of 61 days. Additional legal fees: $8,500. Client paid taxes on $32,000 instead of $12,000. Relationship severely damaged.",
+    lesson:"Never accept artificially low declared values from clients. Your IOR license is at risk. If client insists, decline the shipment. Always run market check on server configs — RAM and CPU config is everything on servers.",
+    tags:["Canal Cinza","Brazil","HPE","Valuation","Refurbished"] },
+
+  { id:"BRA-2024-003",
+    country:"Brazil", type:"Documentation", product:"Arista 7280CR3-32P4",
+    title:"Invoice Mismatch on High-Value Arista Switches — Quick Resolution",
+    desc:"4x Arista 7280CR3-32P4 switches, $38,000 each. Commercial invoice listed model as '7280CR3' without full suffix.",
+    problem:"Brazilian customs flagged model number discrepancy between commercial invoice and actual equipment labels.",
+    analysis:"Arista model numbers are complex. The '-32P4' suffix indicates port configuration and is part of the official model number. Custom agent flagged as potential model mismatch.",
+    solution:"Provided amended commercial invoice with full model number + Arista purchase order + technical spec sheet. Broker submitted within 24 hours of detention.",
+    outcome:"Released in 4 business days. Minimal additional cost.",
+    lesson:"Always use complete, exact model numbers on all commercial invoices. For Arista, Cisco, and HPE — the full part number matters. Abbreviations will cause delays even if the equipment is identical.",
+    tags:["Brazil","Arista","Documentation","Invoice"] },
+
+  { id:"USA-2023-001",
+    country:"USA", type:"Regulatory Compliance", product:"NVIDIA A100 80GB PCIe (x8 units)",
+    title:"BIS Export Control — A100 to LATAM Destination Requires License",
+    desc:"Client requested 8x NVIDIA A100 80GB PCIe GPUs for shipment from USA to destination in Latin America. Total declared value $96,000.",
+    problem:"Post October 2023 BIS rule change, A100 GPUs now require export license for many LATAM destinations.",
+    analysis:"Client was not aware of October 7, 2023 BIS rule expansion. Previous A100 shipments had been done without license. New rules cover advanced computing chips above certain performance thresholds.",
+    solution:"Declined to process without compliance review. Referred client to export compliance attorney. License application filed — 6-week processing time. Shipment held.",
+    outcome:"Shipment eventually cleared with license. Correct decision — violation penalties would have been severe.",
+    lesson:"Always check current BIS rules for GPU shipments. Rules change — what was legal 6 months ago may require a license today. A100, H100, A800 are all controlled. When in doubt, escalate to compliance counsel.",
+    tags:["BIS","GPU","NVIDIA","Export Control","USA"] },
+
+  { id:"MEX-2023-001",
+    country:"Mexico", type:"Customs Inspection", product:"Cisco ASR 1001-X Router",
+    title:"Mexico Customs — Dual-Use Classification Query on High-Capacity Router",
+    desc:"2x Cisco ASR 1001-X aggregation routers shipped to ISP client in Mexico City. Detained at MEX customs.",
+    problem:"Customs agent flagged high-throughput routers as potentially dual-use equipment requiring additional permits.",
+    analysis:"ASR 1001-X is a carrier-grade router. Mexican customs requested additional documentation on end-use. Not a BIS issue — Mexican internal classification question.",
+    solution:"Provided end-user certificate from ISP client (letter on letterhead stating commercial use), plus Cisco product documentation confirming commercial product status.",
+    outcome:"Released in 8 days. No additional costs beyond broker fees.",
+    lesson:"High-throughput carrier-grade equipment in Mexico can trigger dual-use queries. Always have end-user certificate available for enterprise routers. ISP clients should provide this proactively.",
+    tags:["Mexico","Cisco","Router","Dual-use","Inspection"] },
+
+  { id:"COL-2023-001",
+    country:"Colombia", type:"Valuation Dispute", product:"NetApp AFF A400 (partial config)",
+    title:"Colombia DIAN — Undervalued Storage System — 3-week Delay",
+    desc:"NetApp AFF A400 base unit declared at $35,000. DIAN flagged as below market.",
+    problem:"Client declared only base system price without drives. DIAN's price database showed AFF A400 systems typically at $80,000+.",
+    analysis:"NetApp AFF pricing is notoriously complex. DIAN compared declared value to standard AFF A400 full config prices.",
+    solution:"Provided NetApp purchase order showing base unit only configuration (no drives), technical spec showing empty drive bays, and vendor invoice. DIAN accepted with explanation.",
+    outcome:"3-week delay. Administrative costs $1,200. Accepted after documentation.",
+    lesson:"For partial/base configurations of high-value systems (NetApp, Pure Storage, HP 3PAR), always provide DETAILED BOM showing what IS and IS NOT included. Customs compares to full system prices — you must explain the difference proactively.",
+    tags:["Colombia","NetApp","Storage","Valuation","DIAN"] },
+];
+
+// ── FREIGHT HISTORY ────────────────────────────────────
+const FREIGHT_RATES = [
+  { route:"Miami → Brazil (GRU)", mode:"Air", wt:"0-50 lbs", rate:"$3.50-4.20/lb", period:"2024-2025", notes:"Standard IT cargo" },
+  { route:"Miami → Brazil (GRU)", mode:"Air", wt:"50-200 lbs", rate:"$3.00-3.76/lb", period:"2024-2025", notes:"Volume discount" },
+  { route:"Miami → Brazil (GRU)", mode:"Air", wt:"200+ lbs", rate:"$2.50-3.20/lb", period:"2024-2025", notes:"Heavy freight" },
+  { route:"Miami → Brazil (GRU)", mode:"Ocean", wt:"500+ lbs", rate:"$0.80-1.20/lb", period:"2024-2025", notes:"45-day transit" },
+  { route:"Miami → Mexico (MEX)", mode:"Air", wt:"0-100 lbs", rate:"$1.40-1.80/lb", period:"2024-2025", notes:"Standard IT cargo" },
+  { route:"Miami → Mexico (MEX)", mode:"Air", wt:"100+ lbs", rate:"$1.20-1.57/lb", period:"2024-2025", notes:"Volume discount" },
+  { route:"Miami → Colombia (BOG)", mode:"Air", wt:"0-100 lbs", rate:"$1.70-2.10/lb", period:"2024-2025", notes:"Standard" },
+  { route:"Miami → Argentina (EZE)", mode:"Air", wt:"0-100 lbs", rate:"$1.80-2.20/lb", period:"2024-2025", notes:"Higher risk route" },
+  { route:"Miami → Chile (SCL)", mode:"Air", wt:"0-100 lbs", rate:"$1.90-2.40/lb", period:"2024-2025", notes:"Standard" },
+  { route:"China → Brazil (GRU)", mode:"Air", wt:"any", rate:"$8-15/kg", period:"2024-2025", notes:"China surcharges" },
+  { route:"China → Brazil (GRU)", mode:"Ocean", wt:"CBM", rate:"$600-900/CBM", period:"2024-2025", notes:"30-45 day transit" },
+  { route:"Europe → Brazil (GRU)", mode:"Air", wt:"any", rate:"$6-10/kg", period:"2024-2025", notes:"Standard European air" },
+  { route:"Europe → Mexico (MEX)", mode:"Air", wt:"any", rate:"$5-8/kg", period:"2024-2025", notes:"Good connectivity" },
+];
+
+// ── FREIGHT ESTIMATION LOGIC ───────────────────────────
+const FREIGHT_ESTIMATOR = {
+  "Miami, USA": {
+    "Brazil (GRU)":    { air: { base:350, rate:3.76 }, ocean:{ base:800, rate:0.90, minWt:500 } },
+    "Mexico (MEX)":    { air: { base:350, rate:1.57 } },
+    "Argentina (EZE)": { air: { base:450, rate:1.99 } },
+    "Colombia (BOG)":  { air: { base:350, rate:1.84 } },
+    "Chile (SCL)":     { air: { base:450, rate:2.10 } },
+    "USA (Miami)":     { air: { base:200, rate:0 } },
+    "UAE (DXB)":       { air: { base:650, rate:5.50 } },
+  },
+  "Europe": {
+    "Brazil (GRU)":    { air: { base:450, rate:4.77 } },
+    "Mexico (MEX)":    { air: { base:400, rate:3.50 } },
+  },
+  "China": {
+    "Brazil (GRU)":    { air: { base:650, rate:10.00 } },
+    "Mexico (MEX)":    { air: { base:650, rate:7.00 } },
+    "USA (Miami)":     { air: { base:550, rate:8.50 } },
+  },
+  "Taiwan": {
+    "Brazil (GRU)":    { air: { base:650, rate:9.00 } },
+    "USA (Miami)":     { air: { base:500, rate:7.50 } },
+  },
+};
+
+// ════════════════════════════════════════════════════════
+// QUOTER LOGIC
+// ════════════════════════════════════════════════════════
+
+const COUNTRIES = [
+  {id:"brazil",lb:"🇧🇷 Brazil",code:"BRA"},{id:"mexico",lb:"🇲🇽 Mexico",code:"MEX"},
+  {id:"argentina",lb:"🇦🇷 Argentina",code:"ARG"},{id:"colombia",lb:"🇨🇴 Colombia",code:"COL"},
+  {id:"chile",lb:"🇨🇱 Chile",code:"CHL"},{id:"peru",lb:"🇵🇪 Peru",code:"PER"},
+  {id:"ecuador",lb:"🇪🇨 Ecuador",code:"ECU"},{id:"costarica",lb:"🇨🇷 Costa Rica",code:"CRI"},
+  {id:"panama",lb:"🇵🇦 Panama",code:"PAN"},{id:"domrep",lb:"🇩🇴 Dom. Rep.",code:"DOM"},
+  {id:"guatemala",lb:"🇬🇹 Guatemala",code:"GTM"},{id:"honduras",lb:"🇭🇳 Honduras",code:"HND"},
+  {id:"elsalvador",lb:"🇸🇻 El Salvador",code:"SLV"},{id:"nicaragua",lb:"🇳🇮 Nicaragua",code:"NIC"},
+  {id:"bolivia",lb:"🇧🇴 Bolivia",code:"BOL"},{id:"paraguay",lb:"🇵🇾 Paraguay",code:"PRY"},
+  {id:"uruguay",lb:"🇺🇾 Uruguay",code:"URY"},{id:"venezuela",lb:"🇻🇪 Venezuela",code:"VEN"},
+  {id:"guyana",lb:"🇬🇾 Guyana",code:"GUY"},{id:"haiti",lb:"🇭🇹 Haiti",code:"HTI"},
+  {id:"jamaica",lb:"🇯🇲 Jamaica",code:"JAM"},{id:"trinidad",lb:"🇹🇹 Trinidad & Tobago",code:"TTO"},
+  {id:"barbados",lb:"🇧🇧 Barbados",code:"BRB"},{id:"bahamas",lb:"🇧🇸 Bahamas",code:"BHS"},
+  {id:"aruba",lb:"🇦🇼 Aruba",code:"ABW"},{id:"curacao",lb:"🇨🇼 Curacao",code:"CUW"},
+  {id:"cayman",lb:"🇰🇾 Cayman Islands",code:"CYM"},{id:"stlucia",lb:"🇱🇨 St. Lucia",code:"LCA"},
+  {id:"grenada",lb:"🇬🇩 Grenada",code:"GRD"},{id:"puertorico",lb:"🇵🇷 Puerto Rico",code:"PRI"},
+  {id:"stcroix",lb:"🇻🇮 St. Croix",code:"VIR"},{id:"turkcai",lb:"🇹🇨 Turks & Caicos",code:"TCA"},
+  {id:"dubai",lb:"🇦🇪 Dubai/UAE",code:"UAE"},{id:"abudhabi",lb:"🇦🇪 Abu Dhabi",code:"AUH"},
+  {id:"qatar",lb:"🇶🇦 Qatar",code:"QAT"},{id:"saudiarabia",lb:"🇸🇦 Saudi Arabia",code:"KSA"},
+  {id:"bahrain",lb:"🇧🇭 Bahrain",code:"BHR"},{id:"kuwait",lb:"🇰🇼 Kuwait",code:"KWT"},
+  {id:"oman",lb:"🇴🇲 Oman",code:"OMN"},{id:"jordan",lb:"🇯🇴 Jordan",code:"JOR"},
+  {id:"israel",lb:"🇮🇱 Israel",code:"ISR"},{id:"egypt",lb:"🇪🇬 Egypt",code:"EGY"},
+  {id:"uk",lb:"🇬🇧 UK",code:"GBR"},{id:"spain",lb:"🇪🇸 Spain",code:"ESP"},
+  {id:"france",lb:"🇫🇷 France",code:"FRA"},{id:"germany",lb:"🇩🇪 Germany",code:"DEU"},
+  {id:"netherlands",lb:"🇳🇱 Netherlands",code:"NLD"},{id:"italy",lb:"🇮🇹 Italy",code:"ITA"},
+  {id:"belgium",lb:"🇧🇪 Belgium",code:"BEL"},{id:"austria",lb:"🇦🇹 Austria",code:"AUT"},
+  {id:"switzerland",lb:"🇨🇭 Switzerland",code:"CHE"},{id:"sweden",lb:"🇸🇪 Sweden",code:"SWE"},
+  {id:"norway",lb:"🇳🇴 Norway",code:"NOR"},{id:"denmark",lb:"🇩🇰 Denmark",code:"DNK"},
+  {id:"finland",lb:"🇫🇮 Finland",code:"FIN"},{id:"poland",lb:"🇵🇱 Poland",code:"POL"},
+  {id:"portugal",lb:"🇵🇹 Portugal",code:"PRT"},{id:"romania",lb:"🇷🇴 Romania",code:"ROU"},
+  {id:"greece",lb:"🇬🇷 Greece",code:"GRC"},{id:"slovakia",lb:"🇸🇰 Slovakia",code:"SVK"},
+  {id:"cyprus",lb:"🇨🇾 Cyprus",code:"CYP"},{id:"ireland",lb:"🇮🇪 Ireland",code:"IRL"},
+  {id:"iceland",lb:"🇮🇸 Iceland",code:"ISL"},{id:"turkey",lb:"🇹🇷 Turkey",code:"TUR"},
+  {id:"ukraine",lb:"🇺🇦 Ukraine",code:"UKR"},{id:"morocco",lb:"🇲🇦 Morocco",code:"MAR"},
+  {id:"tunisia",lb:"🇹🇳 Tunisia",code:"TUN"},
+  {id:"india",lb:"🇮🇳 India",code:"IND"},{id:"singapore",lb:"🇸🇬 Singapore",code:"SGP"},
+  {id:"japan",lb:"🇯🇵 Japan",code:"JPN"},{id:"australia",lb:"🇦🇺 Australia",code:"AUS"},
+  {id:"newzealand",lb:"🇳🇿 New Zealand",code:"NZL"},{id:"southkorea",lb:"🇰🇷 South Korea",code:"KOR"},
+  {id:"taiwan",lb:"🇹🇼 Taiwan",code:"TWN"},{id:"hongkong",lb:"🇭🇰 Hong Kong",code:"HKG"},
+  {id:"china",lb:"🇨🇳 China",code:"CHN"},{id:"malaysia",lb:"🇲🇾 Malaysia",code:"MYS"},
+  {id:"thailand",lb:"🇹🇭 Thailand",code:"THA"},{id:"vietnam",lb:"🇻🇳 Vietnam",code:"VNM"},
+  {id:"philippines",lb:"🇵🇭 Philippines",code:"PHL"},{id:"indonesia",lb:"🇮🇩 Indonesia",code:"IDN"},
+  {id:"bangladesh",lb:"🇧🇩 Bangladesh",code:"BGD"},{id:"pakistan",lb:"🇵🇰 Pakistan",code:"PAK"},
+  {id:"kazakhstan",lb:"🇰🇿 Kazakhstan",code:"KAZ"},{id:"uzbekistan",lb:"🇺🇿 Uzbekistan",code:"UZB"},
+  {id:"mongolia",lb:"🇲🇳 Mongolia",code:"MNG"},{id:"cambodia",lb:"🇰🇭 Cambodia",code:"KHM"},
+  {id:"laos",lb:"🇱🇦 Laos",code:"LAO"},{id:"canada",lb:"🇨🇦 Canada",code:"CAN"},
+  {id:"southafrica",lb:"🇿🇦 South Africa",code:"ZAF"},{id:"nigeria",lb:"🇳🇬 Nigeria",code:"NGA"},
+  {id:"kenya",lb:"🇰🇪 Kenya",code:"KEN"},{id:"ghana",lb:"🇬🇭 Ghana",code:"GHA"},
+  {id:"angola",lb:"🇦🇴 Angola",code:"AGO"},{id:"namibia",lb:"🇳🇦 Namibia",code:"NAM"},
+  {id:"mozambique",lb:"🇲🇿 Mozambique",code:"MOZ"},{id:"chad",lb:"🇹🇩 Chad",code:"TCD"},
+  {id:"usa",lb:"🇺🇸 USA IOR",code:"US"},
+];
+const SEQ={BRA:35,MEX:10,ARG:5,COL:5,CHL:2,PER:2,ECU:1,CRI:1,PAN:1,DOM:1,GTM:1,HND:1,SLV:1,NIC:1,BOL:1,PRY:1,URY:1,VEN:1,GUY:1,HTI:1,JAM:1,TTO:1,BRB:1,BHS:1,ABW:1,CUW:1,CYM:1,LCA:1,GRD:1,PRI:1,VIR:1,TCA:1,UAE:1,AUH:1,QAT:1,KSA:1,BHR:1,KWT:1,OMN:1,JOR:1,ISR:1,EGY:1,GBR:1,ESP:1,FRA:1,DEU:1,NLD:1,ITA:1,BEL:1,AUT:1,CHE:1,SWE:1,NOR:1,DNK:1,FIN:1,POL:1,PRT:1,ROU:1,GRC:1,SVK:1,CYP:1,IRL:1,ISL:1,TUR:1,UKR:1,MAR:1,TUN:1,IND:1,SGP:1,JPN:1,AUS:1,NZL:1,KOR:1,TWN:1,HKG:1,CHN:1,MYS:1,THA:1,VNM:1,PHL:1,IDN:1,BGD:1,PAK:1,KAZ:1,UZB:1,MNG:1,KHM:1,LAO:1,CAN:1,ZAF:1,NGA:1,KEN:1,GHA:1,AGO:1,NAM:1,MOZ:1,TCD:1,HUN:1,US:32};
+
+const mx=(v,n)=>Math.max(v,n);
+const fmt=n=>n.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+let currentCtry="brazil";
+
+function nextQN(code){
+  const n=new Date(),d=String(n.getDate()).padStart(2,"0"),mo=String(n.getMonth()+1).padStart(2,"0");
+  const s=String((SEQ[code]=(SEQ[code]||0)+1)).padStart(2,"0");
+  return `${code}-2026-${d}${mo}${s}`;
+}
+
+function bTax(cif){
+  const ii=cif*.16,ip=(cif+ii)*.15,ps=(cif+ii+ip)*.021,co=(cif+ii+ip)*.0965;
+  const ic=(cif+ii+ip+ps+co)/(1-.18)*.18;
+  return{ii,ip,ps,co,ic,t:ii+ip+ps+co+ic};
+}
+function mTax(cif){const d=cif*.0093,v=(cif+d)*.16;return{d,v,t:d+v};}
+function aTax(cif){
+  const d=cif*.16,e=cif*.025,v=(cif+d+e)*.21,g=(cif+d+e)*.06,i=(cif+d+e)*.03,a=(cif+d+e)*.10;
+  return{d,e,v,g,i,a,t:d+e+v+g+i+a};
+}
+function cTax(cif){const d=cif*.05,v=(cif+d)*.19;return{d,v,t:d+v};}
+// Chile: 6% duties + 19% VAT on CIF+duties
+function chlTax(cif){const d=cif*.06,v=(cif+d)*.19;return{d,v,t:d+v};}
+// Peru: 5% duties + 18% VAT on CIF+duties
+function perTax(cif){const d=cif*.05,v=(cif+d)*.18;return{d,v,t:d+v};}
+// Ecuador: 25.5% duties + 15% VAT
+function ecuTax(cif){const d=cif*.255,v=(cif+d)*.15;return{d,v,t:d+v};}
+// Costa Rica: 0% duties + 14% VAT
+function criTax(cif){const v=cif*.14;return{v,t:v};}
+// Panama: 5% duties + 7% ITBMS
+function panTax(cif){const d=cif*.05,v=(cif+d)*.07;return{d,v,t:d+v};}
+// Dom. Rep.: 0% duties + 18% ITBIS
+function domTax(cif){const v=cif*.18;return{v,t:v};}
+// Guatemala: 0% duties + 12% VAT
+function gtmTax(cif){const v=cif*.12;return{v,t:v};}
+// Honduras: 0% duties + 15% VAT
+function hndTax(cif){const v=cif*.15;return{v,t:v};}
+// Bolivia: 10% duties + 15% VAT
+function bolTax(cif){const d=cif*.10,v=(cif+d)*.15;return{d,v,t:d+v};}
+// Paraguay: 5% duties + 10% VAT
+function pryTax(cif){const d=cif*.05,v=(cif+d)*.10;return{d,v,t:d+v};}
+// Uruguay: 14% duties + 22% VAT
+function uryTax(cif){const d=cif*.14,v=(cif+d)*.22;return{d,v,t:d+v};}
+// UAE/Dubai: 0% duties + 5% VAT
+function uaeTax(cif){const v=cif*.05;return{v,t:v};}
+// Qatar: 6% duties + 5% VAT
+function qatTax(cif){const d=cif*.06,v=(cif+d)*.05;return{d,v,t:d+v};}
+// Saudi Arabia: 5% duties + 15% VAT
+function ksaTax(cif){const d=cif*.05,v=(cif+d)*.15;return{d,v,t:d+v};}
+// Bahrain: 5% duties + 10% VAT
+function bhrTax(cif){const d=cif*.05,v=(cif+d)*.10;return{d,v,t:d+v};}
+// Israel: 0% duties + 18% VAT
+function israTax(cif){const v=cif*.18;return{v,t:v};}
+// UK: 0% duties + 20% VAT
+function ukTax(cif){const v=cif*.20;return{v,t:v};}
+// Spain/France/Netherlands/Germany: EU — 0% duties + 20-21% VAT
+function euTax(cif,vat){const v=cif*vat;return{v,t:v};}
+// Turkey: 0% duties + 20% VAT
+function turTax(cif){const v=cif*.20;return{v,t:v};}
+// India: 20% BCD + 18% IGST
+function indTax(cif){const d=cif*.20,v=(cif+d)*.18;return{d,v,t:d+v};}
+// Singapore: 0% duties + 9% GST
+function sgpTax(cif){const v=cif*.09;return{v,t:v};}
+// Japan: 5% duties + 10% VAT
+function jpnTax(cif){const d=cif*.05,v=(cif+d)*.10;return{d,v,t:d+v};}
+// Australia: 0% duties + 10% GST
+function ausTax(cif){const v=cif*.10;return{v,t:v};}
+// Canada: 0% duties + 5% GST
+function canTax(cif){const v=cif*.05;return{v,t:v};}
+
+function calcQuote(ct, fob, lbs, coo, fo){
+  const isCN=/china/i.test(coo||"");
+  if(ct==="brazil"){
+    const fc=mx(fob*.01,270),fr=mx(lbs*3.76,350),ins=mx((fob+fr)*.01,80),cif=fob+fr+ins;
+    const ds=mx(cif*.02,400),ior=mx(cif*.02,860),tx=bTax(cif);
+    return{li:[["FOB Charges","1% / min $270",fc],["Freight (Air Miami→GRU)","$3.76/lb / min $350",fr],["Insurance","1% CIF / min $80",ins],["Destination Services","2% CIF / min $400",ds],["Import License (IOR)","2% CIF / min $860",ior]],
+      tx:[["II (16%)",tx.ii],["IPI (15%)",tx.ip],["PIS (2.1%)",tx.ps],["COFINS (9.65%)",tx.co],["ICMS (18%)",tx.ic]],
+      tt:tx.t,tot:fc+fr+ins+ds+ior+tx.t,cif,tr:"21 Days"};
+  }
+  if(ct==="mexico"){
+    const fc=mx(fob*.015,270),fr=mx(lbs*1.57,350),ins=mx((fob+fr)*.01,80),cif=fob+fr+ins;
+    const ds=mx(cif*.025,700),ior=mx(cif*.03,860),tx=mTax(cif);
+    return{li:[["FOB Charges","1.5% / min $270",fc],["Freight (Air Miami→MEX)","$1.57/lb / min $350",fr],["Insurance","1% CIF",ins],["Destination Services","2.5% CIF / min $700",ds],["Import License (IOR)","3% CIF / min $860",ior]],
+      tx:[["DTA (0.93%)",tx.d],["IVA (16%)",tx.v]],tt:tx.t,tot:fc+fr+ins+ds+ior+tx.t,cif,tr:"10 Days"};
+  }
+  if(ct==="argentina"){
+    const fc=mx(fob*.015,270),fr=mx(lbs*1.99,350),ins=mx((fob+fr)*.01,80),cif=fob+fr+ins;
+    const ds=mx(cif*.025,700),ior=mx(cif*.03,750),tx=aTax(cif);
+    return{li:[["FOB Charges","1.5% / min $270",fc],["Freight (Air Miami→EZE)","$1.99/lb / min $350",fr],["Insurance","1% CIF",ins],["Destination Services","2.5% CIF / min $700",ds],["Import License (IOR)","3% CIF / min $750",ior]],
+      tx:[["Derechos (16%)",tx.d],["Estadística (2.5%)",tx.e],["IVA (21%)",tx.v],["Ganancias (6%)",tx.g],["IIBB (3%)",tx.i],["IVA Ad (10%)",tx.a]],
+      tt:tx.t,tot:fc+fr+ins+ds+ior+tx.t,cif,tr:"10 Days"};
+  }
+  if(ct==="colombia"){
+    const fc=mx(fob*.015,270),fr=mx(lbs*1.84,350),ins=mx((fob+fr)*.01,80),cif=fob+fr+ins;
+    const ds=mx(cif*.02,700),ior=mx(cif*.03,650),tx=cTax(cif);
+    return{li:[["FOB Charges","1.5% / min $270",fc],["Freight (Air Miami→BOG)","$1.84/lb / min $350",fr],["Insurance","1% CIF",ins],["Destination Services","2% CIF / min $700",ds],["Import License (IOR)","3% CIF / min $650",ior]],
+      tx:[["Duties (5%)",tx.d],["VAT (19%)",tx.v]],tt:tx.t,tot:fc+fr+ins+ds+ior+tx.t,cif,tr:"10 Days"};
+  }
+  if(ct==="chile"){
+    const fc=mx(fob*.015,270),fr=mx(lbs*1.92,350),ins=mx((fob+fr)*.01,80),cif=fob+fr+ins;
+    const ds=mx(cif*.02,700),ior=mx(cif*.025,650),tx=chlTax(cif);
+    return{li:[["FOB Charges","1.5% / min $270",fc],["Freight (Air Miami→SCL)","$1.92/lb / min $350",fr],["Insurance","1% CIF",ins],["Destination Services","2% CIF / min $700",ds],["Import License (IOR)","2.5% CIF / min $650",ior]],
+      tx:[["Duties (6%)",tx.d],["VAT/IVA (19%)",tx.v]],tt:tx.t,tot:fc+fr+ins+ds+ior+tx.t,cif,tr:"10 Days"};
+  }
+  if(ct==="peru"){
+    const fc=mx(fob*.015,270),fr=mx(lbs*2.42,350),ins=mx((fob+fr)*.01,80),cif=fob+fr+ins;
+    const ds=mx(cif*.025,700),ior=mx(cif*.03,650),tx=perTax(cif);
+    return{li:[["FOB Charges","1.5% / min $270",fc],["Freight (Air Miami→LIM)","$2.42/lb / min $350",fr],["Insurance","1% CIF",ins],["Destination Services","2.5% CIF / min $700",ds],["Import License (IOR)","3% CIF / min $650",ior]],
+      tx:[["Duties (5%)",tx.d],["IGV/VAT (18%)",tx.v]],tt:tx.t,tot:fc+fr+ins+ds+ior+tx.t,cif,tr:"10 Days"};
+  }
+  if(ct==="ecuador"){
+    const fc=mx(fob*.015,270),fr=mx(lbs*1.93,350),ins=mx((fob+fr)*.01,80),cif=fob+fr+ins;
+    const ds=mx(cif*.025,700),ior=mx(cif*.03,650),tx=ecuTax(cif);
+    return{li:[["FOB Charges","1.5% / min $270",fc],["Freight (Air Miami→UIO)","$1.93/lb / min $350",fr],["Insurance","1% CIF",ins],["Destination Services","2.5% CIF / min $700",ds],["Import License (IOR)","3% CIF / min $650",ior]],
+      tx:[["Duties (25.5%)",tx.d],["VAT (15%)",tx.v]],tt:tx.t,tot:fc+fr+ins+ds+ior+tx.t,cif,tr:"10 Days"};
+  }
+  if(ct==="costarica"){
+    const fc=mx(fob*.015,270),fr=mx(lbs*1.71,350),ins=mx((fob+fr)*.01,80),cif=fob+fr+ins;
+    const ds=mx(cif*.02,700),ior=mx(cif*.03,650),tx=criTax(cif);
+    return{li:[["FOB Charges","1.5% / min $270",fc],["Freight (Air Miami→SJO)","$1.71/lb / min $350",fr],["Insurance","1% CIF",ins],["Destination Services","2% CIF / min $700",ds],["Import License (IOR)","3% CIF / min $650",ior]],
+      tx:[["Duties (0%)",0],["VAT (14%)",tx.v]],tt:tx.t,tot:fc+fr+ins+ds+ior+tx.t,cif,tr:"10 Days"};
+  }
+  if(ct==="panama"){
+    const fc=mx(fob*.015,270),fr=mx(lbs*1.64,350),ins=mx((fob+fr)*.01,80),cif=fob+fr+ins;
+    const ds=mx(cif*.02,700),ior=mx(cif*.03,650),tx=panTax(cif);
+    return{li:[["FOB Charges","1.5% / min $270",fc],["Freight (Air Miami→PTY)","$1.64/lb / min $350",fr],["Insurance","1% CIF",ins],["Destination Services","2% CIF / min $700",ds],["Import License (IOR)","3% CIF / min $650",ior]],
+      tx:[["Duties (5%)",tx.d],["ITBMS (7%)",tx.v]],tt:tx.t,tot:fc+fr+ins+ds+ior+tx.t,cif,tr:"10 Days"};
+  }
+  if(ct==="domrep"){
+    const fc=mx(fob*.015,270),fr=mx(lbs*1.71,350),ins=mx((fob+fr)*.01,80),cif=fob+fr+ins;
+    const ds=mx(cif*.025,700),ior=mx(cif*.03,650),tx=domTax(cif);
+    return{li:[["FOB Charges","1.5% / min $270",fc],["Freight (Air Miami→SDQ)","$1.71/lb / min $350",fr],["Insurance","1% CIF",ins],["Destination Services","2.5% CIF / min $700",ds],["Import License (IOR)","3% CIF / min $650",ior]],
+      tx:[["Duties (0%)",0],["ITBIS (18%)",tx.v]],tt:tx.t,tot:fc+fr+ins+ds+ior+tx.t,cif,tr:"10 Days"};
+  }
+  if(ct==="guatemala"){
+    const fc=mx(fob*.015,270),fr=mx(lbs*1.93,350),ins=mx((fob+fr)*.01,80),cif=fob+fr+ins;
+    const ds=mx(cif*.025,700),ior=mx(cif*.03,650),tx=gtmTax(cif);
+    return{li:[["FOB Charges","1.5% / min $270",fc],["Freight (Air Miami→GUA)","$1.93/lb / min $350",fr],["Insurance","1% CIF",ins],["Destination Services","2.5% CIF / min $700",ds],["Import License (IOR)","3% CIF / min $650",ior]],
+      tx:[["Duties (0%)",0],["VAT/IVA (12%)",tx.v]],tt:tx.t,tot:fc+fr+ins+ds+ior+tx.t,cif,tr:"10 Days"};
+  }
+  if(ct==="honduras"){
+    const fc=mx(fob*.015,270),fr=mx(lbs*1.93,350),ins=mx((fob+fr)*.01,80),cif=fob+fr+ins;
+    const ds=mx(cif*.02,700),ior=mx(cif*.03,650),tx=hndTax(cif);
+    return{li:[["FOB Charges","1.5% / min $270",fc],["Freight (Air Miami→TGU)","$1.93/lb / min $350",fr],["Insurance","1% CIF",ins],["Destination Services","2% CIF / min $700",ds],["Import License (IOR)","3% CIF / min $650",ior]],
+      tx:[["Duties (0%)",0],["ISV (15%)",tx.v]],tt:tx.t,tot:fc+fr+ins+ds+ior+tx.t,cif,tr:"10 Days"};
+  }
+  if(ct==="bolivia"){
+    const fc=mx(fob*.015,270),fr=mx(lbs*1.85,350),ins=mx((fob+fr)*.01,80),cif=fob+fr+ins;
+    const ds=mx(cif*.025,700),ior=mx(cif*.03,650),tx=bolTax(cif);
+    return{li:[["FOB Charges","1.5% / min $270",fc],["Freight (Air Miami→VVI/CBB)","$1.85/lb / min $350",fr],["Insurance","1% CIF",ins],["Destination Services","2.5% CIF / min $700",ds],["Import License (IOR)","3% CIF / min $650",ior]],
+      tx:[["Duties (10%)",tx.d],["VAT (15%)",tx.v]],tt:tx.t,tot:fc+fr+ins+ds+ior+tx.t,cif,tr:"12 Days"};
+  }
+  if(ct==="paraguay"){
+    const fc=mx(fob*.015,270),fr=mx(lbs*2.42,350),ins=mx((fob+fr)*.01,80),cif=fob+fr+ins;
+    const ds=mx(cif*.025,700),ior=mx(cif*.03,650),tx=pryTax(cif);
+    return{li:[["FOB Charges","1.5% / min $270",fc],["Freight (Air Miami→ASU)","$2.42/lb / min $350",fr],["Insurance","1% CIF",ins],["Destination Services","2.5% CIF / min $700",ds],["Import License (IOR)","3% CIF / min $650",ior]],
+      tx:[["Duties (5%)",tx.d],["VAT (10%)",tx.v]],tt:tx.t,tot:fc+fr+ins+ds+ior+tx.t,cif,tr:"12 Days"};
+  }
+  if(ct==="uruguay"){
+    const fc=mx(fob*.015,270),fr=mx(lbs*1.76,350),ins=mx((fob+fr)*.01,80),cif=fob+fr+ins;
+    const ds=mx(cif*.025,700),ior=mx(cif*.03,650),tx=uryTax(cif);
+    return{li:[["FOB Charges","1.5% / min $270",fc],["Freight (Air Miami→MVD)","$1.76/lb / min $350",fr],["Insurance","1% CIF",ins],["Destination Services","2.5% CIF / min $700",ds],["Import License (IOR)","3% CIF / min $650",ior]],
+      tx:[["Duties (14%)",tx.d],["IVA (22%)",tx.v]],tt:tx.t,tot:fc+fr+ins+ds+ior+tx.t,cif,tr:"12 Days"};
+  }
+  // ── MIDDLE EAST ──
+  if(ct==="dubai"){
+    const fc=mx(fob*.015,420),fr=mx(lbs*9.20,550),ins=mx((fob+fr)*.01,80),cif=fob+fr+ins;
+    const ds=mx(cif*.03,780),ior=mx(cif*.09,860),tx=uaeTax(cif);
+    return{li:[["FOB Charges","1.5% / min $420",fc],["Freight (Air →DXB)","$9.20/lb / min $550",fr],["Insurance","1% CIF",ins],["Destination Services","3% CIF / min $780",ds],["Import License (IOR)","9% CIF / min $860",ior]],
+      tx:[["Duties (0%)",0],["VAT (5%)",tx.v]],tt:tx.t,tot:fc+fr+ins+ds+ior+tx.t,cif,tr:"14 Days"};
+  }
+  if(ct==="qatar"){
+    const fc=mx(fob*.015,750),fr=mx(lbs*9.02,550),ins=mx((fob+fr)*.01,80),cif=fob+fr+ins;
+    const ds=mx(cif*.05,860),ior=mx(cif*.11,920),tx=qatTax(cif);
+    return{li:[["FOB Charges","1.5% / min $750",fc],["Freight (Air →DOH)","$9.02/lb / min $550",fr],["Insurance","1% CIF",ins],["Destination Services","5% CIF / min $860",ds],["Import License (IOR)","11% CIF / min $920",ior]],
+      tx:[["Duties (6%)",tx.d],["VAT (5%)",tx.v]],tt:tx.t,tot:fc+fr+ins+ds+ior+tx.t,cif,tr:"14 Days"};
+  }
+  if(ct==="saudiarabia"){
+    const fc=mx(fob*.015,270),fr=mx(lbs*4.95,350),ins=mx((fob+fr)*.01,80),cif=fob+fr+ins;
+    const ds=mx(cif*.03,780),ior=mx(cif*.17,860),tx=ksaTax(cif);
+    return{li:[["FOB Charges","1.5% / min $270",fc],["Freight (Air →RUH/JED)","$4.95/lb / min $350",fr],["Insurance","1% CIF",ins],["Destination Services","3% CIF / min $780",ds],["Import License (IOR)","17% CIF / min $860",ior]],
+      tx:[["Duties (5%)",tx.d],["VAT (15%)",tx.v]],tt:tx.t,tot:fc+fr+ins+ds+ior+tx.t,cif,tr:"14 Days"};
+  }
+  if(ct==="bahrain"){
+    const fc=mx(fob*.015,420),fr=mx(lbs*9.02,550),ins=mx((fob+fr)*.01,80),cif=fob+fr+ins;
+    const ds=mx(cif*.03,600),ior=mx(cif*.09,860),tx=bhrTax(cif);
+    return{li:[["FOB Charges","1.5% / min $420",fc],["Freight (Air →BAH)","$9.02/lb / min $550",fr],["Insurance","1% CIF",ins],["Destination Services","3% CIF / min $600",ds],["Import License (IOR)","9% CIF / min $860",ior]],
+      tx:[["Duties (5%)",tx.d],["VAT (10%)",tx.v]],tt:tx.t,tot:fc+fr+ins+ds+ior+tx.t,cif,tr:"14 Days"};
+  }
+  if(ct==="israel"){
+    const fc=mx(fob*.015,420),fr=mx(lbs*9.02,550),ins=mx((fob+fr)*.01,80),cif=fob+fr+ins;
+    const ds=mx(cif*.03,600),ior=mx(cif*.05,860),sii=500,tx=israTax(cif);
+    return{li:[["FOB Charges","1.5% / min $420",fc],["Freight (Air →TLV)","$9.02/lb / min $550",fr],["Insurance","1% CIF",ins],["Destination Services","3% CIF / min $600",ds],["Import License (IOR)","5% CIF / min $860",ior],["SII Permit (regulatory)","Flat",sii]],
+      tx:[["Duties (0%)",0],["VAT (18%)",tx.v]],tt:tx.t,tot:fc+fr+ins+ds+ior+sii+tx.t,cif,tr:"14 Days"};
+  }
+  // ── EUROPE ──
+  if(ct==="uk"){
+    const fc=mx(fob*.015,270),fr=mx(lbs*3.00,450),ins=mx((fob+fr)*.01,80),cif=fob+fr+ins;
+    const ds=mx(cif*.02,450),ior=mx(cif*.035,600),tx=ukTax(cif);
+    return{li:[["FOB Charges","1.5% / min $270",fc],["Freight (Air →LHR)","$3.00/lb / min $450",fr],["Insurance","1% CIF",ins],["Destination Services","2% CIF / min $450",ds],["Import License (IOR)","3.5% CIF / min $600",ior]],
+      tx:[["Duties (0%)",0],["VAT (20%)",tx.v]],tt:tx.t,tot:fc+fr+ins+ds+ior+tx.t,cif,tr:"10 Days"};
+  }
+  if(ct==="spain"){
+    const fc=mx(fob*.015,270),fr=mx(lbs*4.00,350),ins=mx((fob+fr)*.01,80),cif=fob+fr+ins;
+    const ds=mx(cif*.02,450),ior=mx(cif*.05,650),tx=euTax(cif,.21);
+    return{li:[["FOB Charges","1.5% / min $270",fc],["Freight (Air →MAD)","$4.00/lb / min $350",fr],["Insurance","1% CIF",ins],["Destination Services","2% CIF / min $450",ds],["Import License (IOR)","5% CIF / min $650",ior]],
+      tx:[["Duties (0%)",0],["IVA (21%)",tx.v]],tt:tx.t,tot:fc+fr+ins+ds+ior+tx.t,cif,tr:"10 Days"};
+  }
+  if(ct==="france"){
+    const fc=mx(fob*.015,270),fr=mx(lbs*7.93,350),ins=mx((fob+fr)*.01,80),cif=fob+fr+ins;
+    const ds=mx(cif*.02,450),ior=mx(cif*.05,600),tx=euTax(cif,.20);
+    return{li:[["FOB Charges","1.5% / min $270",fc],["Freight (Air →CDG)","$7.93/lb / min $350",fr],["Insurance","1% CIF",ins],["Destination Services","2% CIF / min $450",ds],["Import License (IOR)","5% CIF / min $600",ior]],
+      tx:[["Duties (0%)",0],["TVA (20%)",tx.v]],tt:tx.t,tot:fc+fr+ins+ds+ior+tx.t,cif,tr:"10 Days"};
+  }
+  if(ct==="germany"){
+    const fc=mx(fob*.015,270),fr=mx(lbs*7.93,350),ins=mx((fob+fr)*.01,80),cif=fob+fr+ins;
+    const ds=mx(cif*.02,450),ior=mx(cif*.035,600),tx=euTax(cif,.19);
+    return{li:[["FOB Charges","1.5% / min $270",fc],["Freight (Air →FRA)","$7.93/lb / min $350",fr],["Insurance","1% CIF",ins],["Destination Services","2% CIF / min $450",ds],["Import License (IOR)","3.5% CIF / min $600",ior]],
+      tx:[["Duties (0%)",0],["MwSt (19%)",tx.v]],tt:tx.t,tot:fc+fr+ins+ds+ior+tx.t,cif,tr:"10 Days"};
+  }
+  if(ct==="netherlands"){
+    const fc=mx(fob*.015,270),fr=mx(lbs*7.93,350),ins=mx((fob+fr)*.01,80),cif=fob+fr+ins;
+    const ds=mx(cif*.02,450),ior=mx(cif*.05,600),tx=euTax(cif,.21);
+    return{li:[["FOB Charges","1.5% / min $270",fc],["Freight (Air →AMS)","$7.93/lb / min $350",fr],["Insurance","1% CIF",ins],["Destination Services","2% CIF / min $450",ds],["Import License (IOR)","5% CIF / min $600",ior]],
+      tx:[["Duties (0%)",0],["BTW (21%)",tx.v]],tt:tx.t,tot:fc+fr+ins+ds+ior+tx.t,cif,tr:"10 Days"};
+  }
+  if(ct==="turkey"){
+    const fc=mx(fob*.015,270),fr=mx(lbs*9.02,550),ins=mx((fob+fr)*.01,80),cif=fob+fr+ins;
+    const ds=mx(cif*.03,600),ior=mx(cif*.08,1700),tx=turTax(cif);
+    return{li:[["FOB Charges","1.5% / min $270",fc],["Freight (Air →IST)","$9.02/lb / min $550",fr],["Insurance","1% CIF",ins],["Destination Services","3% CIF / min $600",ds],["Import License (IOR)","8% CIF / min $1,700",ior]],
+      tx:[["Duties (0%)",0],["KDV (20%)",tx.v]],tt:tx.t,tot:fc+fr+ins+ds+ior+tx.t,cif,tr:"12 Days"};
+  }
+  // ── ASIA-PACIFIC ──
+  if(ct==="india"){
+    const fc=mx(fob*.015,270),fr=mx(lbs*5.45,550),ins=mx((fob+fr)*.01,80),cif=fob+fr+ins;
+    const ds=mx(cif*.03,600),ior=mx(cif*.05,860),bis=500,tx=indTax(cif);
+    return{li:[["FOB Charges","1.5% / min $270",fc],["Freight (Air →BOM/DEL)","$5.45/lb / min $550",fr],["Insurance","1% CIF",ins],["Destination Services","3% CIF / min $600",ds],["Import License (IOR)","5% CIF / min $860",ior],["BIS Permit (mandatory)","Flat",bis]],
+      tx:[["BCD Duties (20%)",tx.d],["IGST (18%)",tx.v]],tt:tx.t,tot:fc+fr+ins+ds+ior+bis+tx.t,cif,tr:"14-18 Days"};
+  }
+  if(ct==="singapore"){
+    const fc=mx(fob*.015,270),fr=mx(lbs*9.68,550),ins=mx((fob+fr)*.01,80),cif=fob+fr+ins;
+    const ds=mx(cif*.02,600),ior=mx(cif*.06,860),tx=sgpTax(cif);
+    return{li:[["FOB Charges","1.5% / min $270",fc],["Freight (Air →SIN)","$9.68/lb / min $550",fr],["Insurance","1% CIF",ins],["Destination Services","2% CIF / min $600",ds],["Import License (IOR)","6% CIF / min $860",ior]],
+      tx:[["Duties (0%)",0],["GST (9%)",tx.v]],tt:tx.t,tot:fc+fr+ins+ds+ior+tx.t,cif,tr:"14 Days"};
+  }
+  if(ct==="japan"){
+    const fc=mx(fob*.015,270),fr=mx(lbs*11.00,350),ins=mx((fob+fr)*.01,80),cif=fob+fr+ins;
+    const ds=mx(cif*.02,500),ior=mx(cif*.08,1700),tx=jpnTax(cif);
+    return{li:[["FOB Charges","1.5% / min $270",fc],["Freight (Air →NRT)","$11.00/lb / min $350",fr],["Insurance","1% CIF",ins],["Destination Services","2% CIF / min $500",ds],["Import License (IOR)","8% CIF / min $1,700",ior]],
+      tx:[["Duties (5%)",tx.d],["Consumption Tax (10%)",tx.v]],tt:tx.t,tot:fc+fr+ins+ds+ior+tx.t,cif,tr:"15-20 Days"};
+  }
+  if(ct==="australia"){
+    const fc=mx(fob*.015,270),fr=mx(lbs*12.00,550),ins=mx((fob+fr)*.01,80),cif=fob+fr+ins;
+    const ds=mx(cif*.02,500),ior=mx(cif*.07,850),tx=ausTax(cif);
+    return{li:[["FOB Charges","1.5% / min $270",fc],["Freight (Air →SYD/MEL)","$12.00/lb / min $550",fr],["Insurance","1% CIF",ins],["Destination Services","2% CIF / min $500",ds],["Import License (IOR)","7% CIF / min $850",ior]],
+      tx:[["Duties (0%)",0],["GST (10%)",tx.v]],tt:tx.t,tot:fc+fr+ins+ds+ior+tx.t,cif,tr:"14-16 Days"};
+  }
+  if(ct==="canada"){
+    const fc=mx(fob*.015,270),fr=mx(lbs*1.37,350),ins=mx((fob+fr)*.01,80),cif=fob+fr+ins;
+    const ds=mx(cif*.02,500),ior=mx(cif*.03,550),tx=canTax(cif);
+    return{li:[["FOB Charges","1.5% / min $270",fc],["Freight (Air →YYZ/YVR)","$1.37/lb / min $350",fr],["Insurance","1% CIF",ins],["Destination Services","2% CIF / min $500",ds],["Import License (IOR)","3% CIF / min $550",ior]],
+      tx:[["Duties (0% — CUSMA)",0],["GST (5%)",tx.v]],tt:tx.t,tot:fc+fr+ins+ds+ior+tx.t,cif,tr:"10 Days"};
+  }
+  // ── Generic calculator for all remaining countries ────
+  const CD={
+    elsalvador:{fr:1.71,d:.03,v:.13,ior:.03,ds:.02,tr:"8 Days",ap:"SAL"},
+    nicaragua:{fr:1.71,d:.00,v:.15,ior:.03,ds:.02,tr:"8 Days",ap:"MGA"},
+    venezuela:{fr:2.10,d:.14,v:.12,ior:.03,ds:.02,tr:"12 Days",ap:"CCS"},
+    guyana:{fr:2.10,d:.00,v:.14,ior:.04,ds:.02,tr:"12 Days",ap:"GEO"},
+    haiti:{fr:1.71,d:.12,v:.10,ior:.03,ds:.02,tr:"10 Days",ap:"PAP"},
+    jamaica:{fr:1.71,d:.20,v:.225,ior:.03,ds:.025,tr:"10 Days",ap:"KIN"},
+    trinidad:{fr:1.71,d:.00,v:.125,ior:.03,ds:.02,tr:"10 Days",ap:"POS"},
+    barbados:{fr:1.71,d:.00,v:.175,ior:.03,ds:.02,tr:"10 Days",ap:"BGI"},
+    bahamas:{fr:1.71,d:.00,v:.10,ior:.03,ds:.02,tr:"10 Days",ap:"NAS"},
+    aruba:{fr:1.71,d:.00,v:.125,ior:.03,ds:.02,tr:"10 Days",ap:"AUA"},
+    curacao:{fr:1.71,d:.00,v:.09,ior:.04,ds:.02,tr:"10 Days",ap:"CUR"},
+    cayman:{fr:1.71,d:.00,v:.00,ior:.04,ds:.02,tr:"10 Days",ap:"GCM"},
+    stlucia:{fr:1.71,d:.00,v:.20,ior:.09,ds:.02,tr:"14 Days",ap:"UVF"},
+    grenada:{fr:1.71,d:.00,v:.15,ior:.03,ds:.02,tr:"10 Days",ap:"GND"},
+    puertorico:{fr:1.37,d:.00,v:.115,ior:.03,ds:.02,tr:"10 Days",ap:"SJU"},
+    stcroix:{fr:1.37,d:.00,v:.04,ior:.03,ds:.02,tr:"10 Days",ap:"STX"},
+    turkcai:{fr:1.71,d:.00,v:.00,ior:.03,ds:.02,tr:"10 Days",ap:"PLS"},
+    abudhabi:{fr:9.02,d:.00,v:.05,ior:.09,ds:.03,tr:"14 Days",ap:"AUH"},
+    kuwait:{fr:9.02,d:.05,v:.00,ior:.03,ds:.03,tr:"14 Days",ap:"KWI"},
+    oman:{fr:4.95,d:.05,v:.05,ior:.07,ds:.03,tr:"12-14 Days",ap:"MCT"},
+    jordan:{fr:9.02,d:.00,v:.16,ior:.05,ds:.03,tr:"14 Days",ap:"AMM"},
+    egypt:{fr:9.02,d:.14,v:.01,ior:.08,ds:.03,tr:"30 Days",ap:"CAI"},
+    italy:{fr:7.93,d:.00,v:.22,ior:.035,ds:.02,tr:"10 Days",ap:"MXP"},
+    belgium:{fr:7.93,d:.00,v:.21,ior:.035,ds:.02,tr:"10 Days",ap:"BRU"},
+    austria:{fr:7.93,d:.00,v:.21,ior:.035,ds:.02,tr:"10 Days",ap:"VIE"},
+    switzerland:{fr:7.93,d:.00,v:.081,ior:.03,ds:.02,tr:"10 Days",ap:"ZRH"},
+    sweden:{fr:7.93,d:.00,v:.25,ior:.02,ds:.02,tr:"10 Days",ap:"ARN"},
+    norway:{fr:7.93,d:.00,v:.25,ior:.03,ds:.02,tr:"10 Days",ap:"OSL"},
+    denmark:{fr:7.93,d:.00,v:.25,ior:.05,ds:.02,tr:"10 Days",ap:"CPH"},
+    finland:{fr:7.93,d:.00,v:.19,ior:.03,ds:.02,tr:"12 Days",ap:"HEL"},
+    poland:{fr:7.93,d:.00,v:.23,ior:.05,ds:.02,tr:"14 Days",ap:"WAW"},
+    portugal:{fr:7.93,d:.00,v:.23,ior:.05,ds:.02,tr:"10 Days",ap:"LIS"},
+    romania:{fr:7.93,d:.00,v:.19,ior:.02,ds:.02,tr:"12 Days",ap:"OTP"},
+    greece:{fr:7.93,d:.00,v:.24,ior:.05,ds:.02,tr:"14 Days",ap:"ATH"},
+    slovakia:{fr:7.93,d:.033,v:.20,ior:.02,ds:.02,tr:"10 Days",ap:"BTS"},
+    cyprus:{fr:7.93,d:.00,v:.19,ior:.04,ds:.02,tr:"14 Days",ap:"LCA"},
+    ireland:{fr:7.93,d:.021,v:.23,ior:.02,ds:.02,tr:"10 Days",ap:"DUB"},
+    iceland:{fr:7.93,d:.00,v:.24,ior:.03,ds:.02,tr:"10 Days",ap:"KEF"},
+    ukraine:{fr:7.93,d:.10,v:.20,ior:.04,ds:.02,tr:"10 Days",ap:"KBP"},
+    morocco:{fr:9.02,d:.03,v:.20,ior:.03,ds:.02,tr:"14 Days",ap:"CMN"},
+    tunisia:{fr:9.02,d:.39,v:.20,ior:.08,ds:.03,tr:"22 Days",ap:"TUN"},
+    newzealand:{fr:12.0,d:.01,v:.15,ior:.08,ds:.02,tr:"14-16 Days",ap:"AKL"},
+    southkorea:{fr:9.68,d:.10,v:.05,ior:.06,ds:.02,tr:"14 Days",ap:"ICN"},
+    taiwan:{fr:9.68,d:.00,v:.10,ior:.10,ds:.02,tr:"14 Days",ap:"TPE"},
+    hongkong:{fr:9.68,d:.00,v:.00,ior:.03,ds:.02,tr:"14 Days",ap:"HKG"},
+    china:{fr:9.68,d:.13,v:.13,ior:.06,ds:.02,tr:"14 Days",ap:"PVG"},
+    malaysia:{fr:9.68,d:.20,v:.07,ior:.06,ds:.02,tr:"14 Days",ap:"KUL"},
+    thailand:{fr:9.68,d:.07,v:.07,ior:.06,ds:.02,tr:"14-18 Days",ap:"BKK"},
+    vietnam:{fr:9.68,d:.00,v:.10,ior:.06,ds:.02,tr:"14-16 Days",ap:"SGN"},
+    philippines:{fr:9.68,d:.14,v:.12,ior:.06,ds:.02,tr:"14 Days",ap:"MNL"},
+    indonesia:{fr:9.68,d:.175,v:.11,ior:.06,ds:.02,tr:"14-18 Days",ap:"CGK"},
+    bangladesh:{fr:9.68,d:.10,v:.15,ior:.08,ds:.02,tr:"14 Days",ap:"DAC"},
+    pakistan:{fr:9.68,d:.03,v:.18,ior:.08,ds:.02,tr:"14 Days",ap:"KHI"},
+    kazakhstan:{fr:9.68,d:.00,v:.12,ior:.12,ds:.02,tr:"14 Days",ap:"ALA"},
+    uzbekistan:{fr:9.68,d:.20,v:.12,ior:.12,ds:.02,tr:"14 Days",ap:"TAS"},
+    mongolia:{fr:9.68,d:.05,v:.10,ior:.05,ds:.02,tr:"14 Days",ap:"ULN"},
+    cambodia:{fr:9.68,d:.15,v:.10,ior:.10,ds:.02,tr:"14 Days",ap:"PNH"},
+    laos:{fr:9.68,d:.10,v:.07,ior:.14,ds:.02,tr:"14 Days",ap:"VTE"},
+    southafrica:{fr:9.02,d:.00,v:.15,ior:.08,ds:.02,tr:"14-18 Days",ap:"JNB"},
+    nigeria:{fr:9.02,d:.00,v:.13,ior:.08,ds:.02,tr:"18 Days",ap:"LOS"},
+    kenya:{fr:9.02,d:.10,v:.16,ior:.08,ds:.02,tr:"18 Days",ap:"NBO"},
+    ghana:{fr:9.02,d:.20,v:.15,ior:.05,ds:.02,tr:"14 Days",ap:"ACC"},
+    angola:{fr:9.02,d:.08,v:.14,ior:.05,ds:.02,tr:"14-18 Days",ap:"LAD"},
+    namibia:{fr:9.02,d:.15,v:.15,ior:.08,ds:.02,tr:"18 Days",ap:"WDH"},
+    mozambique:{fr:9.02,d:.075,v:.16,ior:.075,ds:.02,tr:"14 Days",ap:"MPM"},
+    chad:{fr:9.02,d:.15,v:.18,ior:.05,ds:.02,tr:"14-16 Days",ap:"NDJ"},
+    hungary:{fr:1.18,d:.00,v:.27,ior:.03,ds:.02,tr:"10 Days",ap:"BUD"},
+  };
+  if(CD[ct]){
+    const c=CD[ct];
+    const fc=mx(fob*.015,270),fr=mx(lbs*c.fr,350),ins=mx((fob+fr)*.01,80),cif=fob+fr+ins;
+    const ds=mx(cif*c.ds,600),ior=mx(cif*c.ior,600);
+    const dut=cif*c.d,vat=(cif+dut)*c.v,tt=dut+vat;
+    const txLines=[];
+    if(c.d>0) txLines.push([`Duties (${(c.d*100).toFixed(1)}%)`,dut]);
+    if(c.v>0) txLines.push([`VAT/Tax (${(c.v*100).toFixed(1)}%)`,vat]);
+    return{li:[["FOB Charges","1.5% / min $270",fc],[`Freight (Air →${c.ap})`,`$${c.fr}/lb`,fr],["Insurance","1% CIF",ins],["Destination Services",`${(c.ds*100).toFixed(0)}% CIF`,ds],["Import License (IOR)",`${(c.ior*100).toFixed(1)}% CIF`,ior]],
+      tx:txLines,tt,tot:fc+fr+ins+ds+ior+tt,cif,tr:c.tr};
+  }
+  if(ct==="usa"){
+    const ir=isCN?.08:.03,fr=fo||mx(lbs*9.73,450);
+    const iorFee=mx(fob*ir,500),cif=fob+fr,bond=mx(cif*.0045,45),dut=isCN?cif*.45:0;
+    return{li:[["IOR Fee",`${(ir*100).toFixed(0)}% FOB / min $500`,iorFee],["Entry Fee","Flat",85],["FIOR Filing Fee","Flat",50],["Customs Bond","0.45% CIF / min $45",bond],["Int'l Freight (est.)","",fr]],
+      tx:dut?[["Duties 45% (China)",dut]]:[],tt:dut,tot:iorFee+85+50+bond+fr+dut,cif,tr:"Varies"};
+  }
+}
+
+// ── Get regulatory flags for quote ────────────────────
+function getRegFlags(product, type, coo, ct){
+  const flags=[];
+  const isCN=/china/i.test(coo||"");
+  const isGPU=/gpu|nvidia|a100|h100|a800/i.test(product||"");
+  const isWireless=/wireless|ap|wifi|wi-fi|9300-48u|9300-48ux|wlc/i.test(product||"");
+  const isSwitch=/switch|router|asr|catalyst|arista|rahi/i.test(product||"");
+  const isServer=/server|proliant|poweredge|supermicro/i.test(product||"");
+
+  if((ct==="brazil")&&(isSwitch||isWireless)){
+    if(isWireless||/48u|48ux|wlc/i.test(product||"")){
+      flags.push({level:"critical",msg:"<strong>ANATEL REQUIRED</strong> — Wireless-capable equipment detected. Must have valid ANATEL certificate before shipping to Brazil. Detention risk: HIGH."});
+    } else {
+      flags.push({level:"green",msg:"<strong>ANATEL EXEMPT</strong> — Wireline-only switch/router. No ANATEL required."});
+    }
+  }
+  if(ct==="brazil"&&isServer){
+    flags.push({level:"green",msg:"<strong>ANATEL EXEMPT</strong> — Servers do not require ANATEL certification in Brazil."});
+  }
+  if(isGPU){
+    flags.push({level:"critical",msg:"<strong>BIS EXPORT CONTROL</strong> — GPU shipment detected. Current BIS rules (post Oct 2023) restrict advanced GPU exports. Verify export license requirement before proceeding. H100/A800 especially restricted."});
+  }
+  if(isCN&&ct==="usa"){
+    flags.push({level:"high",msg:"<strong>CHINA ORIGIN → USA: 45% DUTIES</strong> — Section 301 (25%) + IEEPA Reciprocal (20%). US brand/label does NOT change COO for CBP purposes. IOR fee = 8% FOB."});
+  }
+  if(isCN&&ct!=="usa"){
+    flags.push({level:"medium",msg:`<strong>CHINA ORIGIN</strong> — Verify HS code classification and export documentation. Some China-origin IT hardware has additional controls.`});
+  }
+  if(ct==="argentina"){
+    flags.push({level:"medium",msg:"<strong>ARGENTINA — SIRA/AFIP</strong> — Import authorization required. AFIP cross-references declared values against market databases. Verify current import rules before committing to timeline."});
+  }
+  if(ct==="brazil"&&/refurb/i.test(type||"")){
+    flags.push({level:"high",msg:"<strong>BRAZIL — REFURBISHED EQUIPMENT</strong> — Customs scrutinizes refurb values heavily. Ensure declared value is defensible with purchase documentation. Canal Cinza risk elevated."});
+  }
+  return flags;
+}
+
+// ── Declared value check inline ────────────────────────
+function getDVCheck(product, fob, type){
+  if(!product||!fob) return null;
+  const match = HW_DB.find(h=>{
+    return product.toLowerCase().includes(h.model.toLowerCase().split(" ")[0].toLowerCase())||
+           h.model.toLowerCase().includes(product.toLowerCase().split(" ")[0].toLowerCase());
+  });
+  if(!match) return null;
+  const isRefurb=/refurb/i.test(type||"");
+  const lo = isRefurb ? match.refLow : match.newLow;
+  const hi = isRefurb ? match.refHigh : match.newHigh;
+  const pct = (fob - lo) / (hi - lo);
+  if(fob < lo*0.5) return {level:"critical",score:10,lo,hi,msg:`<strong>CRITICAL — DECLARED VALUE EXTREMELY LOW</strong><br/>$${fmt(fob)} vs market range $${fmt(lo)}–$${fmt(hi)}. ${Math.round((1-fob/lo)*100)}% below low end. Canal Cinza/audit risk: VERY HIGH.`};
+  if(fob < lo*0.8) return {level:"high",score:35,lo,hi,msg:`<strong>HIGH RISK — BELOW MARKET RANGE</strong><br/>$${fmt(fob)} vs market range $${fmt(lo)}–$${fmt(hi)}. Prepare supporting documentation (LOE, purchase history).`};
+  if(fob <= hi*1.1) return {level:"green",score:90,lo,hi,msg:`<strong>VALUE ACCEPTABLE</strong><br/>$${fmt(fob)} within market range $${fmt(lo)}–$${fmt(hi)}. Low customs scrutiny risk.`};
+  return {level:"medium",score:75,lo,hi,msg:`<strong>NOTE — ABOVE TYPICAL RANGE</strong><br/>$${fmt(fob)} above typical $${fmt(lo)}–$${fmt(hi)}. High value — ensure documentation complete.`};
+}
+
+// ════════════════════════════════════════════════════════
+// UI FUNCTIONS
+// ════════════════════════════════════════════════════════
+
+function showPage(id){
+  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+  document.querySelectorAll(".nav-btn").forEach(b=>{ b.classList.remove("active"); b.style.borderBottomColor=""; b.style.color=""; });
+  document.getElementById("page-"+id).classList.add("active");
+  document.querySelectorAll(".nav-btn").forEach(b=>{
+    if(b.getAttribute("onclick")&&b.getAttribute("onclick").includes("'"+id+"'")){
+      b.classList.add("active");
+      if(id==="ai"){b.style.color="var(--teal)";b.style.borderBottomColor="var(--teal)";}
+    }
+  });
+}
+
+// ── Render country tabs ────────────────────────────────
+function initTabs(){
+  // Set initial display
+  const c = COUNTRIES.find(x => x.id === currentCtry) || COUNTRIES[0];
+  document.getElementById('ctry-search').value = c.lb;
+  document.getElementById('ctry-flag').textContent = c.lb.split(' ')[0];
+}
+
+let ctryHighlight = -1;
+
+function ctrySearch(val) {
+  const res = document.getElementById('ctry-results');
+  const clr = document.getElementById('ctry-clear');
+  clr.style.display = val ? 'block' : 'none';
+
+  const q = val.trim().toLowerCase();
+  // Show all if empty, filter if typed
+  const matches = q.length === 0
+    ? COUNTRIES
+    : COUNTRIES.filter(c =>
+        c.lb.toLowerCase().includes(q) ||
+        c.id.toLowerCase().includes(q) ||
+        c.code.toLowerCase().includes(q)
+      );
+
+  if (!matches.length) { res.style.display = 'none'; return; }
+
+  ctryHighlight = -1;
+  res.style.display = 'block';
+
+  // Group by region
+  const regions = [
+    {label:'LATAM', ids:['brazil','mexico','argentina','colombia','chile','peru','ecuador','costarica','panama','domrep','guatemala','honduras','elsalvador','nicaragua','bolivia','paraguay','uruguay','venezuela','guyana','haiti','jamaica','trinidad','barbados','bahamas','aruba','curacao','cayman','stlucia','grenada','puertorico','stcroix','turkcai']},
+    {label:'MIDDLE EAST', ids:['dubai','abudhabi','qatar','saudiarabia','bahrain','kuwait','oman','jordan','israel','egypt']},
+    {label:'EUROPE', ids:['uk','spain','france','germany','netherlands','italy','belgium','austria','switzerland','sweden','norway','denmark','finland','poland','portugal','romania','greece','slovakia','cyprus','ireland','iceland','turkey','ukraine','morocco','tunisia','hungary']},
+    {label:'ASIA-PACIFIC', ids:['india','singapore','japan','australia','newzealand','southkorea','taiwan','hongkong','china','malaysia','thailand','vietnam','philippines','indonesia','bangladesh','pakistan','kazakhstan','uzbekistan','mongolia','cambodia','laos','canada']},
+    {label:'AFRICA', ids:['southafrica','nigeria','kenya','ghana','angola','namibia','mozambique','chad']},
+    {label:'USA', ids:['usa']},
+  ];
+
+  let html = '';
+  let itemIdx = 0;
+  for (const region of regions) {
+    const regionMatches = matches.filter(c => region.ids.includes(c.id));
+    if (!regionMatches.length) continue;
+    html += `<div style="padding:5px 14px 3px;font-size:9px;color:var(--tx5);letter-spacing:2px;font-family:Barlow,sans-serif;font-weight:700;background:var(--bg3)">${region.label}</div>`;
+    for (const c of regionMatches) {
+      const isActive = c.id === currentCtry;
+      html += `<div class="ctry-opt" data-id="${c.id}" data-idx="${itemIdx}"
+        onclick="selectCtry('${c.id}')"
+        onmouseover="ctryHighlight=${itemIdx};renderHighlight()"
+        style="padding:9px 16px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:10px;${isActive?'background:rgba(0,181,200,.15);color:var(--teal)':'color:var(--tx2)'}">
+        <span style="font-size:16px">${c.lb.split(' ')[0]}</span>
+        <span>${c.lb.substring(c.lb.indexOf(' ')+1)}</span>
+        ${isActive?'<span style="margin-left:auto;font-size:10px;color:var(--teal)">✓</span>':''}
+      </div>`;
+      itemIdx++;
+    }
+  }
+  res.innerHTML = html;
+}
+
+function renderHighlight() {
+  document.querySelectorAll('.ctry-opt').forEach((el, i) => {
+    el.style.background = i === ctryHighlight ? 'rgba(0,181,200,.2)' : (el.dataset.id === currentCtry ? 'rgba(0,181,200,.1)' : '');
+  });
+}
+
+function ctryKey(e) {
+  const opts = document.querySelectorAll('.ctry-opt');
+  if (e.key === 'ArrowDown') { e.preventDefault(); ctryHighlight = Math.min(ctryHighlight+1, opts.length-1); renderHighlight(); opts[ctryHighlight]?.scrollIntoView({block:'nearest'}); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); ctryHighlight = Math.max(ctryHighlight-1, 0); renderHighlight(); opts[ctryHighlight]?.scrollIntoView({block:'nearest'}); }
+  else if (e.key === 'Enter') { if(ctryHighlight>=0 && opts[ctryHighlight]) { selectCtry(opts[ctryHighlight].dataset.id); } }
+  else if (e.key === 'Escape') { document.getElementById('ctry-results').style.display='none'; }
+}
+
+function clearCtrySearch() {
+  document.getElementById('ctry-search').value = '';
+  document.getElementById('ctry-clear').style.display = 'none';
+  ctrySearch('');
+  document.getElementById('ctry-search').focus();
+}
+
+function selectCtry(id){
+  currentCtry = id;
+  const c = COUNTRIES.find(x => x.id === id);
+  if (c) {
+    document.getElementById('ctry-search').value = c.lb.substring(c.lb.indexOf(' ')+1);
+    document.getElementById('ctry-flag').textContent = c.lb.split(' ')[0];
+    document.getElementById('ctry-clear').style.display = 'block';
+  }
+  document.getElementById('ctry-results').style.display = 'none';
+  document.getElementById("freight-field").style.display = id === "usa" ? "block" : "none";
+  updateInlineChecks();
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(e){
+  if (!e.target.closest('#ctry-search') && !e.target.closest('#ctry-results')) {
+    document.getElementById('ctry-results').style.display = 'none';
+  }
+});
+
+// ── Live inline checks ─────────────────────────────────
+function updateInlineChecks(){
+  const product=document.getElementById("q-product").value;
+  const fob=parseFloat(document.getElementById("q-fob").value)||0;
+  const type=document.getElementById("q-type").value;
+  const coo=document.getElementById("q-coo").value;
+
+  // DV Check
+  const dvEl=document.getElementById("dv-check-inline");
+  if(product&&fob){
+    const dv=getDVCheck(product,fob,type);
+    if(dv){
+      const colors={critical:"var(--red)",high:"#f97316",green:"var(--green)",medium:"var(--yellow)"};
+      const bgs={critical:"var(--redbg)",high:"var(--orangebg)",green:"var(--greenbg)",medium:"var(--yellowbg)"};
+      const scoreColor=dv.score<40?"var(--red)":dv.score<70?"var(--yellow)":"var(--green)";
+      dvEl.innerHTML=`
+        <div style="font-size:11px;line-height:1.7;padding:10px;background:${bgs[dv.level]};border-left:2px solid ${colors[dv.level]};color:${colors[dv.level]}">${dv.msg}</div>
+        <div class="score-meter" style="margin-top:10px">
+          <div class="score-bar-bg"><div class="score-bar-fill" style="width:${dv.score}%;background:${scoreColor}"></div></div>
+          <div class="score-label" style="color:${scoreColor}">${dv.score}%</div>
+        </div>
+        <div style="font-size:9px;color:var(--tx5);margin-top:4px">Customs acceptance score — ${dv.score}% = ${dv.score>80?"LOW RISK":dv.score>60?"MEDIUM RISK":"HIGH RISK"}</div>`;
+    } else {
+      dvEl.innerHTML=`<div style="font-size:11px;color:var(--tx5)">Product not in database.<br/>Manual review required.</div>`;
+    }
+  } else {
+    dvEl.innerHTML=`<div style="font-size:11px;color:var(--tx5)">Enter product and FOB value to see declared value risk assessment.</div>`;
+  }
+
+  // Reg flags
+  const regEl=document.getElementById("reg-flags-inline");
+  const flags=getRegFlags(product,type,coo,currentCtry);
+  if(flags.length){
+    const colors={critical:"var(--red)",high:"#f97316",medium:"var(--yellow)",green:"var(--green)",low:"var(--green)"};
+    const bgs={critical:"var(--redbg)",high:"var(--orangebg)",medium:"var(--yellowbg)",green:"var(--greenbg)",low:"var(--greenbg)"};
+    regEl.innerHTML=flags.map(f=>`<div class="flag" style="background:${bgs[f.level]||"var(--bg3)"};border-left:2px solid ${colors[f.level]||"var(--teal)"};color:${colors[f.level]||"var(--tx2)"}">⚠ ${f.msg}</div>`).join("");
+  } else if(product||type){
+    regEl.innerHTML=`<div style="font-size:11px;color:var(--tx5)">No specific flags for this combination. Standard process.</div>`;
+  } else {
+    regEl.innerHTML=`<div style="font-size:11px;color:var(--tx5)">Select destination and product type to see applicable regulations.</div>`;
+  }
+}
+
+// ── Main Quote Calculation ─────────────────────────────
+function doQuote(){
+  const fob=parseFloat(document.getElementById("q-fob").value);
+  const lbs=parseFloat(document.getElementById("q-wt").value);
+  if(!fob||!lbs){alert("Please enter FOB value and weight.");return;}
+  const product=document.getElementById("q-product").value;
+  const type=document.getElementById("q-type").value;
+  const coo=document.getElementById("q-coo").value;
+  const hs=document.getElementById("q-hs").value||"8517.62";
+  const fo=parseFloat(document.getElementById("q-freight").value)||0;
+
+  const r=calcQuote(currentCtry,fob,lbs,coo,fo);
+  if(!r) return;
+  const code=COUNTRIES.find(c=>c.id===currentCtry).code;
+  const qn=nextQN(code);
+  const dest=COUNTRIES.find(c=>c.id===currentCtry).lb;
+  const flags=getRegFlags(product,type,coo,currentCtry);
+  const dv=getDVCheck(product,fob,type);
+
+  // Find related cases
+  const relCases=CASE_DB.filter(c=>c.country.toLowerCase()===currentCtry||
+    (product&&c.product.toLowerCase().includes(product.split(" ")[0].toLowerCase()))||
+    (type&&c.type.toLowerCase().includes(type.toLowerCase().split(" ")[0]))
+  ).slice(0,2);
+
+  const flagColors={critical:"flag-red",high:"flag-red",medium:"flag-yellow",green:"flag-green",low:"flag-green"};
+
+  const html=`
+    <div style="margin-top:20px">
+      <!-- QN Header -->
+      <div style="background:var(--bg2);border:1px solid var(--bd);padding:14px 18px;margin-bottom:2px;display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-family:Barlow,sans-serif;font-weight:800;font-size:15px;color:#fff">${qn}</div>
+          <div style="font-size:11px;color:var(--tx4);margin-top:3px">${product||"—"} · HS ${hs} · ${coo||"COO TBC"} → ${dest}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:8px;color:var(--tx5);letter-spacing:2px">TRANSIT</div>
+          <div style="color:var(--teal);font-weight:600;font-size:13px">${r.tr}</div>
+        </div>
+      </div>
+
+      <!-- Meta -->
+      <div class="meta-bar" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px">
+        <div class="meta-item"><div class="ml">FOB VALUE</div><div class="mv">$${fmt(fob)}</div></div>
+        <div class="meta-item"><div class="ml">WEIGHT</div><div class="mv">${lbs} lbs</div></div>
+        <div class="meta-item"><div class="ml">CIF</div><div class="mv">$${fmt(r.cif)}</div></div>
+      </div>
+
+      <!-- Regulatory Flags -->
+      ${flags.length?`<div style="margin-bottom:14px">${flags.map(f=>`<div class="flag ${flagColors[f.level]||"flag-blue"}">⚠ ${f.msg}</div>`).join("")}</div>`:""}
+
+      <!-- DV Assessment -->
+      ${dv?`<div class="flag ${flagColors[dv.level]||"flag-blue"}" style="margin-bottom:14px">📊 <strong>DECLARED VALUE:</strong> ${dv.msg}</div>`:""}
+
+      <!-- Service Lines -->
+      <div class="table-wrap">
+        <div class="table-head" style="grid-template-columns:1fr 160px 90px"><span>SERVICE</span><span>BASIS</span><span style="text-align:right">USD</span></div>
+        ${r.li.map(([l,b,v])=>`<div class="table-row" style="grid-template-columns:1fr 160px 90px"><div style="font-size:12px;color:var(--tx2)">${l}</div><div style="font-size:10px;color:var(--tx5)">${b}</div><div style="font-size:12px;text-align:right">$${fmt(v)}</div></div>`).join("")}
+      </div>
+
+      <!-- Tax Lines -->
+      ${r.tx.length?`
+      <div class="table-wrap" style="margin-top:2px">
+        <div class="table-head" style="grid-template-columns:1fr 90px"><span>DUTIES & TAXES (PASS-THROUGH)</span><span style="text-align:right">USD</span></div>
+        ${r.tx.map(([l,v])=>`<div class="table-row" style="grid-template-columns:1fr 90px"><div style="font-size:12px;color:var(--tx3)">${l}</div><div style="font-size:12px;color:var(--tx3);text-align:right">$${fmt(v)}</div></div>`).join("")}
+      </div>
+      `:""}
+
+      <!-- Total -->
+      <div class="total-bar" style="margin-top:2px">
+        <div class="total-lbl">TOTAL DDP</div>
+        <div class="total-val">$${fmt(r.tot)}</div>
+      </div>
+
+      <!-- Related Cases -->
+      ${relCases.length?`
+      <div class="card">
+        <div class="card-title">📚 RELATED CASES FROM LIBRARY</div>
+        ${relCases.map(c=>`
+          <div style="border:1px solid var(--bd);border-left:3px solid var(--yellow);padding:12px;margin-bottom:8px">
+            <div style="font-family:Barlow,sans-serif;font-weight:700;font-size:12px;color:#fff">${c.id} — ${c.title}</div>
+            <div style="font-size:10px;color:var(--tx4);margin:3px 0 6px">${c.country} · ${c.type}</div>
+            <div class="case-lesson">💡 ${c.lesson}</div>
+          </div>
+        `).join("")}
+      </div>
+      `:""}
+
+      <!-- Notes -->
+      <div style="font-size:11px;color:var(--tx5);margin-bottom:16px;line-height:1.9">
+        • Duties &amp; Taxes paid in advance / balance due upon delivery<br/>
+        • Cargo must arrive at DDP Global Miami warehouse before clearance<br/>
+        • COO confirmation required prior to booking · Rate valid 7 days
+      </div>
+
+      <!-- Actions -->
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-primary" style="flex:1;padding:12px" onclick="downloadQuotePDF()">⬇ DESCARGAR PDF</button>
+        <button class="btn btn-ghost" style="padding:12px" onclick="copyQuote('${qn}','${dest}','${product||"—"}','${hs}','${coo||"TBC"}',${fob},${lbs},${r.cif},${r.tot},'${r.tr}')">COPY TEXT</button>
+        <button class="btn btn-ghost" style="padding:12px 18px" onclick="saveQuoteToLog('${qn}','${dest}','${product||"—"}',${fob},${r.tot},${r.cif})">📋 LOG</button>
+        <button class="btn btn-ghost" style="padding:12px 18px" onclick="resetQuote()">NEW</button>
+      </div>
+    </div>`;
+
+  document.getElementById("quoter-form").style.display="none";
+  document.getElementById("quoter-result").style.display="block";
+  document.getElementById("quoter-result").innerHTML=html;
+  window.scrollTo(0,0);
+}
+
+function resetQuote(){
+  document.getElementById("quoter-form").style.display="block";
+  document.getElementById("quoter-result").style.display="none";
+}
+
+function copyQuote(qn,dest,product,hs,coo,fob,lbs,cif,tot,tr){
+  const txt=[
+    `QUOTE: ${qn}`,`Destination: ${dest}`,
+    `Product: ${product} | HS: ${hs} | COO: ${coo}`,
+    `FOB: $${fmt(fob)} | Weight: ${lbs} lbs | CIF: $${fmt(cif)}`,
+    `TOTAL DDP: $${fmt(tot)}`,`Transit: ${tr}`,``,
+    `Duties & Taxes paid in advance / balance due upon delivery`,
+    `Rate valid 7 days · COO confirmation required`
+  ].join("\n");
+  navigator.clipboard.writeText(txt).then(()=>{
+    event.target.textContent="✓ COPIED!";
+    setTimeout(()=>{event.target.textContent="COPY QUOTE TEXT";},2000);
+  });
+}
+
+// ════════════════════════════════════════════════════════
+// VALUE ANALYZER
+// ════════════════════════════════════════════════════════
+
+function analyzeValue(){
+  const product=document.getElementById("av-product").value;
+  const type=document.getElementById("av-type").value;
+  const dest=document.getElementById("av-dest").value;
+  const declared=parseFloat(document.getElementById("av-declared").value);
+  const qty=parseInt(document.getElementById("av-qty").value)||1;
+  const cond=document.getElementById("av-condition").value;
+  const el=document.getElementById("av-result");
+
+  if(!product||!declared){el.innerHTML="<div class='flag flag-yellow'>Please enter product model and declared value.</div>";return;}
+
+  const match=HW_DB.find(h=>product.toLowerCase().includes(h.model.toLowerCase().split(" ")[0].toLowerCase())||h.model.toLowerCase().includes(product.toLowerCase().split(" ")[0].toLowerCase()));
+  const isRefurb=/refurb|used/i.test(cond);
+  let lo,hi,status,scoreVal,advice;
+
+  if(match){
+    lo=isRefurb?match.refLow:match.newLow;
+    hi=isRefurb?match.refHigh:match.newHigh;
+    const perUnit=declared/qty;
+    const pctOfLow=perUnit/lo;
+    const pctOfHigh=perUnit/hi;
+
+    if(pctOfLow<0.5){status="CRITICAL";scoreVal=5;advice=`Declared value per unit ($${fmt(perUnit)}) is ${Math.round((1-pctOfLow)*100)}% below the LOW end of market range. This is almost certain to trigger customs inspection in most LATAM countries. Do not proceed without client acknowledgment of risk and full supporting documentation.`;}
+    else if(pctOfLow<0.75){status="HIGH RISK";scoreVal=30;advice=`Declared value per unit ($${fmt(perUnit)}) is below market range ($${fmt(lo)}–$${fmt(hi)}). High inspection risk in Brazil and Argentina. Provide Letter of Explanation (LOE), purchase order, and depreciation schedule if refurbished.`;}
+    else if(perUnit<=hi*1.05){status="ACCEPTABLE";scoreVal=88;advice=`Declared value per unit ($${fmt(perUnit)}) is within market range ($${fmt(lo)}–$${fmt(hi)}). Low inspection risk. Standard documentation should suffice.`;}
+    else{status="ABOVE RANGE";scoreVal=75;advice=`Declared value per unit ($${fmt(perUnit)}) is above typical range ($${fmt(lo)}–$${fmt(hi)}). This is fine but ensure documentation supports the value.`;}
+  } else {
+    status="UNKNOWN MODEL";scoreVal=50;lo=null;hi=null;
+    advice="Product not found in Hardware Intelligence database. Manual market research required. Use Mercado Libre, eBay, or manufacturer pricelists for comparables.";
+  }
+
+  const colors={CRITICAL:"var(--red)","HIGH RISK":"#f97316",ACCEPTABLE:"var(--green)","ABOVE RANGE":"var(--yellow)","UNKNOWN MODEL":"var(--teal)"};
+  const bgs={CRITICAL:"var(--redbg)","HIGH RISK":"var(--orangebg)",ACCEPTABLE:"var(--greenbg)","ABOVE RANGE":"var(--yellowbg)","UNKNOWN MODEL":"var(--bg3)"};
+  const sc=colors[status];
+  const sb=bgs[status];
+
+  // Country-specific notes
+  const ctryNotes=[];
+  if(match&&dest){
+    const ctryKey=dest.toLowerCase().split(" ")[0];
+    const cn=match.countries[ctryKey];
+    if(cn) ctryNotes.push(`<div class="flag flag-blue"><strong>${dest}:</strong> ${cn.notes}</div>`);
+  }
+  if(dest==="Brazil"&&status!=="ACCEPTABLE"){
+    ctryNotes.push(`<div class="flag flag-yellow"><strong>Brazil Canal Cinza Risk:</strong> Values below market range are the #1 trigger for Canal Cinza selection. Delay risk: 30–90 days.</div>`);
+  }
+  if(dest==="Argentina"){
+    ctryNotes.push(`<div class="flag flag-yellow"><strong>Argentina AFIP:</strong> AFIP cross-references major brand prices (Cisco, HPE, Dell, NetApp) against international databases. Values significantly below market will trigger investigation.</div>`);
+  }
+
+  el.innerHTML=`
+    <div style="background:${sb};border:1px solid var(--bd);border-left:3px solid ${sc};padding:16px;margin-bottom:14px">
+      <div style="font-family:Barlow,sans-serif;font-weight:800;font-size:13px;color:${sc};margin-bottom:6px">STATUS: ${status}</div>
+      <div style="font-size:12px;color:var(--tx2);line-height:1.7">${advice}</div>
+      <div class="score-meter" style="margin-top:12px">
+        <div style="font-size:9px;color:var(--tx5);width:80px;flex-shrink:0">ACCEPTANCE SCORE</div>
+        <div class="score-bar-bg"><div class="score-bar-fill" style="width:${scoreVal}%;background:${sc}"></div></div>
+        <div class="score-label" style="color:${sc}">${scoreVal}/100</div>
+      </div>
+    </div>
+
+    ${match?`
+    <div class="card">
+      <div class="card-title">MARKET INTELLIGENCE — ${match.model}</div>
+      <div class="grid3">
+        <div><div style="font-size:9px;color:var(--tx5);letter-spacing:2px">CONDITION</div><div style="font-size:12px;color:var(--tx2);margin-top:3px">${cond}</div></div>
+        <div><div style="font-size:9px;color:var(--tx5);letter-spacing:2px">MARKET RANGE</div><div style="font-size:12px;color:var(--tx2);margin-top:3px">$${fmt(lo)} – $${fmt(hi)} / unit</div></div>
+        <div><div style="font-size:9px;color:var(--tx5);letter-spacing:2px">YOUR DECLARED / UNIT</div><div style="font-size:12px;color:${sc};margin-top:3px;font-weight:700">$${fmt(declared/qty)}</div></div>
+      </div>
+      <hr class="divider"/>
+      <div style="font-size:10px;color:var(--tx4);letter-spacing:1px;margin-bottom:6px;font-family:Barlow,sans-serif">HS CODE</div>
+      <div style="font-size:12px;color:var(--tx2)">${match.hsCode} — ${match.hsNote||""}</div>
+      ${match.anatel?`<div class="flag flag-red" style="margin-top:10px">⚠️ <strong>ANATEL</strong> — This product requires ANATEL certification for Brazil.</div>`:""}
+      ${match.exportControl?`<div class="flag flag-red" style="margin-top:8px">🔴 <strong>EXPORT CONTROL</strong> — This product is subject to BIS Export Administration Regulations. Verify license requirements.</div>`:""}
+      <hr class="divider"/>
+      <div style="font-size:11px;color:var(--tx4);line-height:1.7">${match.notes}</div>
+    </div>
+    `:`<div class="flag flag-yellow">⚠ Product not in Hardware Intelligence database. Add it to improve future analysis.</div>`}
+
+    ${ctryNotes.join("")}
+  `;
+}
+
+// ════════════════════════════════════════════════════════
+// HARDWARE DB PAGE
+// ════════════════════════════════════════════════════════
+
+function renderHW(filter){
+  const list=filter?HW_DB.filter(h=>
+    h.model.toLowerCase().includes(filter.toLowerCase())||
+    h.mfr.toLowerCase().includes(filter.toLowerCase())||
+    h.type.toLowerCase().includes(filter.toLowerCase())
+  ):HW_DB;
+  const el=document.getElementById("hw-list");
+  if(!list.length){el.innerHTML="<div class='flag flag-yellow'>No hardware found matching your search.</div>";return;}
+  el.innerHTML=list.map(h=>`
+    <div class="hw-card">
+      <div class="hw-model">${h.model}</div>
+      <div class="hw-mfr">${h.mfr} · ${h.type} · HS ${h.hsCode}</div>
+      <div class="hw-grid">
+        <div class="hw-stat">New Range<span>$${fmt(h.newLow)} – $${fmt(h.newHigh)}</span></div>
+        <div class="hw-stat">Refurb Range<span>$${fmt(h.refLow)} – $${fmt(h.refHigh)}</span></div>
+        <div class="hw-stat">Typical Declared<span style="font-size:9px">${h.typicalDeclared}</span></div>
+      </div>
+      <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+        ${h.anatel?`<span class="tag" style="border-color:var(--red);color:var(--red)">ANATEL REQUIRED</span>`:`<span class="tag" style="border-color:var(--green);color:var(--green)">ANATEL EXEMPT</span>`}
+        ${h.exportControl?`<span class="tag" style="border-color:var(--red);color:var(--red)">EXPORT CONTROL</span>`:""}
+      </div>
+      <hr class="divider"/>
+      <div style="font-size:11px;color:var(--tx4);line-height:1.7">${h.notes}</div>
+    </div>
+  `).join("");
+}
+function filterHW(v){renderHW(v);}
+
+// ════════════════════════════════════════════════════════
+// REGULATORY PAGE
+// ════════════════════════════════════════════════════════
+
+function renderReg(ctry, risk){
+  let list=REG_DB;
+  if(ctry) list=list.filter(r=>r.country===ctry);
+  if(risk) list=list.filter(r=>r.risk===risk);
+  const el=document.getElementById("reg-list");
+  const colors={Critical:"var(--red)",High:"#f97316",Medium:"var(--yellow)",Low:"var(--green)"};
+  const bgs={Critical:"var(--redbg)",High:"var(--orangebg)",Medium:"var(--yellowbg)",Low:"var(--greenbg)"};
+  el.innerHTML=list.map(r=>`
+    <div style="background:var(--bg2);border:1px solid var(--bd);border-left:3px solid ${colors[r.risk]||"var(--bd)"};padding:16px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        <span class="risk-badge risk-${r.risk.toLowerCase()}">${r.risk}</span>
+        <span style="font-family:Barlow,sans-serif;font-weight:700;font-size:13px;color:#fff">${r.regulation}</span>
+        <span style="font-size:10px;color:var(--teal);margin-left:auto">${r.country}</span>
+      </div>
+      <div style="font-size:10px;color:var(--tx5);margin-bottom:8px">${r.equipType}</div>
+      <div style="font-size:11px;color:var(--tx3);margin-bottom:8px;line-height:1.6">${r.summary}</div>
+      <div style="font-size:11px;color:var(--tx2);line-height:1.7;padding:10px;background:var(--bg3)">${r.practical}</div>
+      <div style="margin-top:8px;font-size:11px;background:${bgs[r.risk]};color:${colors[r.risk]};padding:8px 10px;border-left:2px solid ${colors[r.risk]}">${r.flag}</div>
+    </div>
+  `).join("");
+}
+function filterReg(){
+  renderReg(document.getElementById("reg-ctry-filter").value, document.getElementById("reg-risk-filter").value);
+}
+
+// ════════════════════════════════════════════════════════
+// CASE LIBRARY
+// ════════════════════════════════════════════════════════
+
+function renderCases(search,ctry,type){
+  let list=CASE_DB;
+  if(ctry) list=list.filter(c=>c.country===ctry);
+  if(type) list=list.filter(c=>c.type===type);
+  if(search) list=list.filter(c=>{
+    const s=search.toLowerCase();
+    return c.title.toLowerCase().includes(s)||c.desc.toLowerCase().includes(s)||
+           c.problem.toLowerCase().includes(s)||c.lesson.toLowerCase().includes(s)||
+           c.product.toLowerCase().includes(s)||(c.tags||[]).some(t=>t.toLowerCase().includes(s));
+  });
+  const el=document.getElementById("case-list");
+  if(!list.length){el.innerHTML="<div class='flag flag-yellow'>No cases found.</div>";return;}
+  el.innerHTML=list.map(c=>`
+    <div class="case-card">
+      <div class="case-id">${c.id}</div>
+      <div class="case-title">${c.title}</div>
+      <div class="case-meta">${c.country} · ${c.type} · ${c.product}</div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px">
+        ${(c.tags||[]).map(t=>`<span class="tag">${t}</span>`).join("")}
+      </div>
+      <div class="case-section"><div class="case-section-label">Problem</div><div class="case-section-text">${c.problem}</div></div>
+      <div class="case-section" style="margin-top:6px"><div class="case-section-label">Solution</div><div class="case-section-text">${c.solution}</div></div>
+      <div class="case-section" style="margin-top:6px"><div class="case-section-label">Outcome</div><div class="case-section-text">${c.outcome}</div></div>
+      <div class="case-lesson">💡 <strong>Lesson:</strong> ${c.lesson}</div>
+    </div>
+  `).join("");
+}
+function filterCases(search){
+  renderCases(search,document.getElementById("case-ctry").value,document.getElementById("case-type").value);
+}
+
+// ════════════════════════════════════════════════════════
+// FREIGHT INTEL
+// ════════════════════════════════════════════════════════
+
+function renderFreightHistory(){
+  const el=document.getElementById("freight-history");
+  el.innerHTML=FREIGHT_RATES.map(r=>`
+    <div class="table-row" style="grid-template-columns:1fr 1fr 80px 100px 90px 90px">
+      <div style="font-size:11px;color:var(--tx2)">${r.route}</div>
+      <div style="font-size:11px;color:var(--tx3)">${r.mode}</div>
+      <div style="font-size:11px;color:var(--tx4)">${r.wt}</div>
+      <div style="font-size:11px;color:var(--teal)">${r.rate}</div>
+      <div style="font-size:11px;color:var(--tx5)">${r.period}</div>
+      <div style="font-size:10px;color:var(--tx5)">${r.notes}</div>
+    </div>
+  `).join("");
+}
+
+function estimateFreight(){
+  const origin=document.getElementById("fi-origin").value;
+  const dest=document.getElementById("fi-dest").value;
+  const mode=document.getElementById("fi-mode").value.toLowerCase().split(" ")[0];
+  const wt=parseFloat(document.getElementById("fi-wt").value)||0;
+  const el=document.getElementById("fi-result");
+
+  if(!wt){el.innerHTML="<div class='flag flag-yellow'>Please enter weight to estimate freight.</div>";return;}
+
+  const routes=FREIGHT_ESTIMATOR[origin];
+  if(!routes){el.innerHTML="<div class='flag flag-yellow'>Route data not available for this origin.</div>";return;}
+  const route=routes[dest];
+  if(!route){el.innerHTML="<div class='flag flag-yellow'>Route data not available for this combination. Use Historical Rate Reference below.</div>";return;}
+  const modeData=route[mode]||route.air;
+  const base=modeData.base, rate=modeData.rate;
+  const low=Math.max(base, wt*rate*0.85);
+  const high=Math.max(base, wt*rate*1.15);
+  const mid=Math.max(base, wt*rate);
+
+  el.innerHTML=`
+    <div style="background:var(--bg2);border:1px solid var(--bd);border-left:3px solid var(--teal);padding:16px;margin-bottom:14px">
+      <div style="font-family:Barlow,sans-serif;font-weight:700;font-size:10px;letter-spacing:3px;color:var(--teal);margin-bottom:12px">FREIGHT ESTIMATE — ${origin} → ${dest} (${mode.toUpperCase()})</div>
+      <div class="grid3">
+        <div><div style="font-size:9px;color:var(--tx5);letter-spacing:2px">LOW ESTIMATE</div><div style="font-family:Barlow,sans-serif;font-weight:700;font-size:18px;color:var(--green)">$${fmt(low)}</div></div>
+        <div><div style="font-size:9px;color:var(--tx5);letter-spacing:2px">TYPICAL</div><div style="font-family:Barlow,sans-serif;font-weight:700;font-size:18px;color:var(--teal)">$${fmt(mid)}</div></div>
+        <div><div style="font-size:9px;color:var(--tx5);letter-spacing:2px">HIGH ESTIMATE</div><div style="font-family:Barlow,sans-serif;font-weight:700;font-size:18px;color:var(--yellow)">$${fmt(high)}</div></div>
+      </div>
+      <div style="margin-top:10px;font-size:11px;color:var(--tx5)">Weight: ${wt} lbs · Rate basis: $${rate}/lb + $${base} min · Range ±15%</div>
+      <div style="margin-top:6px;font-size:11px;color:var(--tx4)">Use mid estimate ($${fmt(mid)}) for quotation. Update when actual airline quote received.</div>
+    </div>
+  `;
+}
+
+// ════════════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════════════
+function init(){
+  initTabs();
+  loadApiKey();
+  renderHW();
+  renderReg();
+  renderCases("","","");
+  renderFreightHistory();
+  initLog();
+
+  // Live input binding for quoter
+  ["q-product","q-fob","q-type","q-coo"].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.addEventListener("input",updateInlineChecks);
+  });
+}
+
+init();
+
+// ════════════════════════════════════════════════════════
+// AI EMAIL PARSER
+// ════════════════════════════════════════════════════════
+
+let aiExtracted = null;
+
+
+const AI_SYSTEM_PROMPT = `You are an expert logistics data extractor for DDP Global LLC, a Miami-based IOR/DDP logistics company specializing in IT hardware shipments worldwide.
+
+Extract shipment details from the client email and return ONLY a raw JSON object — no markdown, no explanation, no backticks.
+
+Fields to extract:
+- product: string (product name/model, e.g. "Cisco Catalyst 9300-48T")
+- equipmentType: one of: "Switch / Router", "Server", "GPU / AI Hardware", "Storage", "Cable / Accessory", "Refurbished Hardware", "Other"
+- quantity: number (default 1)
+- fobValue: number in USD total (if per-unit, multiply by qty)
+- weightLbs: number in lbs (convert kg × 2.205 if needed)
+- countryOfOrigin: string (infer from brand if not stated: Cisco/HPE/Dell = Taiwan or USA)
+- destination: one of: "brazil","mexico","argentina","colombia","chile","peru","ecuador","costarica","panama","domrep","guatemala","honduras","bolivia","paraguay","uruguay","dubai","qatar","saudiarabia","bahrain","israel","uk","spain","france","germany","netherlands","turkey","india","singapore","japan","australia","canada","usa"
+- hsCode: infer from type (switch/router=8517.62, server=8471.49, storage=8471.70, gpu=8473.30, cable=8544.42)
+- notes: any special instructions from the email (max 200 chars)
+- confidence: 0-100 (deduct for missing/ambiguous fields)
+- missingFields: array of field names that were guessed or missing
+
+Return ONLY the JSON object.`;
+
+async function parseEmail() {
+  const email = document.getElementById("ai-email-input").value.trim();
+  if (!email) {
+    document.getElementById("ai-error").style.display = "block";
+    document.getElementById("ai-error").innerHTML = "⚠ Pegá un email antes de analizar.";
+    return;
+  }
+
+  document.getElementById("ai-status").style.display = "block";
+  document.getElementById("ai-error").style.display = "none";
+  document.getElementById("ai-extracted").style.display = "none";
+  document.getElementById("ai-parse-btn").disabled = true;
+  document.getElementById("ai-status-text").textContent = "✦ Consultando IA online...";
+
+  let extracted = null;
+
+  // ── INTENTO 1: API de Anthropic (online) ──────────────
+  try {
+    const apiKey = localStorage.getItem("ddp_api_key") || "";
+    if (!apiKey) throw new Error("no-key");
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+        "anthropic-dangerous-direct-browser-calls": "true"
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 1000,
+        system: AI_SYSTEM_PROMPT,
+        messages: [{ role: "user", content: `Extract shipment details:\n\n${email}` }]
+      })
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      const text = data.content?.[0]?.text || "";
+      const clean = text.replace(/```json|```/g,"").trim();
+      extracted = JSON.parse(clean);
+      extracted._source = "ai-online";
+    }
+  } catch(e) {
+    if (e.message === "no-key") {
+      document.getElementById("ai-status-text").textContent = "⚡ Sin API key — procesando localmente...";
+    }
+    console.log("API unavailable, using local parser:", e.message);
+  }
+
+  // ── INTENTO 2: Parser local (offline fallback) ────────
+  if (!extracted) {
+    document.getElementById("ai-status-text").textContent = "⚡ Procesando localmente...";
+    await new Promise(r => setTimeout(r, 400));
+    extracted = extractFromEmail(email);
+    extracted._source = "local";
+  }
+
+  try {
+    aiExtracted = extracted;
+    showExtracted(extracted);
+  } catch(err) {
+    document.getElementById("ai-status").style.display = "none";
+    document.getElementById("ai-error").style.display = "block";
+    document.getElementById("ai-error").innerHTML = `⚠ <strong>Error:</strong> ${err.message}`;
+  } finally {
+    document.getElementById("ai-parse-btn").disabled = false;
+  }
+}
+
+// ── WEIGHT DATABASE — lbs per unit by product keyword ──────────
+const WEIGHT_DB = [
+  // Cables & accessories
+  {re:/rj.?45|patch\s*cord|ethernet\s*cable/i, lbs:0.2, label:'RJ45/patch cord'},
+  {re:/sfp.{0,10}(transceiver|optic|dac|cable)/i, lbs:0.15, label:'SFP transceiver/DAC'},
+  {re:/qsfp.{0,10}(transceiver|optic|dac|cable)/i, lbs:0.2, label:'QSFP transceiver/DAC'},
+  {re:/100g.{0,15}(dac|cable|lr4|sr4)/i, lbs:0.3, label:'100G DAC/optic'},
+  {re:/10g.{0,10}(sfp|dac|cable)/i, lbs:0.15, label:'10G SFP DAC'},
+  {re:/power\s*cord|c13|c14/i, lbs:0.5, label:'Power cord'},
+  {re:/stackwise|stacking\s*cable/i, lbs:0.3, label:'Stacking cable'},
+  // Switches
+  {re:/catalyst\s*9300.{0,5}48/i, lbs:15, label:'Cisco C9300-48'},
+  {re:/catalyst\s*9300.{0,5}24/i, lbs:10, label:'Cisco C9300-24'},
+  {re:/catalyst\s*9200/i, lbs:8, label:'Cisco C9200'},
+  {re:/catalyst\s*9500/i, lbs:20, label:'Cisco C9500'},
+  {re:/nexus\s*93/i, lbs:35, label:'Cisco Nexus 93xx'},
+  {re:/nexus\s*95/i, lbs:55, label:'Cisco Nexus 95xx'},
+  {re:/arista\s*72[0-9]{2}/i, lbs:18, label:'Arista 72xx'},
+  {re:/arista\s*75[0-9]{2}/i, lbs:30, label:'Arista 75xx'},
+  {re:/arista\s*78[0-9]{2}/i, lbs:45, label:'Arista 78xx'},
+  {re:/asr\s*1001/i, lbs:20, label:'Cisco ASR1001'},
+  {re:/asr\s*1002/i, lbs:25, label:'Cisco ASR1002'},
+  // Servers
+  {re:/dl\s*380|proliant\s*dl380/i, lbs:35, label:'HPE DL380'},
+  {re:/dl\s*360|proliant\s*dl360/i, lbs:25, label:'HPE DL360'},
+  {re:/r\s*750|poweredge\s*r750/i, lbs:40, label:'Dell R750'},
+  {re:/r\s*640|poweredge\s*r640/i, lbs:30, label:'Dell R640'},
+  {re:/supermicro|6029p/i, lbs:35, label:'Supermicro 2U'},
+  // GPUs
+  {re:/a100.*pcie/i, lbs:3.5, label:'NVIDIA A100 PCIe'},
+  {re:/h100.*sxm/i, lbs:4, label:'NVIDIA H100 SXM'},
+  {re:/h100.*pcie/i, lbs:3.5, label:'NVIDIA H100 PCIe'},
+];
+
+// ── PRICE DATABASE — per unit market ranges ─────────────────────
+const PRICE_DB = [
+  // Cables & transceivers
+  {re:/rj.?45.{0,15}(5|7)\s*ft/i, lo:2, hi:8, label:'RJ45 Cat6 5-7ft', source:'Standard market'},
+  {re:/rj.?45/i, lo:2, hi:15, label:'RJ45 patch cord', source:'Standard market'},
+  {re:/100g.{0,10}lr4/i, lo:400, hi:1200, label:'100G LR4 transceiver', source:'router-switch.com'},
+  {re:/100g.{0,10}(sr4|dac)/i, lo:80, hi:300, label:'100G DAC/SR4', source:'router-switch.com'},
+  {re:/10g.{0,10}sfp.{0,10}dac/i, lo:20, hi:80, label:'10G SFP DAC', source:'router-switch.com'},
+  {re:/sfp.{0,10}(lr|sr|lx|sx)/i, lo:40, hi:300, label:'SFP optic', source:'router-switch.com'},
+  {re:/power\s*cord|c13.{0,5}c14/i, lo:5, hi:25, label:'Power cord C13-C14', source:'Standard market'},
+  {re:/qsfp.{0,10}40g/i, lo:60, hi:250, label:'QSFP 40G DAC', source:'router-switch.com'},
+  // Switches
+  {re:/catalyst\s*9300.{0,5}48p/i, lo:8000, hi:18000, label:'Cisco C9300-48P new', source:'Cisco/router-switch.com'},
+  {re:/catalyst\s*9300.{0,5}48t/i, lo:7000, hi:15000, label:'Cisco C9300-48T new', source:'Cisco/router-switch.com'},
+  {re:/catalyst\s*9300.{0,5}24/i, lo:4000, hi:10000, label:'Cisco C9300-24 new', source:'Cisco/router-switch.com'},
+  {re:/arista.{0,10}7050/i, lo:8000, hi:25000, label:'Arista 7050 series', source:'Arista/router-switch.com'},
+  {re:/arista.{0,10}7280/i, lo:15000, hi:40000, label:'Arista 7280 series', source:'Arista/router-switch.com'},
+  // Servers
+  {re:/dl\s*380|proliant\s*dl380/i, lo:8000, hi:35000, label:'HPE DL380', source:'HPE/eBay'},
+  {re:/r\s*750|poweredge\s*r750/i, lo:7000, hi:32000, label:'Dell R750', source:'Dell/eBay'},
+  // GPUs
+  {re:/a100/i, lo:10000, hi:15000, label:'NVIDIA A100', source:'NVIDIA/eBay'},
+  {re:/h100/i, lo:25000, hi:40000, label:'NVIDIA H100', source:'NVIDIA/eBay'},
+];
+
+function estimateWeightForLine(desc, qty) {
+  for (const w of WEIGHT_DB) {
+    if (w.re.test(desc)) return { lbs: w.lbs * qty, label: w.label, estimated: true };
+  }
+  return null;
+}
+
+function getPriceForLine(desc) {
+  for (const p of PRICE_DB) {
+    if (p.re.test(desc)) return p;
+  }
+  return null;
+}
+
+// ── HS CODE for a single line description ──────────────────────
+function getHSForLine(desc) {
+  const d = desc.toLowerCase();
+  if (/server|proliant|poweredge|supermicro|dl\d{2}|r\d{3}/.test(d)) return {code:'8471.49', label:'Server'};
+  if (/gpu|nvidia|a100|h100|a800/.test(d)) return {code:'8473.30', label:'GPU'};
+  if (/storage|netapp|aff\s*[a-z]/.test(d)) return {code:'8471.70', label:'Storage'};
+  if (/sfp|qsfp|dac|transceiver|optic|rj.?45|patch|cord|cable|c13|c14/.test(d)) return {code:'8544.42', label:'Cable/Accessory'};
+  if (/switch|router|catalyst|nexus|arista|meraki|fortigate|juniper/.test(d)) return {code:'8517.62', label:'Switch/Router'};
+  return {code:'8517.62', label:'Networking'};
+}
+
+// ── LOCAL SMART EXTRACTOR ─────────────────────────────
+function extractFromEmail(text) {
+  const t = text.toLowerCase();
+  const missing = [];
+
+  // ── DESTINATION ──
+  const destMap = {
+    'brazil|brasil|são paulo|sao paulo|rio de janeiro|brasilia|grú|gru': 'brazil',
+    'mexico|méxico|cdmx|monterrey|guadalajara|mex airport': 'mexico',
+    'argentina|buenos aires|córdoba|cordoba|rosario|eze airport': 'argentina',
+    'colombia|bogotá|bogota|medellín|medellin|bog airport': 'colombia',
+    'chile|santiago|scl airport': 'chile',
+    'peru|perú|lima|lim airport': 'peru',
+    'ecuador|quito|guayaquil|uio airport': 'ecuador',
+    'costa rica|san josé|san jose|sjo airport': 'costarica',
+    'panama|panamá|pty airport': 'panama',
+    'dominican|república dominicana|santo domingo|sdq': 'domrep',
+    'guatemala|gua airport': 'guatemala',
+    'honduras|tegucigalpa|tgu airport': 'honduras',
+    'bolivia|la paz|santa cruz|vvi airport': 'bolivia',
+    'paraguay|asunción|asuncion|asu airport': 'paraguay',
+    'uruguay|montevideo|mvd airport': 'uruguay',
+    'dubai|uae|united arab emirates|dxb': 'dubai',
+    'qatar|doha|doh airport': 'qatar',
+    'saudi|arabia saudita|riyadh|jeddah|dammam': 'saudiarabia',
+    'bahrain|manama|bah airport': 'bahrain',
+    'israel|tel aviv|tlv airport': 'israel',
+    'united kingdom|uk |london|manchester|birmingham|lhr': 'uk',
+    'spain|españa|madrid|barcelona|mad airport': 'spain',
+    'france|paris|cdg airport|lyon': 'france',
+    'germany|deutschland|frankfurt|munich|berlin|fra airport': 'germany',
+    'netherlands|holland|amsterdam|ams airport': 'netherlands',
+    'turkey|türkiye|istanbul|ist airport': 'turkey',
+    'india|mumbai|delhi|bangalore|bengaluru|bom airport': 'india',
+    'singapore|singapura|sin airport': 'singapore',
+    'japan|japón|tokyo|osaka|nrt airport': 'japan',
+    'australia|sydney|melbourne|syd airport': 'australia',
+    'canada|toronto|vancouver|montreal|yyz': 'canada',
+    'united states|usa |u\\.s\\.a|miami|new york|los angeles': 'usa',
+  };
+  let destination = null;
+  for (const [pattern, id] of Object.entries(destMap)) {
+    if (new RegExp(pattern).test(t)) { destination = id; break; }
+  }
+  if (!destination) { destination = 'brazil'; missing.push('destination'); }
+
+  // ── FOB VALUE ──
+  let fobValue = null;
+  const fobPatterns = [
+    /(?:total\s*value|valor\s*total|fob|declared\s*value|valor\s*declarado|total\s*amount)[^\d$]*[\$usd]*\s*([\d,\.]+)/i,
+    /(?:usd|u\$s|\$)\s*([\d,\.]+)/i,
+    /([\d,\.]+)\s*(?:usd|u\$s)/i,
+  ];
+  for (const p of fobPatterns) {
+    const m = text.match(p);
+    if (m) {
+      const raw = (m[1]||m[0]).replace(/[$,]/g,'');
+      const val = parseFloat(raw);
+      if (val > 10 && val < 10000000) { fobValue = val; break; }
+    }
+  }
+  if (!fobValue) missing.push('fobValue');
+
+  // ── PARSE LINE ITEMS — qty × description ──
+  const allQtyMatches = [...text.matchAll(/(\d+)\s*[x×]\s*([^\n\r]{3,80})/gi)];
+
+  let quantity = 1;
+  let itemLines = [];
+  let multiHS = false;
+  let weightEstimated = false;
+  let totalWeightLbs = 0;
+  let dvWarnings = [];       // per-item DV issues
+  let hsCodes = {};          // HS code → {code, label, items[], totalQty}
+
+  if (allQtyMatches.length > 0) {
+    quantity = allQtyMatches.reduce((s, m) => s + parseInt(m[1]), 0);
+
+    for (const m of allQtyMatches) {
+      const qty = parseInt(m[1]);
+      const desc = m[2].trim();
+
+      // Weight estimate per line
+      const wEst = estimateWeightForLine(desc, qty);
+      if (wEst) { totalWeightLbs += wEst.lbs; weightEstimated = true; }
+
+      // Price check per line
+      const priceRef = getPriceForLine(desc);
+
+      // HS Code per line
+      const hsLine = getHSForLine(desc);
+      if (!hsCodes[hsLine.code]) hsCodes[hsLine.code] = {code: hsLine.code, label: hsLine.label, items: [], totalQty: 0};
+      hsCodes[hsLine.code].items.push(desc);
+      hsCodes[hsLine.code].totalQty += qty;
+
+      // DV warning per item
+      let dvWarn = null;
+      if (priceRef && fobValue) {
+        // Estimate this item's share of total value (rough: proportional to qty)
+        const itemValueEst = (fobValue / quantity) * qty;
+        const expectedMin = priceRef.lo * qty;
+        if (itemValueEst < expectedMin * 0.6) {
+          dvWarn = {
+            item: `${qty}x ${desc.slice(0,50)}`,
+            declared: itemValueEst,
+            suggestedMin: priceRef.lo * qty,
+            suggestedMax: priceRef.hi * qty,
+            source: priceRef.source,
+            label: priceRef.label
+          };
+        }
+      }
+
+      itemLines.push({
+        raw: `${qty}x ${desc}`,
+        qty, desc,
+        hs: hsLine,
+        weightEst: wEst,
+        priceRef,
+        dvWarn
+      });
+      if (dvWarn) dvWarnings.push(dvWarn);
+    }
+
+    // Check if multiple HS codes
+    multiHS = Object.keys(hsCodes).length > 1;
+  }
+
+  // Weight: use stated, or estimated sum, or null
+  let weightLbs = null;
+  const wMatch = text.match(/(\d+[\.,]?\d*)\s*(?:lbs?|libras?)/i);
+  const wKgMatch = text.match(/(\d+[\.,]?\d*)\s*(?:kg|kilos?|kilogramos?)/i);
+  if (wMatch) { weightLbs = parseFloat(wMatch[1].replace(',','.')); weightEstimated = false; }
+  else if (wKgMatch) { weightLbs = Math.round(parseFloat(wKgMatch[1].replace(',','.')) * 2.205); weightEstimated = false; }
+  else if (totalWeightLbs > 0) { weightLbs = Math.round(totalWeightLbs * 10) / 10; /* use estimated */ }
+  else { missing.push('weightLbs'); }
+
+  // ── PRIMARY PRODUCT / TYPE / HS ──
+  let product = '';
+  if (itemLines.length > 0) {
+    // Use first meaningful item as primary product label
+    product = itemLines[0].raw;
+  } else {
+    const productPatterns = [
+      /(cisco\s+[\w\-\.]+(?:\s+[\w\-\.]+){0,3})/i,
+      /(arista\s+[\w\-\.]+(?:\s+[\w\-\.]+){0,2})/i,
+      /(hpe\s+[\w\-\.]+(?:\s+[\w\-\.]+){0,2})/i,
+      /(dell\s+[\w\-\.]+(?:\s+[\w\-\.]+){0,2})/i,
+      /(nvidia\s+[\w\-\.]+(?:\s+[\w\-\.]+){0,2})/i,
+    ];
+    for (const p of productPatterns) {
+      const m = text.match(p);
+      if (m) { product = m[1].trim(); break; }
+    }
+  }
+  if (!product) missing.push('product');
+
+  // Primary equipment type from first item or majority
+  let equipmentType = 'Cable / Accessory';
+  if (itemLines.length > 0) {
+    // Use majority HS code's type
+    const dominant = Object.values(hsCodes).sort((a,b) => b.totalQty - a.totalQty)[0];
+    if (dominant) equipmentType = dominant.label;
+  } else {
+    if (/server|proliant|poweredge|supermicro/i.test(text)) equipmentType = 'Server';
+    else if (/gpu|nvidia|a100|h100/i.test(text)) equipmentType = 'GPU / AI Hardware';
+    else if (/storage|netapp/i.test(text)) equipmentType = 'Storage';
+    else if (/cable|sfp|qsfp|dac|rj45|cord/i.test(text)) equipmentType = 'Cable / Accessory';
+    else if (/switch|router|arista|cisco/i.test(text)) equipmentType = 'Switch / Router';
+  }
+
+  // Primary HS code (most common or first)
+  const hsCodesList = Object.values(hsCodes);
+  let hsCode = hsCodesList.length > 0 ? hsCodesList[0].code : '8517.62';
+
+  // ── COO ──
+  let coo = 'USA';
+  if (/made\s*in\s*china|origin[:\s]*china/i.test(text)) coo = 'China';
+  else if (/made\s*in\s*taiwan|origin[:\s]*taiwan/i.test(text)) coo = 'Taiwan';
+  else if (/from\s*japan|origin[:\s]*japan/i.test(text)) coo = 'Japan';
+  else if (/from\s*europe|from\s*netherlands|from\s*germany/i.test(text)) coo = 'Europe';
+
+  // ── NOTES ──
+  const notesMatch = text.match(/(?:note|obs|comment|nota|aclaración|special|instruction|don.t have|no tengo)[:\s]+([^\n]{0,200})/i);
+  const notes = notesMatch ? notesMatch[1].trim() : '';
+
+  // ── CONFIDENCE ──
+  let confidence = 100;
+  confidence -= missing.includes('destination') ? 30 : 0;
+  confidence -= missing.includes('fobValue') ? 25 : 0;
+  confidence -= missing.includes('weightLbs') ? 10 : 0;  // less penalty if estimated
+  confidence -= missing.includes('product') ? 20 : 0;
+  if (weightEstimated) confidence -= 5;
+  confidence = Math.max(20, confidence);
+
+  return {
+    product, equipmentType, quantity, itemLines, fobValue, weightLbs, weightEstimated,
+    countryOfOrigin: coo, destination, hsCode, hsCodes: hsCodesList, multiHS,
+    dvWarnings, notes, confidence, missingFields: missing
+  };
+}
+
+function showExtracted(d) {
+  document.getElementById("ai-status").style.display = "none";
+  document.getElementById("ai-extracted").style.display = "block";
+
+  const confColor = d.confidence >= 85 ? "var(--green)" : d.confidence >= 65 ? "var(--yellow)" : "var(--red)";
+  const destLabel = {brazil:"🇧🇷 Brazil", mexico:"🇲🇽 Mexico", argentina:"🇦🇷 Argentina", colombia:"🇨🇴 Colombia", chile:"🇨🇱 Chile", peru:"🇵🇪 Peru", ecuador:"🇪🇨 Ecuador", costarica:"🇨🇷 Costa Rica", panama:"🇵🇦 Panama", domrep:"🇩🇴 Dom. Rep.", guatemala:"🇬🇹 Guatemala", honduras:"🇭🇳 Honduras", bolivia:"🇧🇴 Bolivia", paraguay:"🇵🇾 Paraguay", uruguay:"🇺🇾 Uruguay", usa:"🇺🇸 USA IOR"}[d.destination] || d.destination;
+
+  const fields = [
+    ["Product / Model", d.product || "—"],
+    ["Equipment Type", d.equipmentType || "—"],
+    ["Quantity", d.quantity || 1],
+    ["FOB Value (Total)", d.fobValue ? `$${fmt(d.fobValue)}` : "—"],
+    ["Weight", d.weightLbs ? `${d.weightLbs} lbs${d.weightEstimated?' ⚡ estimado':''}` : "— (no indicado)"],
+    ["Country of Origin", d.countryOfOrigin || "—"],
+    ["Destination", destLabel],
+    ["HS Code", d.hsCode || "8517.62"],
+  ];
+
+  document.getElementById("ai-fields-grid").innerHTML = fields.map(([l,v]) => `
+    <div style="background:var(--bg3);border:1px solid var(--bd);padding:10px 12px">
+      <div style="font-size:9px;color:var(--tx5);letter-spacing:2px;margin-bottom:4px">${l}</div>
+      <div style="font-size:13px;color:var(--tx);font-family:Barlow,sans-serif;font-weight:600">${v}</div>
+    </div>
+  `).join("") + `
+    <div style="grid-column:1/-1;background:var(--bg3);border:1px solid var(--bd);padding:10px 12px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:9px;color:var(--tx5);letter-spacing:2px;margin-bottom:4px">AI CONFIDENCE</div>
+          <div class="score-meter" style="margin:0">
+            <div class="score-bar-bg" style="width:200px"><div class="score-bar-fill" style="width:${d.confidence}%;background:${confColor}"></div></div>
+            <div class="score-label" style="color:${confColor}">${d.confidence}%</div>
+          </div>
+        </div>
+        ${d.missingFields?.length ? `<div style="font-size:10px;color:var(--yellow)">⚠ Inferido: ${d.missingFields.join(", ")}</div>` : `<div style="font-size:10px;color:var(--green)">✓ Todos los campos encontrados</div>`}
+      </div>
+      <div style="margin-top:6px;font-size:9px;color:var(--tx5)">
+        ${d._source==='ai-online' ? '✦ Procesado con IA online (Claude)' : '⚡ Procesado localmente (sin conexión)'}
+      </div>
+      </div>
+      ${d.notes ? `<div style="margin-top:8px;font-size:11px;color:var(--tx4)">📝 ${d.notes}</div>` : ""}
+    </div>
+  `;
+}
+
+function runFromAI() {
+  if (!aiExtracted) return;
+  const d = aiExtracted;
+
+  // Map destination to country ID
+  const destMap = { brazil:"brazil", mexico:"mexico", argentina:"argentina", colombia:"colombia", chile:"chile", peru:"peru", ecuador:"ecuador", "costa rica":"costarica", costarica:"costarica", panama:"panama", "dom. rep.":"domrep", "dominican":"domrep", domrep:"domrep", guatemala:"guatemala", honduras:"honduras", bolivia:"bolivia", paraguay:"paraguay", uruguay:"uruguay", usa:"usa" };
+  const ctry = destMap[d.destination] || "brazil";
+
+  // Pre-fill quoter form
+  currentCtry = ctry;
+  const fob = d.fobValue || 0;
+  const lbs = d.weightLbs || 5; // use 5 lbs minimum if no weight (triggers min freight anyway)
+
+  // Run quote directly
+  const r = calcQuote(ctry, fob, lbs, d.countryOfOrigin || "", 0);
+  if (!r) return;
+
+  const code = COUNTRIES.find(c => c.id === ctry).code;
+  const qn = nextQN(code);
+  const dest = COUNTRIES.find(c => c.id === ctry).lb;
+  const flags = getRegFlags(d.product, d.equipmentType, d.countryOfOrigin, ctry);
+  const dv = getDVCheck(d.product, fob, d.equipmentType);
+
+  const relCases = CASE_DB.filter(c =>
+    c.country.toLowerCase() === ctry ||
+    (d.product && c.product.toLowerCase().includes(d.product.split(" ")[0].toLowerCase()))
+  ).slice(0, 2);
+
+  const flagColors = { critical:"flag-red", high:"flag-red", medium:"flag-yellow", green:"flag-green", low:"flag-green" };
+
+  const html = `
+    <div style="margin-top:0">
+      <!-- AI Source Badge -->
+      <div style="background:var(--bg3);border:1px solid var(--bd);border-left:3px solid var(--teal);padding:10px 14px;margin-bottom:14px;font-size:11px;color:var(--teal)">
+        ✦ <strong>GENERATED FROM EMAIL</strong> — AI extracted ${d.confidence}% confidence · ${d.missingFields?.length ? `Inferred: ${d.missingFields.join(", ")}` : "All fields confirmed"} · <button onclick="resetAI()" style="background:none;border:none;color:var(--tx4);cursor:pointer;font-size:11px;text-decoration:underline">Edit & re-run</button>
+      </div>
+
+      <!-- QN Header -->
+      <div style="background:var(--bg2);border:1px solid var(--bd);padding:14px 18px;margin-bottom:2px;display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-family:Barlow,sans-serif;font-weight:800;font-size:15px;color:#fff">${qn}</div>
+          <div style="font-size:11px;color:var(--tx4);margin-top:3px">${d.product || "—"} × ${d.quantity || 1} ${d.itemLines&&d.itemLines.length>1?`<span style="color:var(--teal)">(${d.itemLines.length} tipos)</span>`:''} · HS ${d.hsCode || "8517.62"} · ${d.countryOfOrigin || "COO TBC"} → ${dest}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:8px;color:var(--tx5);letter-spacing:2px">TRANSIT</div>
+          <div style="color:var(--teal);font-weight:600;font-size:13px">${r.tr}</div>
+        </div>
+      </div>
+
+      <!-- Meta -->
+      <div class="meta-bar" style="grid-template-columns:repeat(4,1fr);margin-bottom:14px">
+        <div class="meta-item"><div class="ml">FOB VALUE</div><div class="mv">$${fmt(fob)}</div></div>
+        <div class="meta-item"><div class="ml">QTY</div><div class="mv">${d.quantity || 1} units</div></div>
+        <div class="meta-item"><div class="ml">WEIGHT${d.weightEstimated?' ⚡':''}</div><div class="mv">${lbs} lbs${d.weightEstimated?' <span style="font-size:9px;color:var(--yellow)">(est.)</span>':''}</div></div>
+        <div class="meta-item"><div class="ml">CIF</div><div class="mv">$${fmt(r.cif)}</div></div>
+      </div>
+
+      <!-- Regulatory Flags -->
+      ${flags.length ? `<div style="margin-bottom:14px">${flags.map(f => `<div class="flag ${flagColors[f.level] || "flag-blue"}">⚠ ${f.msg}</div>`).join("")}</div>` : ""}
+
+      <!-- DV Assessment — per item -->
+      ${d.dvWarnings && d.dvWarnings.length > 0 ? `
+      <div style="background:var(--redbg);border:1px solid var(--red);border-left:4px solid var(--red);padding:14px 16px;margin-bottom:14px">
+        <div style="font-family:Barlow,sans-serif;font-weight:800;font-size:11px;color:var(--red);letter-spacing:2px;margin-bottom:10px">⚠ ALERTA VALOR DECLARADO — ITEMS ESPECÍFICOS</div>
+        ${d.dvWarnings.map(w=>`
+          <div style="background:rgba(0,0,0,.3);padding:10px 12px;margin-bottom:8px;border-left:2px solid var(--red)">
+            <div style="font-size:11px;color:#fca5a5;font-weight:700">${w.item}</div>
+            <div style="font-size:11px;color:var(--tx3);margin-top:4px;line-height:1.7">
+              Valor declarado estimado para este item: <strong style="color:var(--red)">$${fmt(w.declared)}</strong><br/>
+              Rango de mercado: <strong style="color:var(--green)">$${fmt(w.suggestedMin)} – $${fmt(w.suggestedMax)}</strong> (${w.label})<br/>
+              Fuente referencia: <span style="color:var(--teal)">${w.source}</span>
+            </div>
+          </div>
+        `).join('')}
+        <div style="font-size:10px;color:#fca5a5;margin-top:6px">
+          ⚠ Confirmar valor real con el cliente antes de procesar. Un valor significativamente bajo puede generar Canal Cinza en Brazil o retención en aduana en otros países.
+        </div>
+      </div>` : dv ? `<div class="flag ${flagColors[dv.level] || "flag-blue"}" style="margin-bottom:14px">
+        📊 <strong>DECLARED VALUE:</strong> ${dv.msg}
+        ${dv.level==='critical'||dv.level==='high' ? `<div style="margin-top:8px;font-size:11px;border-top:1px solid rgba(255,255,255,.1);padding-top:8px">
+          <strong>Producto:</strong> ${d.product||'Ver items'} — <strong>Valor sugerido:</strong> $${fmt(dv.lo||0)} – $${fmt(dv.hi||0)}
+        </div>` : ''}
+      </div>` : ""}
+
+      <!-- Multi-HS Code breakdown -->
+      ${d.multiHS && d.hsCodes && d.hsCodes.length > 1 ? `
+      <div style="background:var(--bg3);border:1px solid var(--teal);border-left:4px solid var(--teal);padding:14px 16px;margin-bottom:14px">
+        <div style="font-family:Barlow,sans-serif;font-weight:800;font-size:10px;color:var(--teal);letter-spacing:2px;margin-bottom:10px">📦 MÚLTIPLES HS CODES DETECTADOS — DECLARAR POR SEPARADO</div>
+        <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">Este shipment contiene productos de distintas categorías aduaneras. Se recomienda declarar con HS codes separados para optimizar costos y evitar reclasificación.</div>
+        ${d.hsCodes.map(h=>`
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:rgba(0,0,0,.25);margin-bottom:4px;border-left:2px solid var(--teal)">
+            <div>
+              <span style="font-family:Barlow,sans-serif;font-weight:700;font-size:12px;color:var(--teal)">${h.code}</span>
+              <span style="font-size:10px;color:var(--tx4);margin-left:8px">${h.label}</span>
+            </div>
+            <div style="font-size:10px;color:var(--tx3)">${h.totalQty} unidades — ${h.items.slice(0,2).map(i=>i.slice(0,30)).join(', ')}${h.items.length>2?` +${h.items.length-2} más`:''}</div>
+          </div>
+        `).join('')}
+        <div style="font-size:10px;color:var(--tx5);margin-top:6px">El cálculo de D&T aplica el HS code del item de mayor valor. Para cotización precisa, separar en shipments o consultar broker.</div>
+      </div>` : ''}
+
+      <!-- Multi-item breakdown -->
+      ${d.itemLines && d.itemLines.length > 1 ? `
+      <div style="background:var(--bg3);border:1px solid var(--bd);border-left:3px solid var(--teal);padding:12px 16px;margin-bottom:14px">
+        <div style="font-size:9px;color:var(--teal);letter-spacing:2px;margin-bottom:8px;font-family:Barlow,sans-serif;font-weight:700">ITEMS DETECTADOS — ${d.quantity} UNIDADES TOTALES</div>
+        ${d.itemLines.map(item=>{
+          const il = typeof item === 'string' ? item : item.raw;
+          const hs = typeof item === 'object' ? item.hs : null;
+          const wt = typeof item === 'object' && item.weightEst ? `~${item.weightEst.lbs} lbs` : '';
+          return `<div style="font-size:11px;color:var(--tx3);padding:3px 0;border-bottom:1px solid var(--bd2);display:flex;justify-content:space-between">
+            <span>· ${il.slice ? il.slice(0,60) : il}</span>
+            <span style="font-size:10px;color:var(--tx5);flex-shrink:0;margin-left:8px">${hs?hs.code:''} ${wt}</span>
+          </div>`;
+        }).join('')}
+        ${d.weightEstimated ? `<div style="font-size:10px;color:var(--yellow);margin-top:6px">⚡ Peso estimado según base de datos interna (~${d.weightLbs} lbs). Confirmar peso real con cliente antes de reservar.</div>` : ''}
+      </div>` : d.weightEstimated ? `<div class="flag flag-yellow" style="margin-bottom:14px">⚡ <strong>PESO ESTIMADO:</strong> ~${d.weightLbs} lbs basado en base de datos interna de productos similares. Confirmar con cliente.</div>` : ''}
+
+      <!-- Service Lines -->
+      <div class="table-wrap">
+        <div class="table-head" style="grid-template-columns:1fr 160px 90px"><span>SERVICE</span><span>BASIS</span><span style="text-align:right">USD</span></div>
+        ${r.li.map(([l,b,v]) => `<div class="table-row" style="grid-template-columns:1fr 160px 90px"><div style="font-size:12px;color:var(--tx2)">${l}</div><div style="font-size:10px;color:var(--tx5)">${b}</div><div style="font-size:12px;text-align:right">$${fmt(v)}</div></div>`).join("")}
+      </div>
+
+      <!-- Tax Lines -->
+      ${r.tx.length ? `
+      <div class="table-wrap" style="margin-top:2px">
+        <div class="table-head" style="grid-template-columns:1fr 90px"><span>DUTIES & TAXES (PASS-THROUGH)</span><span style="text-align:right">USD</span></div>
+        ${r.tx.map(([l,v]) => `<div class="table-row" style="grid-template-columns:1fr 90px"><div style="font-size:12px;color:var(--tx3)">${l}</div><div style="font-size:12px;color:var(--tx3);text-align:right">$${fmt(v)}</div></div>`).join("")}
+      </div>` : ""}
+
+      <!-- Total -->
+      <div class="total-bar" style="margin-top:2px">
+        <div class="total-lbl">TOTAL DDP</div>
+        <div class="total-val">$${fmt(r.tot)}</div>
+      </div>
+
+      <!-- Related Cases -->
+      ${relCases.length ? `
+      <div class="card">
+        <div class="card-title">📚 RELATED CASES FROM LIBRARY</div>
+        ${relCases.map(c => `
+          <div style="border:1px solid var(--bd);border-left:3px solid var(--yellow);padding:12px;margin-bottom:8px">
+            <div style="font-family:Barlow,sans-serif;font-weight:700;font-size:12px;color:#fff">${c.id} — ${c.title}</div>
+            <div style="font-size:10px;color:var(--tx4);margin:3px 0 6px">${c.country} · ${c.type}</div>
+            <div class="case-lesson">💡 ${c.lesson}</div>
+          </div>
+        `).join("")}
+      </div>` : ""}
+
+      <!-- Notes from email -->
+      ${d.notes ? `<div class="flag flag-blue" style="margin-bottom:14px">📝 <strong>FROM EMAIL:</strong> ${d.notes}</div>` : ""}
+
+      <!-- Payment Notes -->
+      <div style="font-size:11px;color:var(--tx5);margin-bottom:16px;line-height:1.9">
+        • Duties &amp; Taxes paid in advance / balance due upon delivery<br/>
+        • Cargo must arrive at DDP Global Miami warehouse before clearance<br/>
+        • COO confirmation required prior to booking · Rate valid 7 days
+      </div>
+
+      <!-- Actions -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-primary" style="padding:12px 18px" onclick="downloadQuotePDF()">⬇ DESCARGAR PDF</button>
+        <button class="btn btn-ghost" style="flex:1;padding:12px;min-width:160px" onclick="copyAIQuote('${qn}','${dest}',${fob},${lbs},${r.cif},${r.tot},'${r.tr}','${(d.product||"").replace(/'/g,"\\'")}','${d.hsCode||"8517.62"}','${d.countryOfOrigin||"TBC"}')">COPY QUOTE TEXT</button>
+        <button class="btn btn-ghost" style="padding:12px 18px;background:var(--greenbg);border-color:var(--green);color:var(--green);font-weight:800" onclick="saveAIQuoteToLog('${qn}','${dest}','${(d.product||"—").replace(/'/g,"\\'")}',${fob},${r.tot},${r.cif},'${(d.client||"").replace(/'/g,"\\'")}')">📋 GUARDAR EN LOG</button>
+        <button class="btn btn-ghost" style="padding:12px 18px" onclick="resetAI()">NUEVO EMAIL</button>
+      </div>
+    </div>`;
+
+  document.getElementById("ai-input-section").style.display = "none";
+  document.getElementById("ai-quote-result").style.display = "block";
+  document.getElementById("ai-quote-result").innerHTML = html;
+  window.scrollTo(0, 0);
+}
+
+function saveAIQuoteToLog(qn, dest, product, fob, total, cif, client) {
+  addToLog({qn, client: client||'—', dest, product, fob, total, cif, status:'quote', notes:'Via AI Email', source:'ai-email'});
+  // Flash confirmation inline
+  const btn = event.target;
+  btn.textContent = '✓ GUARDADO!';
+  btn.style.background = 'var(--greenbg)';
+  btn.style.color = 'var(--green)';
+  setTimeout(()=>{ btn.textContent = '📋 GUARDAR EN LOG'; }, 2500);
+}
+
+function copyAIQuote(qn, dest, fob, lbs, cif, tot, tr, product, hs, coo) {
+  const txt = [
+    `QUOTE: ${qn}`, `Destination: ${dest}`,
+    `Product: ${product} | HS: ${hs} | COO: ${coo}`,
+    `FOB: $${fmt(fob)} | Weight: ${lbs} lbs | CIF: $${fmt(cif)}`,
+    `TOTAL DDP: $${fmt(tot)}`, `Transit: ${tr}`, ``,
+    `Duties & Taxes paid in advance / balance due upon delivery`,
+    `Rate valid 7 days · COO confirmation required`
+  ].join("\n");
+  navigator.clipboard.writeText(txt).then(() => {
+    event.target.textContent = "✓ COPIED!";
+    setTimeout(() => { event.target.textContent = "COPY QUOTE TEXT"; }, 2000);
+  });
+}
+
+function saveApiKey(val) {
+  if (val && val.startsWith('sk-ant-')) {
+    localStorage.setItem('ddp_api_key', val);
+    document.getElementById('api-key-status').textContent = '✓ KEY GUARDADA';
+    document.getElementById('api-key-status').style.color = 'var(--green)';
+  } else if (val.length > 5) {
+    document.getElementById('api-key-status').textContent = '⚠ Formato inválido';
+    document.getElementById('api-key-status').style.color = 'var(--yellow)';
+  } else {
+    document.getElementById('api-key-status').textContent = '—';
+    document.getElementById('api-key-status').style.color = 'var(--tx5)';
+  }
+}
+
+function loadApiKey() {
+  const k = localStorage.getItem('ddp_api_key') || '';
+  const inp = document.getElementById('ai-api-key');
+  const st = document.getElementById('api-key-status');
+  if (!inp) return;
+  if (k) {
+    inp.value = k;
+    st.textContent = '✓ KEY CARGADA';
+    st.style.color = 'var(--green)';
+  }
+}
+
+function resetAI() {
+  aiExtracted = null;
+  document.getElementById("ai-input-section").style.display = "block";
+  document.getElementById("ai-extracted").style.display = "none";
+  document.getElementById("ai-quote-result").style.display = "none";
+  document.getElementById("ai-status").style.display = "none";
+  document.getElementById("ai-error").style.display = "none";
+  document.getElementById("ai-email-input").value = "";
+}// ════════════════════════════════════════════════════════
+// SHIPMENT LOG — localStorage persistence
+// ════════════════════════════════════════════════════════
+
+function getLog(){try{return JSON.parse(localStorage.getItem('ddp_log')||'[]');}catch(e){return[];}}
+function saveLog(arr){localStorage.setItem('ddp_log',JSON.stringify(arr));}
+
+function addToLog(entry){
+  const arr=getLog();
+  entry.id=Date.now();
+  entry.date=new Date().toISOString().slice(0,10);
+  arr.unshift(entry);
+  saveLog(arr);
+  renderLog();
+  renderLogStats();
+}
+
+function saveManualLog(){
+  const qn=document.getElementById('lf-qn').value.trim();
+  const client=document.getElementById('lf-client').value.trim();
+  if(!qn){alert('Ingresá el número de cotización.');return;}
+  addToLog({
+    qn,client,
+    dest:document.getElementById('lf-dest').value,
+    product:document.getElementById('lf-product').value,
+    fob:parseFloat(document.getElementById('lf-fob').value)||0,
+    total:parseFloat(document.getElementById('lf-total').value)||0,
+    status:document.getElementById('lf-status').value,
+    notes:document.getElementById('lf-notes').value,
+    source:'manual'
+  });
+  // Clear form
+  ['lf-qn','lf-client','lf-dest','lf-product','lf-fob','lf-total','lf-notes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('lf-status').value='quote';
+  document.getElementById('log-form-body').style.display='none';
+}
+
+function saveQuoteToLog(qn,dest,product,fob,total,cif){
+  const client=prompt('Nombre del cliente (opcional):','');
+  addToLog({qn,client:client||'—',dest,product,fob,total,cif,status:'quote',notes:'',source:'quoter'});
+  showPage('log');
+}
+
+function updateLogStatus(id,newStatus){
+  const arr=getLog();
+  const item=arr.find(x=>x.id===id);
+  if(item){item.status=newStatus;saveLog(arr);renderLog();renderLogStats();}
+}
+
+function deleteLogEntry(id){
+  if(!confirm('¿Eliminar esta cotización del log?'))return;
+  const arr=getLog().filter(x=>x.id!==id);
+  saveLog(arr);renderLog();renderLogStats();
+}
+
+function clearLog(){
+  if(!confirm('¿Eliminar TODO el historial? Esta acción no se puede deshacer.'))return;
+  localStorage.removeItem('ddp_log');renderLog();renderLogStats();
+}
+
+function toggleLogForm(){
+  const body=document.getElementById('log-form-body');
+  const arrow=document.getElementById('log-form-arrow');
+  const open=body.style.display==='none';
+  body.style.display=open?'block':'none';
+  arrow.textContent=open?'▲':'▼';
+}
+
+const STATUS_LABELS={quote:'📤 Enviada',won:'✅ Ganada',lost:'❌ Perdida',pending:'⏳ En proceso',delivered:'🚚 Entregada'};
+const STATUS_COLORS={quote:'var(--teal)',won:'var(--green)',lost:'var(--red)',pending:'var(--yellow)',delivered:'#22c55e'};
+
+function renderLogStats(){
+  const arr=getLog();
+  const total=arr.length;
+  const won=arr.filter(x=>x.status==='won'||x.status==='delivered').length;
+  const revenue=arr.filter(x=>x.status==='won'||x.status==='delivered').reduce((s,x)=>s+(x.total||0),0);
+  const pipeline=arr.filter(x=>x.status==='quote'||x.status==='pending').reduce((s,x)=>s+(x.total||0),0);
+  const el=document.getElementById('log-stats');
+  if(!el)return;
+  el.innerHTML=`
+    <div class="meta-item"><div class="ml">TOTAL COTIZACIONES</div><div class="mv">${total}</div></div>
+    <div class="meta-item"><div class="ml">GANADAS</div><div class="mv" style="color:var(--green)">${won}</div></div>
+    <div class="meta-item"><div class="ml">REVENUE (ganadas)</div><div class="mv" style="color:var(--green)">$${fmt(revenue)}</div></div>
+    <div class="meta-item"><div class="ml">PIPELINE ACTIVO</div><div class="mv" style="color:var(--teal)">$${fmt(pipeline)}</div></div>
+  `;
+}
+
+function renderLog(){
+  const search=(document.getElementById('log-search')?.value||'').toLowerCase();
+  const ctryFilter=(document.getElementById('log-filter-ctry')?.value||'').toLowerCase();
+  let arr=getLog();
+
+  // Populate country filter
+  const ctryEl=document.getElementById('log-filter-ctry');
+  if(ctryEl){
+    const dests=[...new Set(arr.map(x=>x.dest).filter(Boolean))].sort();
+    const cur=ctryEl.value;
+    ctryEl.innerHTML='<option value="">Todos los países</option>'+dests.map(d=>`<option${d===cur?' selected':''}>${d}</option>`).join('');
+  }
+
+  if(search) arr=arr.filter(x=>[x.qn,x.client,x.dest,x.product,x.notes].join(' ').toLowerCase().includes(search));
+  if(ctryFilter) arr=arr.filter(x=>(x.dest||'').toLowerCase()===ctryFilter);
+
+  const el=document.getElementById('log-list');
+  if(!arr.length){
+    el.innerHTML=`<div class="flag flag-blue" style="margin-top:8px">No hay cotizaciones en el log todavía. Generá una cotización en el Quoter y hacé click en "GUARDAR EN LOG", o agregá una manualmente arriba.</div>`;
+    return;
+  }
+
+  el.innerHTML=arr.map(e=>`
+    <div style="background:var(--bg2);border:1px solid var(--bd);border-left:3px solid ${STATUS_COLORS[e.status]||'var(--bd)'};padding:14px 16px;margin-bottom:8px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div>
+          <div style="font-family:Barlow,sans-serif;font-weight:800;font-size:14px;color:#fff">${e.qn}</div>
+          <div style="font-size:11px;color:var(--teal);margin-top:2px">${e.client||'—'} · ${e.dest||'—'} · ${e.date||'—'}</div>
+          <div style="font-size:11px;color:var(--tx3);margin-top:4px">${e.product||'—'}</div>
+          ${e.notes?`<div style="font-size:10px;color:var(--tx5);margin-top:4px">📝 ${e.notes}</div>`:''}
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:9px;color:var(--tx5);letter-spacing:2px">TOTAL DDP</div>
+          <div style="font-family:Barlow,sans-serif;font-weight:800;font-size:18px;color:var(--teal)">$${fmt(e.total||0)}</div>
+          <div style="font-size:10px;color:var(--tx5)">FOB $${fmt(e.fob||0)}</div>
+        </div>
+      </div>
+      <div style="margin-top:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-size:10px;font-weight:700;color:${STATUS_COLORS[e.status]}">${STATUS_LABELS[e.status]||e.status}</span>
+        <select onchange="updateLogStatus(${e.id},this.value)" style="background:var(--bg3);border:1px solid var(--bd);color:var(--tx3);padding:3px 8px;font-size:10px;font-family:'DM Mono',monospace">
+          ${Object.entries(STATUS_LABELS).map(([v,l])=>`<option value="${v}"${v===e.status?' selected':''}>${l}</option>`).join('')}
+        </select>
+        <button onclick="deleteLogEntry(${e.id})" style="background:none;border:1px solid var(--bd);color:var(--tx5);padding:3px 10px;font-size:10px;cursor:pointer">✕ ELIMINAR</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function initLog(){renderLogStats();renderLog();}
+
+
+// ════════════════════════════════════════════════════════
+// PDF DOWNLOAD
+// ════════════════════════════════════════════════════════
+function downloadQuotePDF() {
+  // Collect data from current quote result
+  const qnEl = document.querySelector('#quoter-result [style*="font-size:15px"], #ai-quote-result [style*="font-size:15px"]');
+  if (!qnEl) { alert("No hay cotización activa."); return; }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const W = 210, ML = 14, MR = 14, CW = W - ML - MR;
+  const NAVY = [10, 22, 40], CYAN = [0, 180, 216], WHITE = [255,255,255];
+  const LGRAY = [241,245,249], DGRAY = [100,116,139], MIDNAV = [15,36,64];
+
+  // ── Header ──
+  doc.setFillColor(...NAVY);
+  doc.rect(0, 0, W, 28, 'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(18); doc.setTextColor(...WHITE);
+  doc.text('DDP GLOBAL LLC', ML, 13);
+  doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...CYAN);
+  doc.text('Data Center & AI Infrastructure Logistics  |  U.S. Exporter & Importer of Record', ML, 19);
+  doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(...CYAN);
+  doc.text('QUOTATION', W - MR, 13, {align:'right'});
+
+  // Get quote ref from DOM
+  const qnText = qnEl.textContent.trim();
+  doc.setFontSize(10); doc.setTextColor(...WHITE);
+  doc.text(qnText, W - MR, 20, {align:'right'});
+
+  let y = 35;
+
+  function sectionBar(title) {
+    doc.setFillColor(...MIDNAV);
+    doc.rect(ML, y, CW, 7, 'F');
+    doc.setDrawColor(...CYAN); doc.setLineWidth(0.5);
+    doc.line(ML, y+7, ML+CW, y+7);
+    doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(...CYAN);
+    doc.text(title, ML+3, y+4.8);
+    y += 9;
+  }
+
+  function metaRow(pairs) {
+    const rowH = 8;
+    doc.setFillColor(...LGRAY);
+    doc.rect(ML, y, CW, rowH, 'F');
+    const colW = CW / pairs.length;
+    pairs.forEach(([lbl, val], i) => {
+      const x = ML + i * colW + 2;
+      doc.setFont('helvetica','bold'); doc.setFontSize(6.5); doc.setTextColor(...DGRAY);
+      doc.text(lbl, x, y+3);
+      doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...NAVY);
+      doc.text(String(val), x, y+6.5);
+    });
+    doc.setDrawColor(226,232,240); doc.setLineWidth(0.2);
+    doc.line(ML, y+rowH, ML+CW, y+rowH);
+    y += rowH;
+  }
+
+  function priceHeader() {
+    doc.setFillColor(...NAVY);
+    doc.rect(ML, y, CW, 7, 'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(...WHITE);
+    doc.text('SERVICE', ML+3, y+4.8);
+    doc.text('BASIS', ML+108, y+4.8, {align:'center'});
+    doc.text('USD', ML+CW-2, y+4.8, {align:'right'});
+    y += 7;
+  }
+
+  function priceRow(svc, basis, amt, shade) {
+    const rowH = 7;
+    if (shade) { doc.setFillColor(...LGRAY); doc.rect(ML, y, CW, rowH, 'F'); }
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...NAVY);
+    doc.text(svc, ML+3, y+4.8);
+    doc.setFontSize(7); doc.setTextColor(...DGRAY);
+    doc.text(basis, ML+108, y+4.8, {align:'center'});
+    doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(...NAVY);
+    doc.text('$'+amt, ML+CW-2, y+4.8, {align:'right'});
+    doc.setDrawColor(226,232,240); doc.setLineWidth(0.2);
+    doc.line(ML, y+rowH, ML+CW, y+rowH);
+    y += rowH;
+  }
+
+  function subtotalRow(lbl, amt) {
+    doc.setFillColor(219,234,254);
+    doc.rect(ML, y, CW, 7, 'F');
+    doc.setDrawColor(14,165,233); doc.setLineWidth(0.5);
+    doc.line(ML, y, ML+CW, y); doc.line(ML, y+7, ML+CW, y+7);
+    doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(...NAVY);
+    doc.text(lbl, ML+3, y+4.8);
+    doc.text('$'+amt, ML+CW-2, y+4.8, {align:'right'});
+    y += 9;
+  }
+
+  function dutyHeader(title) {
+    doc.setFillColor(...MIDNAV);
+    doc.rect(ML, y, CW, 7, 'F');
+    doc.setDrawColor(...CYAN); doc.setLineWidth(0.5);
+    doc.line(ML, y+7, ML+CW, y+7);
+    doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(...WHITE);
+    doc.text(title, ML+3, y+4.8);
+    doc.text('USD', ML+CW-2, y+4.8, {align:'right'});
+    y += 7;
+  }
+
+  function dutyRow(lbl, amt, shade) {
+    const rowH = 6;
+    if (shade) { doc.setFillColor(...LGRAY); doc.rect(ML, y, CW, rowH, 'F'); }
+    doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(...DGRAY);
+    doc.text(lbl, ML+3, y+4);
+    doc.text('$'+amt, ML+CW-2, y+4, {align:'right'});
+    doc.setDrawColor(226,232,240); doc.setLineWidth(0.2);
+    doc.line(ML, y+rowH, ML+CW, y+rowH);
+    y += rowH;
+  }
+
+  function totalBar(lbl, amt) {
+    doc.setFillColor(...CYAN);
+    doc.rect(ML, y, CW, 14, 'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(...NAVY);
+    doc.text(lbl, ML+4, y+9);
+    doc.setFontSize(18);
+    doc.text('USD '+amt, ML+CW-2, y+10, {align:'right'});
+    y += 17;
+  }
+
+  function footer(pageNum) {
+    doc.setFillColor(...NAVY);
+    doc.rect(0, 287-13, W, 13, 'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(...WHITE);
+    doc.text('DDP GLOBAL LLC', ML, 287-5);
+    doc.setFont('helvetica','normal'); doc.setTextColor(...CYAN);
+    doc.text('Data Center & AI Infrastructure Logistics  |  Miami, Florida, USA  |  U.S. Exporter & Importer of Record', ML, 287-2);
+    doc.setFont('helvetica','bold'); doc.setTextColor(...WHITE);
+    doc.text(qnText, W-MR, 287-5, {align:'right'});
+    doc.setFont('helvetica','normal'); doc.setTextColor(...CYAN);
+    doc.text('Page '+pageNum+' of 2', W-MR, 287-2, {align:'right'});
+  }
+
+  // ── Extract data from DOM ──
+  const rows = document.querySelectorAll('#quoter-result .table-row, #ai-quote-result .table-row');
+  const metaEl = document.querySelectorAll('#quoter-result .meta-item, #ai-quote-result .meta-item');
+
+  // Get values from meta bar
+  let fobVal='—', wtVal='—', cifVal='—', totVal='—', destVal='—', trVal='—';
+  try {
+    const mvEls = document.querySelectorAll('#quoter-result .mv, #ai-quote-result .mv');
+    if(mvEls[0]) fobVal = mvEls[0].textContent;
+    if(mvEls[1]) wtVal = mvEls[1].textContent;
+    if(mvEls[2]) cifVal = mvEls[2].textContent;
+    const totEl = document.querySelector('#quoter-result .total-val, #ai-quote-result .total-val');
+    if(totEl) totVal = totEl.textContent;
+    const destEl = document.querySelector('#quoter-result [style*="color:var(--tx4)"], #ai-quote-result [style*="color:var(--tx4)"]');
+    const trEl = document.querySelector('#quoter-result [style*="color:var(--teal)"][style*="font-size:13px"], #ai-quote-result [style*="color:var(--teal)"][style*="font-size:13px"]');
+    if(trEl) trVal = trEl.textContent;
+  } catch(e){}
+
+  // ── PAGE 1 ──
+  const today = new Date();
+  const validDate = new Date(today); validDate.setDate(validDate.getDate()+7);
+  const fmt2 = d => d.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+
+  sectionBar('QUOTE INFORMATION');
+  metaRow([['DATE', fmt2(today)], ['VALID UNTIL', fmt2(validDate)]]);
+  metaRow([['QUOTE REF', qnText], ['PAYMENT TERMS', 'D&T advance / balance on delivery']]);
+  metaRow([['PREPARED BY', 'Nick — DDP Global LLC'], ['', '']]);
+  y += 3;
+
+  // Pull service lines and duty lines from DOM
+  const tableRows = document.querySelectorAll('#quoter-result .table-row, #ai-quote-result .table-row');
+  let svcLines = [], dtLines = [], inDuty = false;
+  let subtotSvc = '—', subtotDT = '—';
+
+  tableRows.forEach(row => {
+    const cells = row.querySelectorAll('div');
+    if (cells.length >= 3) {
+      const lbl = cells[0].textContent.trim();
+      const basis = cells[1].textContent.trim();
+      const amt = cells[2].textContent.trim();
+      svcLines.push([lbl, basis, amt]);
+    } else if (cells.length === 2) {
+      const lbl = cells[0].textContent.trim();
+      const amt = cells[1].textContent.trim();
+      dtLines.push([lbl, amt]);
+    }
+  });
+
+  // Get subtotals from DOM (blue bars)
+  const subtotEls = document.querySelectorAll('#quoter-result [style*="DBEAFE"], #ai-quote-result [style*="DBEAFE"]');
+
+  sectionBar('PRICING');
+  priceHeader();
+  svcLines.forEach((r,i) => priceRow(r[0], r[1], r[2], i%2===1));
+
+  // Get total from DOM
+  const totalEl = document.querySelector('#quoter-result .total-val, #ai-quote-result .total-val');
+  const totalTxt = totalEl ? totalEl.textContent.replace('$','').trim() : '—';
+
+  // Duty section
+  if (dtLines.length > 0) {
+    y += 2;
+    dutyHeader('DUTIES & TAXES — (PASS-THROUGH, PAID IN ADVANCE)');
+    dtLines.forEach((r,i) => dutyRow(r[0], r[1], i%2===1));
+    y += 2;
+  }
+
+  totalBar('TOTAL DDP', totalTxt);
+
+  doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(...DGRAY);
+  doc.text('Duties & Taxes are pass-through costs paid in advance on behalf of the consignee and are non-negotiable.', ML, y+4);
+  y += 8;
+
+  footer(1);
+
+  // ── PAGE 2 ──
+  doc.addPage();
+  y = 35;
+
+  // Redo header on page 2
+  doc.setFillColor(...NAVY);
+  doc.rect(0, 0, W, 28, 'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(18); doc.setTextColor(...WHITE);
+  doc.text('DDP GLOBAL LLC', ML, 13);
+  doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...CYAN);
+  doc.text('Data Center & AI Infrastructure Logistics  |  U.S. Exporter & Importer of Record', ML, 19);
+  doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(...CYAN);
+  doc.text('QUOTATION', W - MR, 13, {align:'right'});
+  doc.setFontSize(10); doc.setTextColor(...WHITE);
+  doc.text(qnText, W - MR, 20, {align:'right'});
+
+  // Extract flags from DOM
+  const flagEls = document.querySelectorAll('#quoter-result .flag, #ai-quote-result .flag');
+  sectionBar('IMPORTANT NOTICES');
+
+  let flagsDrawn = 0;
+  flagEls.forEach(el => {
+    const txt = el.innerText.trim();
+    if (!txt || txt.length < 10) return;
+    const isRed = el.className.includes('red') || el.style.borderLeftColor?.includes('ef4444') || el.innerHTML.includes('ef4444');
+    const isGreen = el.className.includes('green') || el.innerHTML.includes('22c55e');
+    const bColor = isGreen ? [34,197,94] : isRed ? [220,38,38] : [234,88,12];
+    const bgColor = isGreen ? [240,253,244] : isRed ? [254,242,242] : [255,247,237];
+
+    // Title line (bold) + body
+    const lines = doc.splitTextToSize(txt, CW-10);
+    const blockH = Math.max(16, lines.length * 4 + 8);
+
+    if (y + blockH > 275) { doc.addPage(); y = 10; }
+
+    doc.setFillColor(...bgColor);
+    doc.rect(ML, y, CW, blockH, 'F');
+    doc.setFillColor(...bColor);
+    doc.rect(ML, y, 2.5, blockH, 'F');
+    doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(30,41,59);
+    lines.forEach((line, li) => {
+      doc.text(line, ML+5, y + 5 + li*4);
+    });
+    y += blockH + 2;
+    flagsDrawn++;
+  });
+
+  if (flagsDrawn === 0) {
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...DGRAY);
+    doc.text('No specific compliance flags for this shipment.', ML+3, y+5);
+    y += 12;
+  }
+
+  y += 3;
+  sectionBar('NOTES & CONDITIONS');
+
+  const notes = [
+    ['1.', 'SCOPE: This quote covers DDP service from DDP Global Miami warehouse to the final delivery address, including air freight, destination customs clearance, full IOR services, and all duties & taxes.'],
+    ['2.', 'DUTIES & TAXES: Import taxes are calculated on the CIF value and are pass-through costs paid in advance on behalf of the consignee. Non-negotiable.'],
+    ['3.', 'PAYMENT: Duties & Taxes must be paid in advance before clearance begins. Service fees due upon delivery.'],
+    ['4.', 'WEIGHT: Freight cost is based on estimated weight. Final charges adjusted based on actual gross or volumetric weight, whichever is greater.'],
+    ['5.', 'INSURANCE: Not included. Available on request.'],
+    ['6.', 'VALIDITY: This quotation is valid for 7 days from the date of issue. Rates subject to change after this date.'],
+    ['7.', 'ACCEPTANCE: To proceed, reply referencing the quote number above confirming COO, delivery address, and commercial invoice value.'],
+  ];
+
+  notes.forEach(([num, text]) => {
+    if (y > 265) return;
+    doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(...CYAN);
+    doc.text(num, ML+1, y+4);
+    doc.setFont('helvetica','normal'); doc.setTextColor(30,41,59);
+    const lines = doc.splitTextToSize(text, CW-10);
+    lines.forEach((line,li) => doc.text(line, ML+7, y+4+li*4));
+    y += Math.max(7, lines.length*4+2);
+  });
+
+  y += 4;
+  if (y < 265) {
+    doc.setFillColor(...LGRAY);
+    doc.rect(ML, y, CW, 10, 'F');
+    doc.setFillColor(...CYAN);
+    doc.rect(ML, y, 2.5, 10, 'F');
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...NAVY);
+    doc.text('To accept this quotation, reply referencing '+qnText+' with COO confirmation and delivery address.', ML+5, y+6.5);
+  }
+
+  footer(2);
+
+  doc.save(qnText + '.pdf');
+}
+
+</script>
