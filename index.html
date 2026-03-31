@@ -2908,37 +2908,46 @@ Respond in the same language the user writes in (Spanish or English). Be concise
       try {
         const update = JSON.parse(updateMatch[1]);
 
-        // Apply to activeQuoteData
+        // Apply to activeQuoteData — always preserve taxes if not in update
         if (update.lines) activeQuoteData.lines = update.lines;
-        if (update.taxes) activeQuoteData.taxes = update.taxes;
+        if (update.taxes && update.taxes.length > 0) activeQuoteData.taxes = update.taxes;
+        // Always use current taxes (never erase them)
+        const taxes = activeQuoteData.taxes || [];
         if (update.tot !== undefined) activeQuoteData.tot = update.tot;
 
         // Update total in UI
         document.querySelectorAll('.total-val').forEach(el2 => {
-          el2.textContent = '$' + Number(update.tot).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+          el2.textContent = '$' + Number(activeQuoteData.tot).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
         });
 
-        // Update service rows in UI
-        const tableWraps = document.querySelectorAll('#quoter-result .table-wrap, #ai-quote-result .table-wrap');
-        if (tableWraps[0] && update.lines) {
-          const hdr = tableWraps[0].querySelector('.table-head');
-          let html = hdr ? hdr.outerHTML : '';
+        // Update service rows in UI — find table-wrap that has service lines (3 columns)
+        const allTableWraps = Array.from(document.querySelectorAll('#quoter-result .table-wrap, #ai-quote-result .table-wrap'));
+        const svcWrap = allTableWraps.find(t => t.querySelector('.table-head') && t.querySelector('.table-head').style.gridTemplateColumns && t.querySelector('.table-head').style.gridTemplateColumns.includes('160px'))
+                     || allTableWraps[0];
+        const taxWrap = allTableWraps.find(t => t !== svcWrap && t.querySelector('.table-head'))
+                     || allTableWraps[1];
+
+        if (svcWrap && update.lines) {
+          const hdr = svcWrap.querySelector('.table-head');
+          let html = hdr ? hdr.outerHTML : '<div class="table-head" style="grid-template-columns:1fr 160px 90px"><span>SERVICE</span><span>BASIS</span><span style="text-align:right">USD</span></div>';
           update.lines.forEach(([l,b,v],i) => {
             const bg = i%2===1 ? 'background:rgba(255,255,255,.015)' : '';
             const vFmt = Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
             html += `<div class="table-row" style="grid-template-columns:1fr 160px 90px;${bg}"><div style="font-size:12px;color:var(--tx2)">${l}</div><div style="font-size:10px;color:var(--tx5)">${b}</div><div style="font-size:12px;text-align:right">$${vFmt}</div></div>`;
           });
-          tableWraps[0].innerHTML = html;
+          svcWrap.innerHTML = html;
         }
-        if (tableWraps[1] && update.taxes) {
-          const hdr2 = tableWraps[1].querySelector('.table-head');
-          let html2 = hdr2 ? hdr2.outerHTML : '';
-          update.taxes.forEach(([l,v],i) => {
+
+        // Always re-render taxes using preserved values
+        if (taxWrap && taxes.length > 0) {
+          const hdr2 = taxWrap.querySelector('.table-head');
+          let html2 = hdr2 ? hdr2.outerHTML : '<div class="table-head" style="grid-template-columns:1fr 90px"><span>DUTIES & TAXES (PASS-THROUGH)</span><span style="text-align:right">USD</span></div>';
+          taxes.forEach(([l,v],i) => {
             const bg = i%2===1 ? 'background:rgba(255,255,255,.015)' : '';
             const vFmt = Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
             html2 += `<div class="table-row" style="grid-template-columns:1fr 90px;${bg}"><div style="font-size:12px;color:var(--tx3)">${l}</div><div style="font-size:12px;color:var(--tx3);text-align:right">$${vFmt}</div></div>`;
           });
-          tableWraps[1].innerHTML = html2;
+          taxWrap.innerHTML = html2;
         }
 
         // Clean the QUOTE_UPDATE from display
@@ -2962,11 +2971,15 @@ Respond in the same language the user writes in (Spanish or English). Be concise
 function openAIChat() {
   const panel = document.getElementById('ai-chat-panel');
   if (!panel) return;
-  // Build context
   let ctx = '';
   if (activeQuoteData) {
-    ctx = 'Quote: '+activeQuoteData.qn+'\nProduct: '+activeQuoteData.product+'\nFOB: $'+activeQuoteData.fob+'\nWeight: '+activeQuoteData.lbs+' lbs\nCOO: '+(activeQuoteData.coo||'TBC')+'\nDestination: '+activeQuoteData.dest+'\nTotal DDP: $'+activeQuoteData.tot+'\n';
-    (activeQuoteData.lines||[]).forEach(([l,b,v])=>{ ctx+=l+': $'+v+'\n'; });
+    const fmt = n => Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+    ctx = 'Quote: '+activeQuoteData.qn+'\nProduct: '+activeQuoteData.product+'\nFOB: $'+fmt(activeQuoteData.fob)+'\nWeight: '+activeQuoteData.lbs+' lbs\nCOO: '+(activeQuoteData.coo||'TBC')+'\nDestination: '+activeQuoteData.dest+'\nCIF: $'+fmt(activeQuoteData.cif)+'\n';
+    ctx += '\nSERVICE LINES:\n';
+    (activeQuoteData.lines||[]).forEach(([l,b,v])=>{ ctx+=`  ${l} (${b}): $${fmt(v)}\n`; });
+    ctx += '\nTAXES & DUTIES (pass-through, never discount):\n';
+    (activeQuoteData.taxes||[]).forEach(([l,v])=>{ ctx+=`  ${l}: $${fmt(v)}\n`; });
+    ctx += `\nTOTAL DDP: $${fmt(activeQuoteData.tot)}\n`;
   }
   chatQuoteContext = ctx;
   chatHistory = [];
@@ -2981,8 +2994,13 @@ function openQuoterChat() {
   if (!panel) return;
   let ctx = '';
   if (activeQuoteData) {
-    ctx = 'Quote: '+activeQuoteData.qn+'\nProduct: '+activeQuoteData.product+'\nFOB: $'+activeQuoteData.fob+'\nWeight: '+activeQuoteData.lbs+' lbs\nCOO: '+(activeQuoteData.coo||'TBC')+'\nDestination: '+activeQuoteData.dest+'\nTotal DDP: $'+activeQuoteData.tot+'\n';
-    (activeQuoteData.lines||[]).forEach(([l,b,v])=>{ ctx+=l+': $'+v+'\n'; });
+    const fmt = n => Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+    ctx = 'Quote: '+activeQuoteData.qn+'\nProduct: '+activeQuoteData.product+'\nFOB: $'+fmt(activeQuoteData.fob)+'\nWeight: '+activeQuoteData.lbs+' lbs\nCOO: '+(activeQuoteData.coo||'TBC')+'\nDestination: '+activeQuoteData.dest+'\nCIF: $'+fmt(activeQuoteData.cif)+'\n';
+    ctx += '\nSERVICE LINES:\n';
+    (activeQuoteData.lines||[]).forEach(([l,b,v])=>{ ctx+=`  ${l} (${b}): $${fmt(v)}\n`; });
+    ctx += '\nTAXES & DUTIES (pass-through, never discount):\n';
+    (activeQuoteData.taxes||[]).forEach(([l,v])=>{ ctx+=`  ${l}: $${fmt(v)}\n`; });
+    ctx += `\nTOTAL DDP: $${fmt(activeQuoteData.tot)}\n`;
   }
   quoterChatContext = ctx;
   quoterChatHistory = [];
