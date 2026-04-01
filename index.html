@@ -2676,7 +2676,9 @@ function runFromAI() {
 }
 
 function saveAIQuoteToLog(qn, dest, product, fob, total, cif, client) {
-  addToLog({qn, client: client||'—', dest, product, fob, total, cif, status:'quote', notes:'Via AI Email', source:'ai-email'});
+  const aiEntry={qn, client: client||'—', dest, product, fob, total, cif, status:'quote', notes:'Via AI Email', source:'ai-email'};
+  if(activeQuoteData) aiEntry.quoteSnapshot=JSON.stringify(activeQuoteData);
+  addToLog(aiEntry);
   // Flash confirmation inline
   const btn = event.target;
   btn.textContent = '✓ GUARDADO!';
@@ -2908,46 +2910,37 @@ Respond in the same language the user writes in (Spanish or English). Be concise
       try {
         const update = JSON.parse(updateMatch[1]);
 
-        // Apply to activeQuoteData — always preserve taxes if not in update
+        // Apply to activeQuoteData
         if (update.lines) activeQuoteData.lines = update.lines;
-        if (update.taxes && update.taxes.length > 0) activeQuoteData.taxes = update.taxes;
-        // Always use current taxes (never erase them)
-        const taxes = activeQuoteData.taxes || [];
+        if (update.taxes) activeQuoteData.taxes = update.taxes;
         if (update.tot !== undefined) activeQuoteData.tot = update.tot;
 
         // Update total in UI
         document.querySelectorAll('.total-val').forEach(el2 => {
-          el2.textContent = '$' + Number(activeQuoteData.tot).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+          el2.textContent = '$' + Number(update.tot).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
         });
 
-        // Update service rows in UI — find table-wrap that has service lines (3 columns)
-        const allTableWraps = Array.from(document.querySelectorAll('#quoter-result .table-wrap, #ai-quote-result .table-wrap'));
-        const svcWrap = allTableWraps.find(t => t.querySelector('.table-head') && t.querySelector('.table-head').style.gridTemplateColumns && t.querySelector('.table-head').style.gridTemplateColumns.includes('160px'))
-                     || allTableWraps[0];
-        const taxWrap = allTableWraps.find(t => t !== svcWrap && t.querySelector('.table-head'))
-                     || allTableWraps[1];
-
-        if (svcWrap && update.lines) {
-          const hdr = svcWrap.querySelector('.table-head');
-          let html = hdr ? hdr.outerHTML : '<div class="table-head" style="grid-template-columns:1fr 160px 90px"><span>SERVICE</span><span>BASIS</span><span style="text-align:right">USD</span></div>';
+        // Update service rows in UI
+        const tableWraps = document.querySelectorAll('#quoter-result .table-wrap, #ai-quote-result .table-wrap');
+        if (tableWraps[0] && update.lines) {
+          const hdr = tableWraps[0].querySelector('.table-head');
+          let html = hdr ? hdr.outerHTML : '';
           update.lines.forEach(([l,b,v],i) => {
             const bg = i%2===1 ? 'background:rgba(255,255,255,.015)' : '';
             const vFmt = Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
             html += `<div class="table-row" style="grid-template-columns:1fr 160px 90px;${bg}"><div style="font-size:12px;color:var(--tx2)">${l}</div><div style="font-size:10px;color:var(--tx5)">${b}</div><div style="font-size:12px;text-align:right">$${vFmt}</div></div>`;
           });
-          svcWrap.innerHTML = html;
+          tableWraps[0].innerHTML = html;
         }
-
-        // Always re-render taxes using preserved values
-        if (taxWrap && taxes.length > 0) {
-          const hdr2 = taxWrap.querySelector('.table-head');
-          let html2 = hdr2 ? hdr2.outerHTML : '<div class="table-head" style="grid-template-columns:1fr 90px"><span>DUTIES & TAXES (PASS-THROUGH)</span><span style="text-align:right">USD</span></div>';
-          taxes.forEach(([l,v],i) => {
+        if (tableWraps[1] && update.taxes) {
+          const hdr2 = tableWraps[1].querySelector('.table-head');
+          let html2 = hdr2 ? hdr2.outerHTML : '';
+          update.taxes.forEach(([l,v],i) => {
             const bg = i%2===1 ? 'background:rgba(255,255,255,.015)' : '';
             const vFmt = Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
             html2 += `<div class="table-row" style="grid-template-columns:1fr 90px;${bg}"><div style="font-size:12px;color:var(--tx3)">${l}</div><div style="font-size:12px;color:var(--tx3);text-align:right">$${vFmt}</div></div>`;
           });
-          taxWrap.innerHTML = html2;
+          tableWraps[1].innerHTML = html2;
         }
 
         // Clean the QUOTE_UPDATE from display
@@ -2971,15 +2964,11 @@ Respond in the same language the user writes in (Spanish or English). Be concise
 function openAIChat() {
   const panel = document.getElementById('ai-chat-panel');
   if (!panel) return;
+  // Build context
   let ctx = '';
   if (activeQuoteData) {
-    const fmt = n => Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
-    ctx = 'Quote: '+activeQuoteData.qn+'\nProduct: '+activeQuoteData.product+'\nFOB: $'+fmt(activeQuoteData.fob)+'\nWeight: '+activeQuoteData.lbs+' lbs\nCOO: '+(activeQuoteData.coo||'TBC')+'\nDestination: '+activeQuoteData.dest+'\nCIF: $'+fmt(activeQuoteData.cif)+'\n';
-    ctx += '\nSERVICE LINES:\n';
-    (activeQuoteData.lines||[]).forEach(([l,b,v])=>{ ctx+=`  ${l} (${b}): $${fmt(v)}\n`; });
-    ctx += '\nTAXES & DUTIES (pass-through, never discount):\n';
-    (activeQuoteData.taxes||[]).forEach(([l,v])=>{ ctx+=`  ${l}: $${fmt(v)}\n`; });
-    ctx += `\nTOTAL DDP: $${fmt(activeQuoteData.tot)}\n`;
+    ctx = 'Quote: '+activeQuoteData.qn+'\nProduct: '+activeQuoteData.product+'\nFOB: $'+activeQuoteData.fob+'\nWeight: '+activeQuoteData.lbs+' lbs\nCOO: '+(activeQuoteData.coo||'TBC')+'\nDestination: '+activeQuoteData.dest+'\nTotal DDP: $'+activeQuoteData.tot+'\n';
+    (activeQuoteData.lines||[]).forEach(([l,b,v])=>{ ctx+=l+': $'+v+'\n'; });
   }
   chatQuoteContext = ctx;
   chatHistory = [];
@@ -2994,13 +2983,8 @@ function openQuoterChat() {
   if (!panel) return;
   let ctx = '';
   if (activeQuoteData) {
-    const fmt = n => Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
-    ctx = 'Quote: '+activeQuoteData.qn+'\nProduct: '+activeQuoteData.product+'\nFOB: $'+fmt(activeQuoteData.fob)+'\nWeight: '+activeQuoteData.lbs+' lbs\nCOO: '+(activeQuoteData.coo||'TBC')+'\nDestination: '+activeQuoteData.dest+'\nCIF: $'+fmt(activeQuoteData.cif)+'\n';
-    ctx += '\nSERVICE LINES:\n';
-    (activeQuoteData.lines||[]).forEach(([l,b,v])=>{ ctx+=`  ${l} (${b}): $${fmt(v)}\n`; });
-    ctx += '\nTAXES & DUTIES (pass-through, never discount):\n';
-    (activeQuoteData.taxes||[]).forEach(([l,v])=>{ ctx+=`  ${l}: $${fmt(v)}\n`; });
-    ctx += `\nTOTAL DDP: $${fmt(activeQuoteData.tot)}\n`;
+    ctx = 'Quote: '+activeQuoteData.qn+'\nProduct: '+activeQuoteData.product+'\nFOB: $'+activeQuoteData.fob+'\nWeight: '+activeQuoteData.lbs+' lbs\nCOO: '+(activeQuoteData.coo||'TBC')+'\nDestination: '+activeQuoteData.dest+'\nTotal DDP: $'+activeQuoteData.tot+'\n';
+    (activeQuoteData.lines||[]).forEach(([l,b,v])=>{ ctx+=l+': $'+v+'\n'; });
   }
   quoterChatContext = ctx;
   quoterChatHistory = [];
@@ -3080,9 +3064,74 @@ function saveManualLog(){
   document.getElementById('log-form-body').style.display='none';
 }
 
+
+function openLogQuote(id){
+  const arr=getLog();
+  const entry=arr.find(x=>x.id===id);
+  if(!entry||!entry.quoteSnapshot){alert('Esta cotización no tiene datos completos guardados.');return;}
+  try{
+    const snap=JSON.parse(entry.quoteSnapshot);
+    // Restore activeQuoteData
+    activeQuoteData=snap;
+    // Build and show the quote result HTML
+    const dest=snap.dest||'—';
+    const flagColors={critical:'flag-red',high:'flag-red',medium:'flag-yellow',green:'flag-green',low:'flag-green'};
+    const html=`
+      <div style="margin-top:20px">
+        <div style="background:var(--bg3);border:1px solid var(--bd);border-left:3px solid var(--teal);padding:10px 14px;margin-bottom:14px;font-size:11px;color:var(--teal)">
+          📋 <strong>COTIZACIÓN DESDE LOG</strong> — ${entry.client||'—'} · Guardada ${entry.date||''}
+        </div>
+        <div style="background:var(--bg2);border:1px solid var(--bd);padding:14px 18px;margin-bottom:2px;display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-family:Barlow,sans-serif;font-weight:800;font-size:15px;color:#fff">${snap.qn}</div>
+            <div style="font-size:11px;color:var(--tx4);margin-top:3px">${snap.product||'—'} · HS ${snap.hs||'—'} · ${snap.coo||'—'} → ${dest}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:8px;color:var(--tx5);letter-spacing:2px">TRANSIT</div>
+            <div style="color:var(--teal);font-weight:600;font-size:13px">${snap.tr||'—'}</div>
+          </div>
+        </div>
+        <div class="meta-bar" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px">
+          <div class="meta-item"><div class="ml">FOB VALUE</div><div class="mv">$${fmt(snap.fob)}</div></div>
+          <div class="meta-item"><div class="ml">WEIGHT</div><div class="mv">${snap.lbs} lbs</div></div>
+          <div class="meta-item"><div class="ml">CIF</div><div class="mv">$${fmt(snap.cif)}</div></div>
+        </div>
+        <div class="table-wrap">
+          <div class="table-head" style="grid-template-columns:1fr 160px 90px"><span>SERVICE</span><span>BASIS</span><span style="text-align:right">USD</span></div>
+          ${(snap.lines||[]).map(([l,b,v],i)=>`<div class="table-row" style="grid-template-columns:1fr 160px 90px"><div style="font-size:12px;color:var(--tx2)">${l}</div><div style="font-size:10px;color:var(--tx5)">${b}</div><div style="font-size:12px;text-align:right">$${fmt(v)}</div></div>`).join('')}
+        </div>
+        ${(snap.taxes||[]).length?`
+        <div class="table-wrap" style="margin-top:2px">
+          <div class="table-head" style="grid-template-columns:1fr 90px"><span>DUTIES & TAXES (PASS-THROUGH)</span><span style="text-align:right">USD</span></div>
+          ${(snap.taxes||[]).map(([l,v])=>`<div class="table-row" style="grid-template-columns:1fr 90px"><div style="font-size:12px;color:var(--tx3)">${l}</div><div style="font-size:12px;color:var(--tx3);text-align:right">$${fmt(v)}</div></div>`).join('')}
+        </div>`:''}
+        <div class="total-bar" style="margin-top:2px">
+          <div class="total-lbl">TOTAL DDP</div>
+          <div class="total-val">$${fmt(snap.tot)}</div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:14px">
+          <button class="btn btn-primary" style="flex:1;padding:12px" onclick="downloadQuotePDF()">⬇ DESCARGAR PDF</button>
+          <button class="btn btn-ghost" style="padding:12px 18px" onclick="openAIChat()">💬 CHAT</button>
+          <button class="btn btn-ghost" style="padding:12px 18px" onclick="showPage('log')">← VOLVER AL LOG</button>
+        </div>
+      </div>`;
+    // Show in quoter result
+    showPage('quoter');
+    document.getElementById('quoter-form').style.display='none';
+    document.getElementById('quoter-result').style.display='block';
+    document.getElementById('quoter-result').innerHTML=html;
+    window.scrollTo(0,0);
+  }catch(err){alert('Error al abrir la cotización: '+err.message);}
+}
 function saveQuoteToLog(qn,dest,product,fob,total,cif){
   const client=prompt('Nombre del cliente (opcional):','');
-  addToLog({qn,client:client||'—',dest,product,fob,total,cif,status:'quote',notes:'',source:'quoter'});
+  const entry={qn,client:client||'—',dest,product,fob,total,cif,status:'quote',notes:'',source:'quoter'};
+  // Save full quote data so we can reopen it
+  if(activeQuoteData){
+    entry.quoteSnapshot=JSON.stringify(activeQuoteData);
+  }
+  addToLog(entry);
+  alert('✓ Cotización guardada en el LOG');
   showPage('log');
 }
 
@@ -3173,6 +3222,7 @@ function renderLog(){
           ${Object.entries(STATUS_LABELS).map(([v,l])=>`<option value="${v}"${v===e.status?' selected':''}>${l}</option>`).join('')}
         </select>
         <button onclick="deleteLogEntry(${e.id})" style="background:none;border:1px solid var(--bd);color:var(--tx5);padding:3px 10px;font-size:10px;cursor:pointer">✕ ELIMINAR</button>
+        ${e.quoteSnapshot?`<button onclick="openLogQuote(${e.id})" style="background:var(--teal);border:none;color:var(--bg);padding:3px 14px;font-size:10px;font-family:Barlow,sans-serif;font-weight:700;cursor:pointer">📄 ABRIR</button>`:''}
       </div>
     </div>
   `).join('');
