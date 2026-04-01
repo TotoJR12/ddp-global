@@ -2080,6 +2080,8 @@ let chatQuoteContext = '';
 let quoterChatHistory = [];
 let quoterChatContext = '';
 
+const STATUS_LABELS={quote:'📤 Enviada',won:'✅ Ganada',lost:'❌ Perdida',pending:'⏳ En proceso',delivered:'🚚 Entregada'};
+const STATUS_COLORS={quote:'var(--teal)',won:'var(--green)',lost:'var(--red)',pending:'var(--yellow)',delivered:'#22c55e'};
 function init(){
   initTabs();
   loadApiKey();
@@ -3160,8 +3162,7 @@ function toggleLogForm(){
   arrow.textContent=open?'▲':'▼';
 }
 
-const STATUS_LABELS={quote:'📤 Enviada',won:'✅ Ganada',lost:'❌ Perdida',pending:'⏳ En proceso',delivered:'🚚 Entregada'};
-const STATUS_COLORS={quote:'var(--teal)',won:'var(--green)',lost:'var(--red)',pending:'var(--yellow)',delivered:'#22c55e'};
+
 
 function renderLogStats(){
   const arr=getLog();
