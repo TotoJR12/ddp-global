@@ -2912,10 +2912,17 @@ Respond in the same language the user writes in (Spanish or English). Be concise
       try {
         const update = JSON.parse(updateMatch[1]);
 
-        // Apply to activeQuoteData
+        // Apply to activeQuoteData — NEVER overwrite taxes
         if (update.lines) activeQuoteData.lines = update.lines;
-        if (update.taxes) activeQuoteData.taxes = update.taxes;
+        if (update.taxes && update.taxes.length > 0) activeQuoteData.taxes = update.taxes;
+        // Always recalculate tot = services + existing taxes
+        const taxTotal = (activeQuoteData.taxes||[]).reduce((s,[,v])=>s+Number(v),0);
         if (update.tot !== undefined) activeQuoteData.tot = update.tot;
+        // If Claude forgot to include taxes in tot, add them
+        const svcTotal = (activeQuoteData.lines||[]).reduce((s,[,,v])=>s+Number(v),0);
+        if (Math.abs(activeQuoteData.tot - (svcTotal + taxTotal)) > 1) {
+          activeQuoteData.tot = svcTotal + taxTotal;
+        }
 
         // Update total in UI
         document.querySelectorAll('.total-val').forEach(el2 => {
@@ -2934,15 +2941,17 @@ Respond in the same language the user writes in (Spanish or English). Be concise
           });
           tableWraps[0].innerHTML = html;
         }
-        if (tableWraps[1] && update.taxes) {
+        if (tableWraps[1]) {
+          // Always render taxes from activeQuoteData (never lost)
+          const currentTaxes = activeQuoteData.taxes || [];
           const hdr2 = tableWraps[1].querySelector('.table-head');
           let html2 = hdr2 ? hdr2.outerHTML : '';
-          update.taxes.forEach(([l,v],i) => {
+          currentTaxes.forEach(([l,v],i) => {
             const bg = i%2===1 ? 'background:rgba(255,255,255,.015)' : '';
             const vFmt = Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
             html2 += `<div class="table-row" style="grid-template-columns:1fr 90px;${bg}"><div style="font-size:12px;color:var(--tx3)">${l}</div><div style="font-size:12px;color:var(--tx3);text-align:right">$${vFmt}</div></div>`;
           });
-          tableWraps[1].innerHTML = html2;
+          if (currentTaxes.length) tableWraps[1].innerHTML = html2;
         }
 
         // Clean the QUOTE_UPDATE from display
