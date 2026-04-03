@@ -162,7 +162,7 @@ a{color:var(--teal);text-decoration:none}
     <div class="logo-sub">LOGISTICS FOR GLOBAL INFRASTRUCTURE</div>
   </div>
   <nav class="nav">
-    <button class="nav-btn" onclick="showPage('ai')" id="nav-ai" style="color:var(--teal);border-bottom:2px solid var(--teal)">✦ AI EMAIL</button>
+    <button class="nav-btn" onclick="showPage('ai')" id="nav-ai" style="color:var(--teal);border-bottom:2px solid var(--teal)">✦ AI QUOTE</button>
     <button class="nav-btn active" onclick="showPage('quoter')">QUOTER</button>
     <button class="nav-btn" onclick="showPage('analyzer')">VALUE ANALYZER</button>
     <button class="nav-btn" onclick="showPage('hardware')">HARDWARE DB</button>
@@ -175,13 +175,13 @@ a{color:var(--teal);text-decoration:none}
 </div>
 
 <!-- ════════════════════════════════════════════════ -->
-<!-- PAGE: AI EMAIL PARSER                            -->
+<!-- PAGE: AI QUOTE                            -->
 <!-- ════════════════════════════════════════════════ -->
 <div class="page" id="page-ai">
   <div class="page-title" style="display:flex;align-items:center;gap:12px">
-    <span style="color:var(--teal)">✦</span> AI EMAIL → QUOTE
+    <span style="color:var(--teal)">✦</span> AI QUOTE
   </div>
-  <div class="page-sub">Paste a client email. The AI extracts all shipment details, pre-fills the quoter, and runs the full intelligence report automatically.</div>
+  <div class="page-sub">Pegá un email o describí el envío. La IA extrae todos los detalles y genera la cotización completa con análisis de inteligencia.</div>
 
   <div id="ai-input-section">
 
@@ -1465,10 +1465,70 @@ function calcQuote(ct, fob, lbs, coo, fo){
       tx:txLines,tt,tot:fc+fr+ins+ds+ior+tt,cif,tr:c.tr};
   }
   if(ct==="usa"){
-    const ir=isCN?.08:.03,fr=fo||mx(lbs*9.73,450);
-    const iorFee=mx(fob*ir,500),cif=fob+fr,bond=mx(cif*.0045,45),dut=isCN?cif*.45:0;
-    return{li:[["IOR Fee",`${(ir*100).toFixed(0)}% FOB / min $500`,iorFee],["Entry Fee","Flat",85],["FIOR Filing Fee","Flat",50],["Customs Bond","0.45% CIF / min $45",bond],["Int'l Freight (est.)","",fr]],
-      tx:dut?[["Duties 45% (China)",dut]]:[],tt:dut,tot:iorFee+85+50+bond+fr+dut,cif,tr:"Varies"};
+    // USA IOR — full cost breakdown
+    const isCN=/china/i.test(coo||"");
+    const isMX=/mexico/i.test(coo||"");
+    const isSanctioned=/russia|iran|north.?korea|cuba|syria/i.test(coo||"");
+    
+    // IOR fee: 8% if China origin (higher risk), 3% standard, min $500
+    const iorRate = isCN ? 0.08 : 0.03;
+    const iorFee = mx(fob*iorRate, 500);
+    
+    // Freight: use provided or estimate $9.73/lb from international
+    const freight = fo || mx(lbs*9.73, 450);
+    const cif = fob + freight;
+    
+    // CBP fees
+    const entryFee = 85;         // CBP Entry
+    const fiorFee = 50;          // FIOR Filing
+    const bond = mx(cif*0.0045, 45); // Customs Bond
+    const mpf = Math.min(Math.max(cif*0.003464, 27.23), 528.33); // MPF (Merchandise Processing Fee)
+    const hmf = cif*0.00125;     // HMF (Harbor Maintenance Fee) — only ocean, skip for air
+    
+    // Duties by COO
+    let duties = [];
+    let dutyTotal = 0;
+    if(isCN){
+      const s301 = cif*0.25; // Section 301
+      const ieepa = cif*0.20; // IEEPA Reciprocal
+      duties = [["Section 301 (China 25%)",s301],["IEEPA Reciprocal (20%)",ieepa]];
+      dutyTotal = s301+ieepa;
+    } else if(isMX){
+      duties = [["USMCA — Duty Free (Mexico COO)","$0.00"]];
+    }
+    // MPF always applies (unless USMCA and qualifies)
+    duties.push(["MPF (0.3464% / min $27.23)",mpf]);
+    
+    // Airport pickup + local delivery (optional but shown)
+    const airportPickup = mx(lbs*0.85, 150); // ~$0.85/lb, min $150
+    const localDelivery = mx(lbs*1.20, 200); // ~$1.20/lb, min $200
+    
+    const svcLines = [
+      ["IOR Fee", `${(iorRate*100).toFixed(0)}% FOB / min $500`, iorFee],
+      ["CBP Entry Fee", "Flat", entryFee],
+      ["FIOR Filing Fee", "Flat", fiorFee],
+      ["Customs Bond", "0.45% CIF / min $45", bond],
+      ["Int'l Freight (est.)", `$${(freight/Math.max(lbs,1)).toFixed(2)}/lb`, freight],
+      ["Airport Pickup & Handling", "$0.85/lb / min $260", mx(lbs*0.85, 260)],
+      ["Local Delivery (USA)", "$1.20/lb / min $350", mx(lbs*1.20, 350)],
+    ];
+    
+    const svcTotal = svcLines.reduce((s,[,,v])=>s+(typeof v==='number'?v:0),0);
+    const tot = svcTotal + dutyTotal + mpf;
+    
+    // Sanctions flag
+    if(isSanctioned){
+      duties.unshift(["⚠ OFAC SANCTIONED COUNTRY — DO NOT SHIP","—"]);
+    }
+    
+    return{
+      li: svcLines,
+      tx: duties,
+      tt: dutyTotal + mpf,
+      tot: svcTotal + dutyTotal + mpf,
+      cif, tr:"3–7 Days",
+      usaFlags: {isCN, isMX, isSanctioned, iorRate}
+    };
   }
 }
 
@@ -1494,8 +1554,21 @@ function getRegFlags(product, type, coo, ct){
   if(isGPU){
     flags.push({level:"critical",msg:"<strong>BIS EXPORT CONTROL</strong> — GPU shipment detected. Current BIS rules (post Oct 2023) restrict advanced GPU exports. Verify export license requirement before proceeding. H100/A800 especially restricted."});
   }
-  if(isCN&&ct==="usa"){
-    flags.push({level:"high",msg:"<strong>CHINA ORIGIN → USA: 45% DUTIES</strong> — Section 301 (25%) + IEEPA Reciprocal (20%). US brand/label does NOT change COO for CBP purposes. IOR fee = 8% FOB."});
+  if(ct==="usa"){
+    const isSanctCOO=/russia|iran|north.?korea|cuba|syria/i.test(coo||"");
+    const isMXcoo=/mexico/i.test(coo||"");
+    if(isSanctCOO){
+      flags.push({level:"critical",msg:"<strong>⚠ OFAC SANCTIONED COUNTRY</strong> — Shipments from "+coo+" to USA are PROHIBITED. Do not proceed without OFAC compliance review."});
+    } else if(isCN){
+      flags.push({level:"high",msg:"<strong>CHINA ORIGIN → USA: ~45% DUTIES</strong> — Section 301 (25%) + IEEPA Reciprocal (20%). US brand label does NOT change COO for CBP. IOR fee = 8% FOB."});
+    } else if(isMXcoo){
+      flags.push({level:"green",msg:"<strong>MEXICO COO → USMCA</strong> — Duty-free if product qualifies under USMCA. Verify origin certification. IOR fee standard 3% FOB."});
+    } else {
+      flags.push({level:"blue",msg:"<strong>USA IOR</strong> — Standard MFN duties apply. Verify HS code for specific rate. MPF always applies (0.3464% CIF)."});
+    }
+    if(isGPU){
+      flags.push({level:"critical",msg:"<strong>BIS EXPORT CONTROL</strong> — GPU shipment into USA: verify end-user, entity list screening required. H100/A100 may require import license for re-export."});
+    }
   }
   if(isCN&&ct!=="usa"){
     flags.push({level:"medium",msg:`<strong>CHINA ORIGIN</strong> — Verify HS code classification and export documentation. Some China-origin IT hardware has additional controls.`});
@@ -1670,6 +1743,16 @@ function updateInlineChecks(){
         <div style="font-size:9px;color:var(--tx5);margin-top:4px">Customs acceptance score — ${dv.score}% = ${dv.score>80?"LOW RISK":dv.score>60?"MEDIUM RISK":"HIGH RISK"}</div>`;
     } else {
       dvEl.innerHTML=`<div style="font-size:11px;color:var(--tx5)">Product not in database.<br/>Manual review required.</div>`;
+    }
+    // KB historical insight
+    if(kbInsight && kbInsight.count > 0){
+      const kbColors={green:'var(--green)',high:'#f97316',medium:'var(--yellow)'};
+      const kbBgs={green:'var(--greenbg)',high:'var(--orangebg)',medium:'var(--yellowbg)'};
+      const f=kbInsight.valueFlag;
+      const kbHtml=`<div style="margin-top:8px;padding:8px 10px;background:${f?kbBgs[f.level]:'var(--bg3)'};border-left:2px solid ${f?kbColors[f.level]:'var(--teal)'};font-size:10px;color:${f?kbColors[f.level]:'var(--tx3)'}">
+        📊 <strong>KB (${kbInsight.count} envíos anteriores):</strong> ${f?f.msg:'Peso promedio: '+Math.round(kbInsight.avgLbs)+' lbs | HS: '+kbInsight.lastHS}
+      </div>`;
+      dvEl.innerHTML += kbHtml;
     }
   } else {
     dvEl.innerHTML=`<div style="font-size:11px;color:var(--tx5)">Enter product and FOB value to see declared value risk assessment.</div>`;
@@ -2101,7 +2184,7 @@ function init(){
 init();
 
 // ════════════════════════════════════════════════════════
-// AI EMAIL PARSER
+// AI QUOTE
 // ════════════════════════════════════════════════════════
 
 
@@ -2678,8 +2761,11 @@ function runFromAI() {
 }
 
 function saveAIQuoteToLog(qn, dest, product, fob, total, cif, client) {
-  const aiEntry={qn, client: client||'—', dest, product, fob, total, cif, status:'quote', notes:'Via AI Email', source:'ai-email'};
-  if(activeQuoteData) aiEntry.quoteSnapshot=JSON.stringify(activeQuoteData);
+  const aiEntry={qn, client: client||'—', dest, product, fob, total, cif, status:'quote', notes:'Via AI Quote', source:'ai-email'};
+  if(activeQuoteData){
+    aiEntry.quoteSnapshot=JSON.stringify(activeQuoteData);
+    addToKB(activeQuoteData);
+  }
   addToLog(aiEntry);
   // Flash confirmation inline
   const btn = event.target;
@@ -3042,6 +3128,97 @@ function resetAI() {
 // SHIPMENT LOG — localStorage persistence
 // ════════════════════════════════════════════════════════
 
+
+// ════════════════════════════════════════════════════════
+// KNOWLEDGE BASE — aprende de cada cotización guardada
+// ════════════════════════════════════════════════════════
+
+function getKB(){try{return JSON.parse(localStorage.getItem('ddp_kb')||'[]');}catch(e){return[];}}
+function saveKB(arr){localStorage.setItem('ddp_kb',JSON.stringify(arr));}
+
+function addToKB(snap){
+  if(!snap||!snap.product) return;
+  const kb = getKB();
+  const record = {
+    id: Date.now(),
+    date: new Date().toISOString().slice(0,10),
+    product: snap.product||'',
+    type: snap.type||'',
+    hs: snap.hs||'',
+    coo: snap.coo||'',
+    dest: snap.dest||'',
+    lbs: snap.lbs||0,
+    fob: snap.fob||0,
+    cif: snap.cif||0,
+    tot: snap.tot||0,
+    qn: snap.qn||''
+  };
+  // Avoid exact duplicate (same qn)
+  if(kb.find(x=>x.qn===record.qn)) return;
+  kb.unshift(record);
+  // Keep max 500 records
+  if(kb.length>500) kb.pop();
+  saveKB(kb);
+}
+
+function getKBInsights(product, fob, dest){
+  if(!product) return null;
+  const kb = getKB();
+  const term = product.toLowerCase().split(' ')[0];
+  // Find matching records — same product family
+  const matches = kb.filter(x => 
+    x.product.toLowerCase().includes(term) ||
+    term.includes(x.product.toLowerCase().split(' ')[0])
+  );
+  if(!matches.length) return null;
+  
+  const fobs = matches.map(x=>x.fob).filter(x=>x>0);
+  const lbs = matches.map(x=>x.lbs).filter(x=>x>0);
+  const avgFob = fobs.reduce((a,b)=>a+b,0)/fobs.length;
+  const avgLbs = lbs.reduce((a,b)=>a+b,0)/lbs.length;
+  const minFob = Math.min(...fobs);
+  const maxFob = Math.max(...fobs);
+  
+  let valueFlag = null;
+  if(fob > 0 && fobs.length > 0){
+    const pct = (fob - avgFob) / avgFob;
+    if(pct < -0.4) valueFlag = {level:'high', msg:`Valor $${fob.toLocaleString()} es ${Math.round(Math.abs(pct)*100)}% menor al histórico promedio de $${Math.round(avgFob).toLocaleString()} (${matches.length} envíos anteriores)`};
+    else if(pct > 0.5) valueFlag = {level:'medium', msg:`Valor $${fob.toLocaleString()} es ${Math.round(pct*100)}% mayor al histórico promedio de $${Math.round(avgFob).toLocaleString()}`};
+    else valueFlag = {level:'green', msg:`Valor dentro del rango histórico ($${Math.round(minFob).toLocaleString()}–$${Math.round(maxFob).toLocaleString()}, ${matches.length} envíos)`};
+  }
+  
+  return {
+    count: matches.length,
+    avgFob, avgLbs, minFob, maxFob,
+    lastDest: matches[0]?.dest||'',
+    lastHS: matches[0]?.hs||'',
+    lastCOO: matches[0]?.coo||'',
+    valueFlag,
+    recent: matches.slice(0,3)
+  };
+}
+
+function getKBContext(){
+  // Returns a text summary of the KB for the chat system prompt
+  const kb = getKB();
+  if(!kb.length) return '';
+  let ctx = '\n\nHISTORIAL DE OPERACIONES DDP GLOBAL ('+kb.length+' envíos):\n';
+  // Group by product
+  const byProduct = {};
+  kb.forEach(x=>{
+    const key = x.product.split(' ').slice(0,3).join(' ');
+    if(!byProduct[key]) byProduct[key]={count:0,fobs:[],dests:new Set(),hs:x.hs};
+    byProduct[key].count++;
+    if(x.fob>0) byProduct[key].fobs.push(x.fob);
+    if(x.dest) byProduct[key].dests.add(x.dest.replace(/[^a-zA-Z]/g,'').trim());
+  });
+  Object.entries(byProduct).slice(0,10).forEach(([prod,data])=>{
+    const avgFob = data.fobs.length ? Math.round(data.fobs.reduce((a,b)=>a+b,0)/data.fobs.length) : 0;
+    ctx += `  - ${prod}: ${data.count} envíos, FOB prom $${avgFob.toLocaleString()}, destinos: ${[...data.dests].join('/')}, HS: ${data.hs}\n`;
+  });
+  return ctx;
+}
+
 function getLog(){try{return JSON.parse(localStorage.getItem('ddp_log')||'[]');}catch(e){return[];}}
 function saveLog(arr){localStorage.setItem('ddp_log',JSON.stringify(arr));}
 
@@ -3137,12 +3314,13 @@ function openLogQuote(id){
 function saveQuoteToLog(qn,dest,product,fob,total,cif){
   const client=prompt('Nombre del cliente (opcional):','');
   const entry={qn,client:client||'—',dest,product,fob,total,cif,status:'quote',notes:'',source:'quoter'};
-  // Save full quote data so we can reopen it
   if(activeQuoteData){
     entry.quoteSnapshot=JSON.stringify(activeQuoteData);
+    // Feed the Knowledge Base
+    addToKB(activeQuoteData);
   }
   addToLog(entry);
-  alert('✓ Cotización guardada en el LOG');
+  alert('✓ Cotización guardada en el LOG y en la Knowledge Base');
   showPage('log');
 }
 
