@@ -1474,16 +1474,18 @@ function calcQuote(ct, fob, lbs, coo, fo){
     const iorRate = isCN ? 0.08 : 0.03;
     const iorFee = mx(fob*iorRate, 500);
     
-    // Freight: use provided or estimate $9.73/lb from international
-    const freight = fo || mx(lbs*9.73, 450);
+    // Freight: only if client provided
+    const freight = fo > 0 ? fo : 0;
     const cif = fob + freight;
     
-    // CBP fees
-    const entryFee = 85;         // CBP Entry
-    const fiorFee = 50;          // FIOR Filing
-    const bond = mx(cif*0.0045, 45); // Customs Bond
-    const mpf = Math.min(Math.max(cif*0.003464, 27.23), 528.33); // MPF (Merchandise Processing Fee)
-    const hmf = cif*0.00125;     // HMF (Harbor Maintenance Fee) — only ocean, skip for air
+    // CBP fees — IBC Broker tariff + 30% markup, unified in one line
+    const entryFee = 85 * 1.30;         // $85 → $110.50
+    const fiorFee  = 50 * 1.30;         // $50 → $65
+    const bond     = mx(cif*0.0045, 45) * 1.30; // 0.45% min $45 → +30%
+    const brokerFee = entryFee + fiorFee + bond; // Single line for client
+
+    // MPF — pass-through, no markup
+    const mpf = Math.min(Math.max(cif*0.003464, 27.23), 528.33);
     
     // Duties by COO
     let duties = [];
@@ -1499,19 +1501,21 @@ function calcQuote(ct, fob, lbs, coo, fo){
     // MPF always applies (unless USMCA and qualifies)
     duties.push(["MPF (0.3464% / min $27.23)",mpf]);
     
-    // Airport pickup + local delivery (optional but shown)
-    const airportPickup = mx(lbs*0.85, 150); // ~$0.85/lb, min $150
-    const localDelivery = mx(lbs*1.20, 200); // ~$1.20/lb, min $200
-    
+    // Airport pickup + local delivery
+    const airportPickup = mx(lbs*0.85, 260);
+    const localDelivery = mx(lbs*1.20, 350);
+
+    // Int'l freight only if explicitly provided
     const svcLines = [
       ["IOR Fee", `${(iorRate*100).toFixed(0)}% FOB / min $500`, iorFee],
-      ["CBP Entry Fee", "Flat", entryFee],
-      ["FIOR Filing Fee", "Flat", fiorFee],
-      ["Customs Bond", "0.45% CIF / min $45", bond],
-      ["Int'l Freight (est.)", `$${(freight/Math.max(lbs,1)).toFixed(2)}/lb`, freight],
-      ["Airport Pickup & Handling", "$0.85/lb / min $260", mx(lbs*0.85, 260)],
-      ["Local Delivery (USA)", "$1.20/lb / min $350", mx(lbs*1.20, 350)],
+      ["Broker & Documentation Fee", "Entry + Bond + FIOR (IBC)", brokerFee],
+      ["Airport Pickup & Handling", "$0.85/lb / min $260", airportPickup],
+      ["Local Delivery (USA)", "$1.20/lb / min $350", localDelivery],
     ];
+    // Only add int'l freight if client provided it
+    if(fo > 0){
+      svcLines.splice(2, 0, ["Int'l Freight (client provided)", "As quoted", fo]);
+    }
     
     const svcTotal = svcLines.reduce((s,[,,v])=>s+(typeof v==='number'?v:0),0);
     const tot = svcTotal + dutyTotal + mpf;
