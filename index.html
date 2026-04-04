@@ -3396,8 +3396,10 @@ function renderShipmentsStats(){
   const active = arr.filter(x=>x.status!=='delivered').length;
   const delivered = arr.filter(x=>x.status==='delivered').length;
   const revenue = arr.filter(x=>x.status==='delivered').reduce((s,x)=>s+(x.ddpQuoted||0)+(x.dtSeparate||0),0);
-  const pipeline = arr.filter(x=>x.status!=='delivered').reduce((s,x)=>s+(x.ddpQuoted||0),0);
-  const profit = arr.filter(x=>x.status==='delivered').reduce((s,x)=>s+calcProfit(x),0);
+  const pipeline = arr.filter(x=>x.status!=='delivered').reduce((s,x)=>s+(x.ddpQuoted||0)+(x.dtSeparate||0),0);
+  // Profit: sum all shipments that have costs loaded (not just delivered)
+  const profitDelivered = arr.filter(x=>x.status==='delivered').reduce((s,x)=>s+calcProfit(x),0);
+  const profitActive = arr.filter(x=>x.status!=='delivered').reduce((s,x)=>s+calcProfit(x),0);
   const el = document.getElementById('shipments-stats');
   if(!el) return;
   el.innerHTML = `
@@ -3405,7 +3407,7 @@ function renderShipmentsStats(){
     <div class="meta-item"><div class="ml">ENTREGADOS</div><div class="mv" style="color:var(--green)">${delivered}</div></div>
     <div class="meta-item"><div class="ml">PIPELINE</div><div class="mv" style="color:var(--yellow)">$${fmt(pipeline)}</div></div>
     <div class="meta-item"><div class="ml">REVENUE</div><div class="mv" style="color:var(--green)">$${fmt(revenue)}</div></div>
-    <div class="meta-item"><div class="ml">PROFIT</div><div class="mv" style="color:${profit>=0?'var(--green)':'var(--red)'}">$${fmt(profit)}</div></div>
+    <div class="meta-item"><div class="ml">PROFIT ACTIVOS</div><div class="mv" style="color:${profitActive>=0?'var(--teal)':'var(--red)'}">$${fmt(profitActive)}</div></div>
   `;
 }
 
