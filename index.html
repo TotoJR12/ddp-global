@@ -2265,6 +2265,13 @@ let quoterChatContext = '';
 
 const STATUS_LABELS={quote:'📤 Enviada',won:'✅ Ganada',lost:'❌ Perdida',pending:'⏳ En proceso',delivered:'🚚 Entregada'};
 const STATUS_COLORS={quote:'var(--teal)',won:'var(--green)',lost:'var(--red)',pending:'var(--yellow)',delivered:'#22c55e'};
+const SHIP_STATUS = {
+  confirmed: {label:'✅ Confirmado',    color:'var(--teal)'},
+  transit:   {label:'✈ En tránsito',   color:'var(--yellow)'},
+  customs:   {label:'🛃 En aduana',     color:'#f97316'},
+  delivered: {label:'📦 Entregado',     color:'var(--green)'},
+  issue:     {label:'⚠ Problema',       color:'var(--red)'},
+};
 function init(){
   initTabs();
   loadApiKey();
@@ -3272,13 +3279,6 @@ Respondé en el mismo idioma que usa Toto (español o inglés). Sé directo y co
 // SHIPMENTS TRACKER
 // ════════════════════════════════════════════════════════
 
-const SHIP_STATUS = {
-  confirmed: {label:'✅ Confirmado',    color:'var(--teal)'},
-  transit:   {label:'✈ En tránsito',   color:'var(--yellow)'},
-  customs:   {label:'🛃 En aduana',     color:'#f97316'},
-  delivered: {label:'📦 Entregado',     color:'var(--green)'},
-  issue:     {label:'⚠ Problema',       color:'var(--red)'},
-};
 
 function getShipments(){try{return JSON.parse(localStorage.getItem('ddp_shipments')||'[]');}catch(e){return[];}}
 function saveShipments(arr){localStorage.setItem('ddp_shipments',JSON.stringify(arr));}
