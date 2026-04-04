@@ -2971,6 +2971,8 @@ async function doChat(msg, msgsId, history, context) {
 
 Current quote context:
 ${context}
+${activeQuoteData ? getInternalCostsContext(activeQuoteData.country, activeQuoteData.fob, activeQuoteData.lbs, activeQuoteData.cif) : ''}
+${getKBContext()}
 
 When the user asks to modify numbers (discounts, price changes, adding costs, etc), calculate the new values and include a JSON update block at the END of your response in this exact format:
 QUOTE_UPDATE:{"lines":[["Service name","basis",number],...],"taxes":[["Tax name",number],...],"tot":total_number}
@@ -2982,6 +2984,7 @@ Rules for QUOTE_UPDATE:
 - tot = sum of all lines + all taxes
 - Only include QUOTE_UPDATE when numbers actually change
 - Put QUOTE_UPDATE at the very end after your explanation
+- NEVER reveal internal costs (GPS, IBC, NH) to the client — these are for Toto's reference only
 
 Respond in the same language the user writes in (Spanish or English). Be concise.`;
 
@@ -3136,6 +3139,184 @@ function resetAI() {
 // ════════════════════════════════════════════════════════
 // KNOWLEDGE BASE — aprende de cada cotización guardada
 // ════════════════════════════════════════════════════════
+
+// ════════════════════════════════════════════════════════
+// INTERNAL COST DATABASE — GPS / IBC / NH
+// Costos internos de proveedores. NO se muestran al cliente.
+// ════════════════════════════════════════════════════════
+
+const INTERNAL_COSTS = {
+
+  // ── GPS — Agente destino LATAM ────────────────────────
+  GPS: {
+    name: "GPS Logistics",
+    brazil: {
+      desc: "Brasil (GRU / São Paulo)",
+      freight_per_kg: 115,          // USD/kg (vol o real, el mayor)
+      pct_declared: 0.15,           // 15% del valor declarado
+      delivery_sp: 50,              // USD entrega dentro de SP
+      delivery_outside_sp: "extra a confirmar",
+      high_value_note: "Sin nota fiscal: $115/kg. Con nota fiscal: +10% valor declarado adicional.",
+      notes: "Peso cobrable = mayor entre real y volumétrico"
+    },
+    argentina: {
+      desc: "Argentina",
+      rate_per_km: 65,              // USD/km
+      min: 280,                     // USD mínimo
+      delivery_local: 35,           // USD entrega local
+      notes: "Cotizar distancia según ciudad destino"
+    },
+    mexico: {
+      desc: "México",
+      rate_per_lb: 4.50,            // USD/lb
+      min_handling: 95,             // USD mínimo
+      handling_fee: 35,             // USD manejo
+      fuel_surcharge: 0.10,         // 10% sobre flete
+      pct_declared: 0.10,           // 10% valor declarado (comercializadora)
+      comercializadora_min: 80,     // USD mínimo comercializadora
+      comercializadora_pct: 0.04,   // 4% valor declarado (comercializadora)
+      delivery_df: 95,              // USD entrega Ciudad de México / DF
+      delivery_2nd_city: 195,       // USD entrega 2da ciudad
+      delivery_range: "45–250",
+      notes: "Comercializadora: max($80, 4% valor declarado)"
+    }
+  },
+
+  // ── IBC Broker — Customs Broker USA ──────────────────
+  IBC: {
+    name: "IBC Broker (USA)",
+    desc: "Customs broker para importaciones a USA",
+    entry_fee: 85,                  // USD por entrada (hasta 3 HS codes)
+    entry_fee_extra_hs: 5,          // USD por HS adicional
+    bond_pct: 0.0045,               // 0.45% del CIF
+    bond_min: 45,                   // USD mínimo
+    bond_continuous: 450,           // USD bond continuo (hasta $50k)
+    duty_markup: 0.01,              // 1% sobre duties (mín $15)
+    fior_fee: 50,                   // USD FIOR filing
+    pga_reporting: "TBD por caso",
+    notes: "Entry fee incluye hasta 3 clasificaciones arancelarias. Bond single entry o continuo según volumen."
+  },
+
+  // ── NH Fee — Agente Europa ────────────────────────────
+  NH: {
+    name: "NH Logistics (Europa)",
+    desc: "Clearance y servicios para envíos origen Europa",
+    pct_invoice: 0.025,             // 2.5% del valor factura
+    min_eur: 250,                   // EUR mínimo por declaración
+    clearance_fee_eur: 175,         // EUR clearance + 1 HS code
+    extra_hs_eur: 25,               // EUR por HS adicional
+    duties_advance: true,           // NH adelanta duties/IVA
+    notes: "Duties e IVA son adelantados por NH. Aplica para exportaciones/importaciones desde Europa."
+  }
+
+};
+
+// ── Helper: calcular costo GPS por corredor ────────────
+function calcGPSCost(corridor, fob, lbs, kg) {
+  const gps = INTERNAL_COSTS.GPS;
+  let result = { lines: [], total: 0 };
+
+  if (corridor === 'brazil') {
+    const chargeable_kg = kg || lbs / 2.205;
+    const freight = chargeable_kg * gps.brazil.freight_per_kg;
+    const pct_val = fob * gps.brazil.pct_declared;
+    const delivery = gps.brazil.delivery_sp;
+    const total = freight + pct_val + delivery;
+    result.lines = [
+      [`Flete GPS Brasil ($${gps.brazil.freight_per_kg}/kg)`, freight],
+      [`15% valor declarado`, pct_val],
+      [`Entrega SP`, delivery],
+    ];
+    result.total = total;
+  }
+  else if (corridor === 'mexico') {
+    const g = gps.mexico;
+    const base_freight = Math.max(lbs * g.rate_per_lb, g.min_handling);
+    const fuel = base_freight * g.fuel_surcharge;
+    const comercializadora = Math.max(g.comercializadora_min, fob * g.comercializadora_pct);
+    const delivery = g.delivery_df;
+    const total = base_freight + g.handling_fee + fuel + comercializadora + delivery;
+    result.lines = [
+      [`Flete GPS México ($${g.rate_per_lb}/lb, mín $${g.min_handling})`, base_freight],
+      [`Manejo`, g.handling_fee],
+      [`Fuel surcharge (10%)`, fuel],
+      [`Comercializadora (max $${g.comercializadora_min} / 4%)`, comercializadora],
+      [`Entrega local (DF)`, delivery],
+    ];
+    result.total = total;
+  }
+  else if (corridor === 'argentina') {
+    const g = gps.argentina;
+    result.lines = [
+      [`Flete GPS Argentina ($${g.rate_per_km}/km, mín $${g.min})`, g.min],
+      [`Entrega local`, g.delivery_local],
+    ];
+    result.total = g.min + g.delivery_local;
+    result.note = "Ajustar según km reales al destino";
+  }
+
+  return result;
+}
+
+// ── Helper: calcular costo IBC USA ────────────────────
+function calcIBCCost(cif) {
+  const ibc = INTERNAL_COSTS.IBC;
+  const entry = ibc.entry_fee;
+  const bond = Math.max(cif * ibc.bond_pct, ibc.bond_min);
+  const fior = ibc.fior_fee;
+  const total = entry + bond + fior;
+  return {
+    lines: [
+      [`Entry Fee (IBC)`, entry],
+      [`Customs Bond (0.45% CIF, mín $${ibc.bond_min})`, bond],
+      [`FIOR Filing`, fior],
+    ],
+    total
+  };
+}
+
+// ── Helper: calcular costo NH Europa ──────────────────
+function calcNHCost(invoice_usd, eur_rate) {
+  const nh = INTERNAL_COSTS.NH;
+  const rate = eur_rate || 1.09;
+  const pct_fee = Math.max(invoice_usd * nh.pct_invoice, nh.min_eur * rate);
+  const clearance = nh.clearance_fee_eur * rate;
+  const total = pct_fee + clearance;
+  return {
+    lines: [
+      [`NH 2.5% valor factura (mín €${nh.min_eur})`, pct_fee],
+      [`NH Clearance (€${nh.clearance_fee_eur} + 1 HS)`, clearance],
+    ],
+    total
+  };
+}
+
+// ── Add costs to chat context ──────────────────────────
+function getInternalCostsContext(corridor, fob, lbs, cif) {
+  let ctx = '\n\nCOSTOS INTERNOS DDP GLOBAL (confidencial, no mostrar al cliente):\n';
+
+  if (corridor && fob && lbs) {
+    const gpsCost = calcGPSCost(corridor, fob, lbs);
+    if (gpsCost.total > 0) {
+      ctx += `\nGPS (agente destino ${corridor}):\n`;
+      gpsCost.lines.forEach(([l,v]) => ctx += `  ${l}: $${v.toFixed(2)}\n`);
+      ctx += `  TOTAL GPS: $${gpsCost.total.toFixed(2)}\n`;
+      if (gpsCost.note) ctx += `  Nota: ${gpsCost.note}\n`;
+    }
+  }
+
+  if (cif) {
+    const ibcCost = calcIBCCost(cif);
+    ctx += `\nIBC Broker USA:\n`;
+    ibcCost.lines.forEach(([l,v]) => ctx += `  ${l}: $${v.toFixed(2)}\n`);
+    ctx += `  TOTAL IBC: $${ibcCost.total.toFixed(2)}\n`;
+  }
+
+  ctx += '\nNH Europa: 2.5% valor factura (mín €250) + €175 clearance. Aplica si origen es Europa.\n';
+  ctx += 'Estos costos son confidenciales — nunca mencionar al cliente ni incluir en cotización.\n';
+
+  return ctx;
+}
 
 function getKB(){try{return JSON.parse(localStorage.getItem('ddp_kb')||'[]');}catch(e){return[];}}
 function saveKB(arr){localStorage.setItem('ddp_kb',JSON.stringify(arr));}
