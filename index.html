@@ -3373,14 +3373,28 @@ function updateShipmentField(id, field, value){
   const arr = getShipments();
   const s = arr.find(x=>x.id===id);
   if(!s) return;
-  // Parse numbers
   const numFields = ['originPickup','originFreight','originOther','destLiberation','destDelivery','destOther','ddpQuoted','dtSeparate','fob','kg'];
   s[field] = numFields.includes(field) ? (parseFloat(value)||0) : value;
   saveShipments(arr);
   renderShipmentsStats();
-  // Update profit display in modal if open
+  // Show saved indicator
+  const indicator = document.getElementById('shipment-save-indicator');
+  if(indicator){
+    indicator.textContent = '✓ Guardado';
+    indicator.style.color = 'var(--green)';
+    clearTimeout(window._saveTimer);
+    window._saveTimer = setTimeout(()=>{ indicator.textContent = ''; }, 2000);
+  }
+  // Update profit display
   const profitEl = document.getElementById('modal-profit-'+id);
   if(profitEl) profitEl.textContent = '$'+fmt(calcProfit(s));
+  // Update costs totals
+  const costsOrigin = (s.originPickup||0)+(s.originFreight||0)+(s.originOther||0);
+  const costsDest = (s.destLiberation||0)+(s.destDelivery||0)+(s.destOther||0);
+  const origEl = document.getElementById('modal-costs-origin-'+id);
+  const destEl = document.getElementById('modal-costs-dest-'+id);
+  if(origEl) origEl.textContent = '$'+fmt(costsOrigin);
+  if(destEl) destEl.textContent = '$'+fmt(costsDest);
 }
 
 function calcProfit(s){
@@ -3469,7 +3483,8 @@ function openShipmentModal(id){
         <div style="font-size:12px;color:var(--teal)">${s.client} · ${s.origin} → ${s.dest}</div>
       </div>
       <div style="display:flex;gap:8px;align-items:center">
-        <select onchange="updateShipmentField(${id},'status',this.value);renderShipments();renderShipmentsStats();this.closest('#shipment-modal-content').querySelector('.status-label').textContent=SHIP_STATUS[this.value].label" 
+        <span id="shipment-save-indicator" style="font-size:11px;font-family:Barlow,sans-serif;font-weight:700;min-width:80px"></span>
+        <select onchange="updateShipmentField(${id},'status',this.value);renderShipments();renderShipmentsStats();" 
           style="background:var(--bg3);border:1px solid var(--bd);color:var(--tx);padding:6px 10px;font-size:11px;font-family:'DM Mono',monospace">
           ${Object.entries(SHIP_STATUS).map(([v,d])=>`<option value="${v}"${v===s.status?' selected':''}>${d.label}</option>`).join('')}
         </select>
@@ -3522,7 +3537,7 @@ function openShipmentModal(id){
         </select></div>
     </div>
     <div style="background:var(--bg3);padding:8px 12px;margin-bottom:16px;font-size:12px;color:var(--tx2)">
-      Total Costos Origen: <strong style="color:var(--teal)">$${fmt(costsOrigin)}</strong>
+      Total Costos Origen: <strong id="modal-costs-origin-${id}" style="color:var(--teal)">$${fmt(costsOrigin)}</strong>
     </div>
 
     <!-- Costos Destino -->
@@ -3545,7 +3560,7 @@ function openShipmentModal(id){
         </select></div>
     </div>
     <div style="background:var(--bg3);padding:8px 12px;margin-bottom:16px;font-size:12px;color:var(--tx2)">
-      Total Costos Destino: <strong style="color:var(--teal)">$${fmt(costsDest)}</strong>
+      Total Costos Destino: <strong id="modal-costs-dest-${id}" style="color:var(--teal)">$${fmt(costsDest)}</strong>
     </div>
 
     <!-- Facturación -->
