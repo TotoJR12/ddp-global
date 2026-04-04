@@ -748,14 +748,20 @@ Please advise on DDP cost and transit time. Thanks"></textarea>
   <!-- Filters -->
   <div class="grid2" style="margin-bottom:12px">
     <input class="search-box" id="shipments-search" placeholder="Buscar por cliente, referencia, destino..." oninput="renderShipments()" style="margin-bottom:0"/>
-    <select id="shipments-filter-status" onchange="renderShipments()" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:10px 14px;font-size:12px;font-family:'DM Mono',monospace">
-      <option value="">Todos los estados</option>
-      <option value="confirmed">Confirmado</option>
-      <option value="transit">En tránsito</option>
-      <option value="customs">En aduana</option>
-      <option value="delivered">Entregado</option>
-      <option value="issue">Problema</option>
-    </select>
+    <div style="display:flex;gap:10px;align-items:center">
+      <select id="shipments-filter-status" onchange="renderShipments()" style="flex:1;background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:10px 14px;font-size:12px;font-family:'DM Mono',monospace">
+        <option value="">Activos (sin archivados)</option>
+        <option value="confirmed">Confirmado</option>
+        <option value="transit">En tránsito</option>
+        <option value="customs">En aduana</option>
+        <option value="delivered">Entregado</option>
+        <option value="issue">Problema</option>
+      </select>
+      <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--tx4);white-space:nowrap;cursor:pointer">
+        <input type="checkbox" id="shipments-show-archived" onchange="renderShipments()" style="cursor:pointer"/>
+        Ver archivados
+      </label>
+    </div>
   </div>
 
   <!-- New shipment form (hidden) -->
@@ -3521,13 +3527,29 @@ function renderShipmentsStats(){
 function renderShipments(){
   const search = (document.getElementById('shipments-search')?.value||'').toLowerCase();
   const statusFilter = document.getElementById('shipments-filter-status')?.value||'';
+  const showArchived = document.getElementById('shipments-show-archived')?.checked || false;
   let arr = getShipments();
+
+  // Sort newest first
+  arr.sort((a,b) => (b.id||0) - (a.id||0));
+
+  // By default hide archived (delivered + cobrado) unless checkbox is on
+  if (!showArchived && !statusFilter) {
+    arr = arr.filter(x => !(x.status === 'delivered' && x.clientPaid));
+  }
+
   if(search) arr = arr.filter(x=>[x.ref,x.client,x.dest,x.tracking,x.notes].join(' ').toLowerCase().includes(search));
   if(statusFilter) arr = arr.filter(x=>x.status===statusFilter);
+
   const el = document.getElementById('shipments-list');
   if(!el) return;
+
+  // Count archived
+  const allArr = getShipments();
+  const archivedCount = allArr.filter(x=>x.status==='delivered'&&x.clientPaid).length;
+
   if(!arr.length){
-    el.innerHTML = `<div class="flag flag-blue">No hay shipments todavía. Cuando una cotización pasa a "Ganada" en el LOG se crea automáticamente, o podés agregar uno manual.</div>`;
+    el.innerHTML = `<div class="flag flag-blue">No hay shipments activos.${archivedCount?' ('+archivedCount+' archivados — activá "Ver archivados" para verlos)':''}</div>`;
     return;
   }
   el.innerHTML = arr.map(s => {
