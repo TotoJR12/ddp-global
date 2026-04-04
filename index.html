@@ -1874,6 +1874,106 @@ function updateInlineChecks(){
 }
 
 // ── Main Quote Calculation ─────────────────────────────
+
+// ════════════════════════════════════════════════════════
+// INTELLIGENCE REPORT — internal only, never shown to client
+// ════════════════════════════════════════════════════════
+function buildIntelligenceReport(product, hs, coo, fob, lbs, dest, type) {
+  const kb = getKB ? getKB() : [];
+  const term = (product||'').toLowerCase().split(' ')[0];
+  const matches = kb.filter(x =>
+    x.product && (x.product.toLowerCase().includes(term) || term.includes(x.product.toLowerCase().split(' ')[0]))
+  );
+
+  const knows = [];
+  const verify = [];
+  const unknown = [];
+
+  // ── What we KNOW ──────────────────────────────────────
+  if (matches.length > 0) {
+    const fobs = matches.map(x=>x.fob).filter(x=>x>0);
+    const avgFob = fobs.length ? Math.round(fobs.reduce((a,b)=>a+b,0)/fobs.length) : 0;
+    knows.push(`📦 Producto conocido: ${matches.length} envío(s) previo(s) — FOB prom $${avgFob.toLocaleString()}`);
+    const hsCodes = [...new Set(matches.map(x=>x.hs).filter(Boolean))];
+    if (hsCodes.length) knows.push(`🔢 HS Code histórico: ${hsCodes.join(', ')}`);
+    const dests = [...new Set(matches.map(x=>x.dest).filter(Boolean))];
+    if (dests.length) knows.push(`🌎 Destinos anteriores: ${dests.join(', ')}`);
+  }
+
+  if (hs && hs !== '8517.62') {
+    knows.push(`🔢 HS Code declarado: ${hs}`);
+  }
+
+  // COO knowledge
+  const isCN = /china/i.test(coo||'');
+  const isMX = /mexico/i.test(coo||'');
+  const isPL = /poland/i.test(coo||'');
+  const isTW = /taiwan/i.test(coo||'');
+  if (isCN && dest === 'usa') knows.push('⚠️ COO China → USA: 45% duties (S.301 25% + IEEPA 20%) — CONFIRMADO');
+  if (isMX && dest === 'usa') knows.push('✅ COO Mexico → USA: USMCA duty-free — CONFIRMADO');
+  if (isPL) knows.push('✅ COO Poland → USA: 0% MFN duties para servers HS 8471 — CONFIRMADO');
+  if (isTW) knows.push('✅ COO Taiwan → USA: 0% MFN duties para networking HS 8517 — CONFIRMADO');
+
+  // DG
+  const isDG = /un3481|un3480|battery|bater|lithium|litio/i.test(product||'');
+  if (isDG) knows.push('⚡ DG UN3481 detectado — surcharge aplicable, requiere DG declaration');
+
+  // GPU
+  const isGPU = /gpu|nvidia|a100|h100|a800|h800/i.test(product||'');
+  if (isGPU) knows.push('🔴 GPU detectada — BIS Export Control aplicable. Verificar licencia de exportación.');
+
+  // ── What needs VERIFICATION ───────────────────────────
+  if (!coo || coo === 'TBC') verify.push('🔍 COO no confirmado — duties USA dependen del COO real');
+  if (fob < 1000 && fob > 0) verify.push('⚠️ FOB muy bajo — confirmar valor de mercado antes de declarar');
+
+  // ANATEL
+  const isWireless = /wireless|ap |wifi|wi-fi|9300-48u|9300-48ux|wlc/i.test(product||'');
+  if (dest === 'brazil' && /switch|router|cisco|arista|rahi/i.test(product||'')) {
+    if (isWireless) verify.push('📡 ANATEL requerido — modelo con wireless detectado. Confirmar certificado.');
+    else verify.push('📡 ANATEL — confirmar si modelo es wireline only (exento) o tiene wireless');
+  }
+
+  if (dest === 'argentina') verify.push('🇦🇷 Argentina — verificar estado actual SIRA antes de comprometer fecha');
+  if (/refurb/i.test(type||'')) verify.push('♻️ Equipo refurbished — valor declarado debe ser defensible con documentación');
+
+  // ── What we DON'T KNOW ────────────────────────────────
+  if (matches.length === 0) unknown.push('❓ Producto nuevo — sin historial en KB. Verificar HS code y valor de mercado manualmente.');
+  if (!hs || hs === '8517.62') unknown.push('❓ HS Code no confirmado — usar 8517.62 como referencia pero verificar para este modelo específico');
+
+  const destKnown = ['brazil','mexico','argentina','colombia','usa'].includes(dest);
+  if (!destKnown) unknown.push(`❓ Destino "${dest}" — tasas de D&T no están en la base de datos. Investigar antes de cotizar.`);
+
+  // Confidence score
+  const total = knows.length + verify.length + unknown.length;
+  const score = total > 0 ? Math.round((knows.length / total) * 100) : 50;
+  const scoreColor = score >= 75 ? 'var(--green)' : score >= 50 ? 'var(--yellow)' : 'var(--red)';
+  const scoreLabel = score >= 75 ? 'ALTA' : score >= 50 ? 'MEDIA' : 'BAJA';
+
+  if (!knows.length && !verify.length && !unknown.length) return '';
+
+  return `
+    <div style="background:var(--bg3);border:1px solid var(--bd);border-left:3px solid #7c3aed;padding:16px;margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div style="font-family:Barlow,sans-serif;font-weight:700;font-size:10px;letter-spacing:3px;color:#a78bfa">🧠 INTELLIGENCE REPORT</div>
+        <div style="font-size:10px;font-family:Barlow,sans-serif;font-weight:700;color:${scoreColor}">CONFIANZA: ${scoreLabel} (${score}%)</div>
+      </div>
+      ${knows.length ? `
+      <div style="margin-bottom:10px">
+        <div style="font-size:9px;color:var(--green);letter-spacing:2px;margin-bottom:5px;font-family:Barlow,sans-serif;font-weight:700">✅ LO QUE SABEMOS</div>
+        ${knows.map(k=>`<div style="font-size:11px;color:var(--tx2);padding:3px 0;border-bottom:1px solid var(--bd2)">${k}</div>`).join('')}
+      </div>` : ''}
+      ${verify.length ? `
+      <div style="margin-bottom:10px">
+        <div style="font-size:9px;color:var(--yellow);letter-spacing:2px;margin-bottom:5px;font-family:Barlow,sans-serif;font-weight:700">⚠️ REQUIERE VERIFICACIÓN</div>
+        ${verify.map(v=>`<div style="font-size:11px;color:#fde68a;padding:3px 0;border-bottom:1px solid var(--bd2)">${v}</div>`).join('')}
+      </div>` : ''}
+      ${unknown.length ? `
+      <div>
+        <div style="font-size:9px;color:var(--red);letter-spacing:2px;margin-bottom:5px;font-family:Barlow,sans-serif;font-weight:700">❓ NO SABEMOS — NO INVENTAR</div>
+        ${unknown.map(u=>`<div style="font-size:11px;color:#fca5a5;padding:3px 0;border-bottom:1px solid var(--bd2)">${u}</div>`).join('')}
+      </div>` : ''}
+    </div>`;
+}
 function doQuote(){
   const fob=parseFloat(document.getElementById("q-fob").value);
   const lbs=parseFloat(document.getElementById("q-wt").value);
@@ -1965,6 +2065,9 @@ function doQuote(){
         • Cargo must arrive at DDP Global Miami warehouse before clearance<br/>
         • COO confirmation required prior to booking · Rate valid 7 days
       </div>
+
+      <!-- Intelligence Report (internal only) -->
+      ${buildIntelligenceReport(product,hs,coo,fob,lbs,currentCtry,type)}
 
       <!-- Actions -->
       <div style="display:flex;gap:8px">
@@ -2852,6 +2955,9 @@ function runFromAI() {
         • Cargo must arrive at DDP Global Miami warehouse before clearance<br/>
         • COO confirmation required prior to booking · Rate valid 7 days
       </div>
+
+      <!-- Intelligence Report (internal only) -->
+      ${buildIntelligenceReport(d.product||'',d.hsCode||'',d.countryOfOrigin||'',fob,lbs,ctry,d.equipmentType||'')}
 
       <!-- Actions -->
       <div style="display:flex;gap:8px;flex-wrap:wrap">
