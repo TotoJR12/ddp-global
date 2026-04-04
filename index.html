@@ -3284,44 +3284,31 @@ function getShipments(){try{return JSON.parse(localStorage.getItem('ddp_shipment
 function saveShipments(arr){localStorage.setItem('ddp_shipments',JSON.stringify(arr));}
 
 function createShipmentFromLog(logEntry){
-  const snap = logEntry.quoteSnapshot ? JSON.parse(logEntry.quoteSnapshot) : null;
+  let snap = null;
+  try { snap = logEntry.quoteSnapshot ? JSON.parse(logEntry.quoteSnapshot) : null; } catch(e){}
+  
+  // Clean dest — remove emoji flags
+  const destClean = (logEntry.dest||'').replace(/[^\x00-\x7F]/g,'').trim();
+  
   const shipment = {
     id: Date.now(),
-    ref: logEntry.qn || '',
+    ref: logEntry.qn || 'SHP-'+Date.now(),
     client: logEntry.client || '—',
     tracking: '',
     origin: snap?.origin || 'Miami, USA',
-    dest: logEntry.dest || '',
-    fob: logEntry.fob || 0,
+    dest: destClean || snap?.dest || '',
+    fob: parseFloat(logEntry.fob)||0,
     kg: snap ? Math.round((snap.lbs||0)/2.205) : 0,
     dims: '',
-    ddpQuoted: logEntry.total || 0,
+    ddpQuoted: parseFloat(logEntry.total)||0,
     dtSeparate: 0,
     status: 'confirmed',
     dateCreated: new Date().toISOString().slice(0,10),
-    eta: '',
-    deliveryDate: '',
-    pod: '',
+    eta: '', deliveryDate: '', pod: '',
     notes: logEntry.notes || '',
-    // Costos origen
-    originProv: '',
-    originPickup: 0,
-    originFreight: 0,
-    originOther: 0,
-    originInvoice: '',
-    originPaid: false,
-    // Costos destino
-    destProv: '',
-    destLiberation: 0,
-    destDelivery: 0,
-    destOther: 0,
-    destInvoice: '',
-    destPaid: false,
-    // Cobro cliente
-    clientInvoice: '',
-    clientInvoiceDate: '',
-    clientPaid: false,
-    clientPaidDate: '',
+    originProv: '', originPickup: 0, originFreight: 0, originOther: 0, originInvoice: '', originPaid: false,
+    destProv: '', destLiberation: 0, destDelivery: 0, destOther: 0, destInvoice: '', destPaid: false,
+    clientInvoice: '', clientInvoiceDate: '', clientPaid: false, clientPaidDate: '',
   };
   const arr = getShipments();
   arr.unshift(shipment);
@@ -4036,12 +4023,21 @@ function updateLogStatus(id,newStatus){
     saveLog(arr);
     // Auto-create shipment when marked as won
     if(newStatus==='won'){
-      const existing = getShipments().find(x=>x.ref===item.qn);
-      if(!existing){
-        createShipmentFromLog(item);
-        renderShipments();
-        renderShipmentsStats();
-        alert('✓ Shipment creado automáticamente en la pestaña SHIPMENTS');
+      try {
+        const existing = getShipments().find(x=>x.ref===item.qn);
+        if(!existing){
+          const newShip = createShipmentFromLog(item);
+          renderShipments();
+          renderShipmentsStats();
+          if(confirm('✓ Shipment "'+item.qn+'" creado. ¿Ir a SHIPMENTS ahora?')){
+            showPage('shipments');
+          }
+        } else {
+          alert('Este shipment ya existe en SHIPMENTS.');
+        }
+      } catch(e) {
+        console.error('Error creating shipment:', e);
+        alert('Error al crear shipment: ' + e.message);
       }
     }
     renderLog();
