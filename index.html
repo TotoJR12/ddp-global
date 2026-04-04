@@ -170,6 +170,7 @@ a{color:var(--teal);text-decoration:none}
     <button class="nav-btn" onclick="showPage('cases')">CASE LIBRARY</button>
     <button class="nav-btn" onclick="showPage('freight')">FREIGHT INTEL</button>
     <button class="nav-btn" onclick="showPage('log')" style="color:#22c55e">📋 SHIP LOG</button>
+    <button class="nav-btn" onclick="showPage('shipments')" style="color:#f59e0b">🚚 SHIPMENTS</button>
     <button class="nav-btn" onclick="showPage('freechat')" style="color:var(--teal)">💬 CHAT IA</button>
   </nav>
   <div class="version" style="display:flex;flex-direction:column;align-items:center;line-height:1.4;padding:3px 10px"><span style="font-size:9px;font-weight:700;letter-spacing:2px">v2.2</span><span style="font-size:7px;opacity:.75">2026-03-29</span></div>
@@ -728,6 +729,74 @@ Please advise on DDP cost and transit time. Thanks"></textarea>
 
   <!-- Log list -->
   <div id="log-list"></div>
+</div>
+
+<!-- ════════════════════════════════════════════════ -->
+<!-- PAGE: SHIPMENTS TRACKER                          -->
+<!-- ════════════════════════════════════════════════ -->
+<div class="page" id="page-shipments">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+    <div class="page-title">🚚 SHIPMENTS</div>
+    <button class="btn btn-ghost btn-sm" onclick="toggleNewShipmentForm()">+ NUEVO MANUAL</button>
+  </div>
+  <div class="page-sub">Gestión operacional de envíos activos — costos, pagos y profit en tiempo real</div>
+
+  <!-- Stats bar -->
+  <div id="shipments-stats" class="meta-bar" style="grid-template-columns:repeat(5,1fr);margin-bottom:16px"></div>
+
+  <!-- Filters -->
+  <div class="grid2" style="margin-bottom:12px">
+    <input class="search-box" id="shipments-search" placeholder="Buscar por cliente, referencia, destino..." oninput="renderShipments()" style="margin-bottom:0"/>
+    <select id="shipments-filter-status" onchange="renderShipments()" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:10px 14px;font-size:12px;font-family:'DM Mono',monospace">
+      <option value="">Todos los estados</option>
+      <option value="confirmed">Confirmado</option>
+      <option value="transit">En tránsito</option>
+      <option value="customs">En aduana</option>
+      <option value="delivered">Entregado</option>
+      <option value="issue">Problema</option>
+    </select>
+  </div>
+
+  <!-- New shipment form (hidden) -->
+  <div id="new-shipment-form" style="display:none;background:var(--bg2);border:1px solid var(--bd);padding:20px;margin-bottom:16px">
+    <div class="card-title">NUEVO SHIPMENT MANUAL</div>
+    <div class="grid3" style="gap:10px;margin-bottom:10px">
+      <div class="field"><div class="field-label">DDP Reference</div><input id="sf-ref" type="text" placeholder="MCG-MX-001"/></div>
+      <div class="field"><div class="field-label">Cliente</div><input id="sf-client" type="text" placeholder="MCGlobe"/></div>
+      <div class="field"><div class="field-label">Tracking #</div><input id="sf-tracking" type="text" placeholder="CTA211715"/></div>
+    </div>
+    <div class="grid3" style="gap:10px;margin-bottom:10px">
+      <div class="field"><div class="field-label">Origen</div><input id="sf-origin" type="text" placeholder="US / UK / Netherlands"/></div>
+      <div class="field"><div class="field-label">Destino</div><input id="sf-dest" type="text" placeholder="Brazil / Mexico"/></div>
+      <div class="field"><div class="field-label">FOB Value (USD)</div><input id="sf-fob" type="number" placeholder="0"/></div>
+    </div>
+    <div class="grid3" style="gap:10px;margin-bottom:10px">
+      <div class="field"><div class="field-label">Peso (kg)</div><input id="sf-kg" type="number" placeholder="0"/></div>
+      <div class="field"><div class="field-label">Dimensiones</div><input id="sf-dims" type="text" placeholder="120x80x160cm / 1 pallet"/></div>
+      <div class="field"><div class="field-label">DDP Cotizado (USD)</div><input id="sf-ddp" type="number" placeholder="0"/></div>
+    </div>
+    <div class="grid2" style="gap:10px;margin-bottom:14px">
+      <div class="field"><div class="field-label">D&T Facturado por separado (USD)</div><input id="sf-dt" type="number" placeholder="0"/></div>
+      <div class="field"><div class="field-label">Notas</div><input id="sf-notes" type="text" placeholder="Observaciones..."/></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-primary" onclick="saveManualShipment()">CREAR SHIPMENT</button>
+      <button class="btn btn-ghost" onclick="toggleNewShipmentForm()">CANCELAR</button>
+    </div>
+  </div>
+
+  <!-- Shipment list -->
+  <div id="shipments-list"></div>
+</div>
+
+<!-- ════════════════════════════════════════════════ -->
+<!-- SHIPMENT DETAIL MODAL                            -->
+<!-- ════════════════════════════════════════════════ -->
+<div id="shipment-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);z-index:999;overflow-y:auto">
+  <div style="max-width:800px;margin:40px auto;background:var(--bg2);border:1px solid var(--bd);padding:24px;position:relative">
+    <button onclick="closeShipmentModal()" style="position:absolute;top:12px;right:12px;background:none;border:none;color:var(--tx4);font-size:20px;cursor:pointer">✕</button>
+    <div id="shipment-modal-content"></div>
+  </div>
 </div>
 
 <!-- ════════════════════════════════════════════════ -->
@@ -2204,6 +2273,8 @@ function init(){
   renderCases("","","");
   renderFreightHistory();
   initLog();
+  renderShipments();
+  renderShipmentsStats();
 
   // Live input binding for quoter
   ["q-product","q-fob","q-type","q-coo"].forEach(id=>{
@@ -3197,6 +3268,326 @@ Respondé en el mismo idioma que usa Toto (español o inglés). Sé directo y co
   }
 }
 
+// ════════════════════════════════════════════════════════
+// SHIPMENTS TRACKER
+// ════════════════════════════════════════════════════════
+
+const SHIP_STATUS = {
+  confirmed: {label:'✅ Confirmado',    color:'var(--teal)'},
+  transit:   {label:'✈ En tránsito',   color:'var(--yellow)'},
+  customs:   {label:'🛃 En aduana',     color:'#f97316'},
+  delivered: {label:'📦 Entregado',     color:'var(--green)'},
+  issue:     {label:'⚠ Problema',       color:'var(--red)'},
+};
+
+function getShipments(){try{return JSON.parse(localStorage.getItem('ddp_shipments')||'[]');}catch(e){return[];}}
+function saveShipments(arr){localStorage.setItem('ddp_shipments',JSON.stringify(arr));}
+
+function createShipmentFromLog(logEntry){
+  const snap = logEntry.quoteSnapshot ? JSON.parse(logEntry.quoteSnapshot) : null;
+  const shipment = {
+    id: Date.now(),
+    ref: logEntry.qn || '',
+    client: logEntry.client || '—',
+    tracking: '',
+    origin: snap?.origin || 'Miami, USA',
+    dest: logEntry.dest || '',
+    fob: logEntry.fob || 0,
+    kg: snap ? Math.round((snap.lbs||0)/2.205) : 0,
+    dims: '',
+    ddpQuoted: logEntry.total || 0,
+    dtSeparate: 0,
+    status: 'confirmed',
+    dateCreated: new Date().toISOString().slice(0,10),
+    eta: '',
+    deliveryDate: '',
+    pod: '',
+    notes: logEntry.notes || '',
+    // Costos origen
+    originProv: '',
+    originPickup: 0,
+    originFreight: 0,
+    originOther: 0,
+    originInvoice: '',
+    originPaid: false,
+    // Costos destino
+    destProv: '',
+    destLiberation: 0,
+    destDelivery: 0,
+    destOther: 0,
+    destInvoice: '',
+    destPaid: false,
+    // Cobro cliente
+    clientInvoice: '',
+    clientInvoiceDate: '',
+    clientPaid: false,
+    clientPaidDate: '',
+  };
+  const arr = getShipments();
+  arr.unshift(shipment);
+  saveShipments(arr);
+  return shipment;
+}
+
+function toggleNewShipmentForm(){
+  const f = document.getElementById('new-shipment-form');
+  f.style.display = f.style.display === 'none' ? 'block' : 'none';
+}
+
+function saveManualShipment(){
+  const ref = document.getElementById('sf-ref').value.trim();
+  if(!ref){alert('Ingresá la referencia DDP.');return;}
+  const shipment = {
+    id: Date.now(),
+    ref,
+    client: document.getElementById('sf-client').value,
+    tracking: document.getElementById('sf-tracking').value,
+    origin: document.getElementById('sf-origin').value,
+    dest: document.getElementById('sf-dest').value,
+    fob: parseFloat(document.getElementById('sf-fob').value)||0,
+    kg: parseFloat(document.getElementById('sf-kg').value)||0,
+    dims: document.getElementById('sf-dims').value,
+    ddpQuoted: parseFloat(document.getElementById('sf-ddp').value)||0,
+    dtSeparate: parseFloat(document.getElementById('sf-dt').value)||0,
+    status: 'confirmed',
+    dateCreated: new Date().toISOString().slice(0,10),
+    eta:'', deliveryDate:'', pod:'', notes: document.getElementById('sf-notes').value,
+    originProv:'', originPickup:0, originFreight:0, originOther:0, originInvoice:'', originPaid:false,
+    destProv:'', destLiberation:0, destDelivery:0, destOther:0, destInvoice:'', destPaid:false,
+    clientInvoice:'', clientInvoiceDate:'', clientPaid:false, clientPaidDate:'',
+  };
+  const arr = getShipments();
+  arr.unshift(shipment);
+  saveShipments(arr);
+  toggleNewShipmentForm();
+  // Clear form
+  ['sf-ref','sf-client','sf-tracking','sf-origin','sf-dest','sf-fob','sf-kg','sf-dims','sf-ddp','sf-dt','sf-notes'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  renderShipments();
+  renderShipmentsStats();
+  alert('✓ Shipment creado');
+}
+
+function updateShipmentField(id, field, value){
+  const arr = getShipments();
+  const s = arr.find(x=>x.id===id);
+  if(!s) return;
+  // Parse numbers
+  const numFields = ['originPickup','originFreight','originOther','destLiberation','destDelivery','destOther','ddpQuoted','dtSeparate','fob','kg'];
+  s[field] = numFields.includes(field) ? (parseFloat(value)||0) : value;
+  saveShipments(arr);
+  renderShipmentsStats();
+  // Update profit display in modal if open
+  const profitEl = document.getElementById('modal-profit-'+id);
+  if(profitEl) profitEl.textContent = '$'+fmt(calcProfit(s));
+}
+
+function calcProfit(s){
+  const revenue = (s.ddpQuoted||0) + (s.dtSeparate||0);
+  const costsOrigin = (s.originPickup||0) + (s.originFreight||0) + (s.originOther||0);
+  const costsDest = (s.destLiberation||0) + (s.destDelivery||0) + (s.destOther||0);
+  return revenue - costsOrigin - costsDest;
+}
+
+function renderShipmentsStats(){
+  const arr = getShipments();
+  const active = arr.filter(x=>x.status!=='delivered').length;
+  const delivered = arr.filter(x=>x.status==='delivered').length;
+  const revenue = arr.filter(x=>x.status==='delivered').reduce((s,x)=>s+(x.ddpQuoted||0)+(x.dtSeparate||0),0);
+  const pipeline = arr.filter(x=>x.status!=='delivered').reduce((s,x)=>s+(x.ddpQuoted||0),0);
+  const profit = arr.filter(x=>x.status==='delivered').reduce((s,x)=>s+calcProfit(x),0);
+  const el = document.getElementById('shipments-stats');
+  if(!el) return;
+  el.innerHTML = `
+    <div class="meta-item"><div class="ml">ACTIVOS</div><div class="mv" style="color:var(--teal)">${active}</div></div>
+    <div class="meta-item"><div class="ml">ENTREGADOS</div><div class="mv" style="color:var(--green)">${delivered}</div></div>
+    <div class="meta-item"><div class="ml">PIPELINE</div><div class="mv" style="color:var(--yellow)">$${fmt(pipeline)}</div></div>
+    <div class="meta-item"><div class="ml">REVENUE</div><div class="mv" style="color:var(--green)">$${fmt(revenue)}</div></div>
+    <div class="meta-item"><div class="ml">PROFIT</div><div class="mv" style="color:${profit>=0?'var(--green)':'var(--red)'}">$${fmt(profit)}</div></div>
+  `;
+}
+
+function renderShipments(){
+  const search = (document.getElementById('shipments-search')?.value||'').toLowerCase();
+  const statusFilter = document.getElementById('shipments-filter-status')?.value||'';
+  let arr = getShipments();
+  if(search) arr = arr.filter(x=>[x.ref,x.client,x.dest,x.tracking,x.notes].join(' ').toLowerCase().includes(search));
+  if(statusFilter) arr = arr.filter(x=>x.status===statusFilter);
+  const el = document.getElementById('shipments-list');
+  if(!el) return;
+  if(!arr.length){
+    el.innerHTML = `<div class="flag flag-blue">No hay shipments todavía. Cuando una cotización pasa a "Ganada" en el LOG se crea automáticamente, o podés agregar uno manual.</div>`;
+    return;
+  }
+  el.innerHTML = arr.map(s => {
+    const st = SHIP_STATUS[s.status] || SHIP_STATUS.confirmed;
+    const profit = calcProfit(s);
+    const costsOrigin = (s.originPickup||0)+(s.originFreight||0)+(s.originOther||0);
+    const costsDest = (s.destLiberation||0)+(s.destDelivery||0)+(s.destOther||0);
+    return `
+    <div style="background:var(--bg2);border:1px solid var(--bd);border-left:3px solid ${st.color};padding:14px 16px;margin-bottom:8px;cursor:pointer" onclick="openShipmentModal(${s.id})">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
+        <div>
+          <div style="font-family:Barlow,sans-serif;font-weight:800;font-size:14px;color:#fff">${s.ref}</div>
+          <div style="font-size:11px;color:var(--teal);margin-top:2px">${s.client} · ${s.origin} → ${s.dest}</div>
+          <div style="font-size:10px;color:var(--tx5);margin-top:2px">${s.dateCreated}${s.eta?' · ETA: '+s.eta:''}${s.tracking?' · '+s.tracking:''}</div>
+          ${s.notes?`<div style="font-size:10px;color:var(--tx4);margin-top:4px">📝 ${s.notes}</div>`:''}
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:10px;color:${st.color};font-weight:700;margin-bottom:4px">${st.label}</div>
+          <div style="font-size:9px;color:var(--tx5)">DDP COTIZADO</div>
+          <div style="font-family:Barlow,sans-serif;font-weight:800;font-size:16px;color:var(--teal)">$${fmt(s.ddpQuoted)}</div>
+          <div style="font-size:9px;color:${profit>=0?'var(--green)':'var(--red)'};margin-top:2px">PROFIT: $${fmt(profit)}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:16px;margin-top:10px;flex-wrap:wrap">
+        <div style="font-size:10px;color:var(--tx4)">📦 FOB: <strong style="color:var(--tx2)">$${fmt(s.fob)}</strong></div>
+        <div style="font-size:10px;color:var(--tx4)">⚖ ${s.kg||'—'}kg</div>
+        <div style="font-size:10px;color:var(--tx4)">🔺 Costos Orig: <strong style="color:var(--tx2)">$${fmt(costsOrigin)}</strong></div>
+        <div style="font-size:10px;color:var(--tx4)">🔻 Costos Dest: <strong style="color:var(--tx2)">$${fmt(costsDest)}</strong></div>
+        ${s.clientPaid?`<div style="font-size:10px;color:var(--green)">✓ Cobrado</div>`:`<div style="font-size:10px;color:var(--yellow)">⏳ Pago pendiente</div>`}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openShipmentModal(id){
+  const arr = getShipments();
+  const s = arr.find(x=>x.id===id);
+  if(!s) return;
+  const st = SHIP_STATUS[s.status] || SHIP_STATUS.confirmed;
+  const profit = calcProfit(s);
+  const costsOrigin = (s.originPickup||0)+(s.originFreight||0)+(s.originOther||0);
+  const costsDest = (s.destLiberation||0)+(s.destDelivery||0)+(s.destOther||0);
+  const revenue = (s.ddpQuoted||0)+(s.dtSeparate||0);
+
+  document.getElementById('shipment-modal-content').innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+      <div>
+        <div style="font-family:Barlow,sans-serif;font-weight:800;font-size:18px;color:#fff">${s.ref}</div>
+        <div style="font-size:12px;color:var(--teal)">${s.client} · ${s.origin} → ${s.dest}</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <select onchange="updateShipmentField(${id},'status',this.value);renderShipments();renderShipmentsStats();this.closest('#shipment-modal-content').querySelector('.status-label').textContent=SHIP_STATUS[this.value].label" 
+          style="background:var(--bg3);border:1px solid var(--bd);color:var(--tx);padding:6px 10px;font-size:11px;font-family:'DM Mono',monospace">
+          ${Object.entries(SHIP_STATUS).map(([v,d])=>`<option value="${v}"${v===s.status?' selected':''}>${d.label}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+
+    <!-- Profit bar -->
+    <div style="background:${profit>=0?'var(--greenbg)':'var(--redbg)'};border:1px solid ${profit>=0?'var(--green)':'var(--red)'};padding:12px 16px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center">
+      <div style="font-family:Barlow,sans-serif;font-weight:700;font-size:10px;letter-spacing:2px;color:${profit>=0?'var(--green)':'var(--red)'}">PROFIT</div>
+      <div id="modal-profit-${id}" style="font-family:Barlow,sans-serif;font-weight:800;font-size:22px;color:${profit>=0?'var(--green)':'var(--red)'}">$${fmt(profit)}</div>
+      <div style="font-size:10px;color:var(--tx4);text-align:right">Revenue: $${fmt(revenue)}<br/>Costos: $${fmt(costsOrigin+costsDest)}</div>
+    </div>
+
+    <!-- Info general -->
+    <div class="card-title" style="margin-bottom:10px">INFO GENERAL</div>
+    <div class="grid3" style="gap:8px;margin-bottom:16px">
+      <div class="field"><div class="field-label">Tracking #</div>
+        <input value="${s.tracking||''}" onchange="updateShipmentField(${id},'tracking',this.value)" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+      <div class="field"><div class="field-label">ETA</div>
+        <input type="date" value="${s.eta||''}" onchange="updateShipmentField(${id},'eta',this.value)" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+      <div class="field"><div class="field-label">Delivery Date</div>
+        <input type="date" value="${s.deliveryDate||''}" onchange="updateShipmentField(${id},'deliveryDate',this.value)" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+      <div class="field"><div class="field-label">POD</div>
+        <input value="${s.pod||''}" onchange="updateShipmentField(${id},'pod',this.value)" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+      <div class="field"><div class="field-label">Peso (kg)</div>
+        <input type="number" value="${s.kg||''}" onchange="updateShipmentField(${id},'kg',this.value)" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+      <div class="field"><div class="field-label">Dimensiones</div>
+        <input value="${s.dims||''}" onchange="updateShipmentField(${id},'dims',this.value)" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+    </div>
+    <div class="field" style="margin-bottom:16px"><div class="field-label">Notas</div>
+      <input value="${s.notes||''}" onchange="updateShipmentField(${id},'notes',this.value)" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+
+    <!-- Costos Origen -->
+    <div class="card-title" style="margin-bottom:10px">COSTOS ORIGEN</div>
+    <div class="grid3" style="gap:8px;margin-bottom:16px">
+      <div class="field"><div class="field-label">Proveedor</div>
+        <input value="${s.originProv||''}" onchange="updateShipmentField(${id},'originProv',this.value)" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px;font-size:12px;width:100%" placeholder="IBC / NH / DHL"/></div>
+      <div class="field"><div class="field-label">Pickup (USD)</div>
+        <input type="number" value="${s.originPickup||''}" onchange="updateShipmentField(${id},'originPickup',this.value)" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+      <div class="field"><div class="field-label">Flete (USD)</div>
+        <input type="number" value="${s.originFreight||''}" onchange="updateShipmentField(${id},'originFreight',this.value)" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+      <div class="field"><div class="field-label">Otros (USD)</div>
+        <input type="number" value="${s.originOther||''}" onchange="updateShipmentField(${id},'originOther',this.value)" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+      <div class="field"><div class="field-label"># Invoice</div>
+        <input value="${s.originInvoice||''}" onchange="updateShipmentField(${id},'originInvoice',this.value)" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+      <div class="field"><div class="field-label">Pagado</div>
+        <select onchange="updateShipmentField(${id},'originPaid',this.value==='true')" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px;font-size:12px;width:100%">
+          <option value="false"${!s.originPaid?' selected':''}>⏳ Pendiente</option>
+          <option value="true"${s.originPaid?' selected':''}>✓ Pagado</option>
+        </select></div>
+    </div>
+    <div style="background:var(--bg3);padding:8px 12px;margin-bottom:16px;font-size:12px;color:var(--tx2)">
+      Total Costos Origen: <strong style="color:var(--teal)">$${fmt(costsOrigin)}</strong>
+    </div>
+
+    <!-- Costos Destino -->
+    <div class="card-title" style="margin-bottom:10px">COSTOS DESTINO</div>
+    <div class="grid3" style="gap:8px;margin-bottom:16px">
+      <div class="field"><div class="field-label">Proveedor</div>
+        <input value="${s.destProv||''}" onchange="updateShipmentField(${id},'destProv',this.value)" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px;font-size:12px;width:100%" placeholder="GPS / NH"/></div>
+      <div class="field"><div class="field-label">Liberación (USD)</div>
+        <input type="number" value="${s.destLiberation||''}" onchange="updateShipmentField(${id},'destLiberation',this.value)" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+      <div class="field"><div class="field-label">Entrega (USD)</div>
+        <input type="number" value="${s.destDelivery||''}" onchange="updateShipmentField(${id},'destDelivery',this.value)" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+      <div class="field"><div class="field-label">Otros (USD)</div>
+        <input type="number" value="${s.destOther||''}" onchange="updateShipmentField(${id},'destOther',this.value)" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+      <div class="field"><div class="field-label"># Invoice</div>
+        <input value="${s.destInvoice||''}" onchange="updateShipmentField(${id},'destInvoice',this.value)" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+      <div class="field"><div class="field-label">Pagado</div>
+        <select onchange="updateShipmentField(${id},'destPaid',this.value==='true')" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px;font-size:12px;width:100%">
+          <option value="false"${!s.destPaid?' selected':''}>⏳ Pendiente</option>
+          <option value="true"${s.destPaid?' selected':''}>✓ Pagado</option>
+        </select></div>
+    </div>
+    <div style="background:var(--bg3);padding:8px 12px;margin-bottom:16px;font-size:12px;color:var(--tx2)">
+      Total Costos Destino: <strong style="color:var(--teal)">$${fmt(costsDest)}</strong>
+    </div>
+
+    <!-- Facturación -->
+    <div class="card-title" style="margin-bottom:10px">FACTURACIÓN AL CLIENTE</div>
+    <div class="grid3" style="gap:8px;margin-bottom:16px">
+      <div class="field"><div class="field-label">DDP Cotizado (USD)</div>
+        <input type="number" value="${s.ddpQuoted||''}" onchange="updateShipmentField(${id},'ddpQuoted',this.value)" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+      <div class="field"><div class="field-label">D&T x Separado (USD)</div>
+        <input type="number" value="${s.dtSeparate||''}" onchange="updateShipmentField(${id},'dtSeparate',this.value)" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+      <div class="field"><div class="field-label"># Invoice</div>
+        <input value="${s.clientInvoice||''}" onchange="updateShipmentField(${id},'clientInvoice',this.value)" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+      <div class="field"><div class="field-label">Fecha Invoice</div>
+        <input type="date" value="${s.clientInvoiceDate||''}" onchange="updateShipmentField(${id},'clientInvoiceDate',this.value)" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+      <div class="field"><div class="field-label">Cobrado</div>
+        <select onchange="updateShipmentField(${id},'clientPaid',this.value==='true');renderShipments()" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px;font-size:12px;width:100%">
+          <option value="false"${!s.clientPaid?' selected':''}>⏳ Pendiente</option>
+          <option value="true"${s.clientPaid?' selected':''}>✓ Cobrado</option>
+        </select></div>
+      <div class="field"><div class="field-label">Fecha Cobro</div>
+        <input type="date" value="${s.clientPaidDate||''}" onchange="updateShipmentField(${id},'clientPaidDate',this.value)" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn btn-ghost btn-sm" onclick="deleteShipment(${id})" style="color:var(--red);border-color:var(--red)">ELIMINAR SHIPMENT</button>
+    </div>
+  `;
+  document.getElementById('shipment-modal').style.display = 'block';
+}
+
+function closeShipmentModal(){
+  document.getElementById('shipment-modal').style.display = 'none';
+}
+
+function deleteShipment(id){
+  if(!confirm('¿Eliminar este shipment?')) return;
+  const arr = getShipments().filter(x=>x.id!==id);
+  saveShipments(arr);
+  closeShipmentModal();
+  renderShipments();
+  renderShipmentsStats();
+}
+
 function saveApiKey(val) {
   if (val && val.startsWith('sk-ant-')) {
     localStorage.setItem('ddp_api_key', val);
@@ -3625,7 +4016,22 @@ function saveQuoteToLog(qn,dest,product,fob,total,cif){
 function updateLogStatus(id,newStatus){
   const arr=getLog();
   const item=arr.find(x=>x.id===id);
-  if(item){item.status=newStatus;saveLog(arr);renderLog();renderLogStats();}
+  if(item){
+    item.status=newStatus;
+    saveLog(arr);
+    // Auto-create shipment when marked as won
+    if(newStatus==='won'){
+      const existing = getShipments().find(x=>x.ref===item.qn);
+      if(!existing){
+        createShipmentFromLog(item);
+        renderShipments();
+        renderShipmentsStats();
+        alert('✓ Shipment creado automáticamente en la pestaña SHIPMENTS');
+      }
+    }
+    renderLog();
+    renderLogStats();
+  }
 }
 
 function deleteLogEntry(id){
