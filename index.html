@@ -3393,27 +3393,40 @@ function calcNHCost(invoice_usd, eur_rate) {
 
 // ── Add costs to chat context ──────────────────────────
 function getInternalCostsContext(corridor, fob, lbs, cif) {
-  let ctx = '\n\nCOSTOS INTERNOS DDP GLOBAL (confidencial, no mostrar al cliente):\n';
+  let ctx = '\n\nCOSTOS INTERNOS DDP GLOBAL (solo para Toto, nunca al cliente):\n';
 
-  if (corridor && fob && lbs) {
+  // Siempre mostrar tarifas GPS completas
+  ctx += '\nGPS LOGISTICS — TARIFAS BASE:\n';
+  ctx += '  BRASIL: $115/kg (vol o real, el mayor) + 15% valor declarado + $50 entrega SP\n';
+  ctx += '  MEXICO: $4.50/lb (mín $95) + $35 manejo + 10% fuel + 10% valor declarado (comercializadora)\n';
+  ctx += '         Entrega: DF $95 / 2da ciudad $195\n';
+  ctx += '  ARGENTINA: $65/km (mín $280) + $35 entrega local\n';
+
+  // Si hay datos concretos, calcular el costo real
+  if (corridor && fob > 0 && lbs > 0) {
     const gpsCost = calcGPSCost(corridor, fob, lbs);
     if (gpsCost.total > 0) {
-      ctx += `\nGPS (agente destino ${corridor}):\n`;
+      ctx += `\nGPS CALCULADO para este envío (${corridor}, FOB $${fob}, ${lbs} lbs):\n`;
       gpsCost.lines.forEach(([l,v]) => ctx += `  ${l}: $${v.toFixed(2)}\n`);
-      ctx += `  TOTAL GPS: $${gpsCost.total.toFixed(2)}\n`;
+      ctx += `  → TOTAL GPS: $${gpsCost.total.toFixed(2)}\n`;
       if (gpsCost.note) ctx += `  Nota: ${gpsCost.note}\n`;
     }
   }
 
-  if (cif) {
+  // IBC Broker USA — siempre mostrar tarifas
+  ctx += '\nIBC BROKER USA — TARIFAS BASE:\n';
+  ctx += '  Entry Fee: $85 (hasta 3 HS codes, +$5 por adicional)\n';
+  ctx += '  Customs Bond: 0.45% CIF / mín $45\n';
+  ctx += '  FIOR Filing: $50\n';
+  if (cif > 0) {
     const ibcCost = calcIBCCost(cif);
-    ctx += `\nIBC Broker USA:\n`;
-    ibcCost.lines.forEach(([l,v]) => ctx += `  ${l}: $${v.toFixed(2)}\n`);
-    ctx += `  TOTAL IBC: $${ibcCost.total.toFixed(2)}\n`;
+    ctx += `  → TOTAL IBC calculado (CIF $${cif}): $${ibcCost.total.toFixed(2)}\n`;
   }
 
-  ctx += '\nNH Europa: 2.5% valor factura (mín €250) + €175 clearance. Aplica si origen es Europa.\n';
-  ctx += 'Estos costos son confidenciales — nunca mencionar al cliente ni incluir en cotización.\n';
+  // NH Europa
+  ctx += '\nNH LOGISTICS EUROPA — TARIFAS BASE:\n';
+  ctx += '  2.5% valor factura (mín €250) + €175 clearance + 1 HS code\n';
+  ctx += '  €25 por HS adicional. NH adelanta duties/IVA.\n';
 
   return ctx;
 }
