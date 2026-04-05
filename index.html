@@ -1949,7 +1949,74 @@ function buildIntelligenceReport(product, hs, coo, fob, lbs, dest, type) {
   const destKnown = ['brazil','mexico','argentina','colombia','usa'].includes(dest);
   if (!destKnown) unknown.push(`❓ Destino "${dest}" — tasas de D&T no están en la base de datos. Investigar antes de cotizar.`);
 
-  // Confidence score
+  // ── Country-specific intelligence from QT_GRAL ──────
+  const destLower = (dest||'').toLowerCase();
+
+  // COLOMBIA
+  if (destLower === 'colombia') {
+    const isServer = /server|proliant|poweredge|supermicro/i.test(product||'');
+    if (isServer) {
+      knows.push('🇨🇴 Colombia SERVERS: 0% duties (arancel 0%). Solo IVA 19%. Confirmado en operaciones anteriores.');
+    } else {
+      knows.push('🇨🇴 Colombia electrónica general: 5% duties + IVA 19%. Tasa confirmada del Excel.');
+    }
+  }
+
+  // GHANA
+  if (destLower === 'ghana') {
+    verify.push('🇬🇭 Ghana: IOR fee €350 + 1.5% CI value. Permisos locales NCA & GSA requeridos para todo equipo IT. CoC no requerido si valor < $200.');
+    verify.push('🇬🇭 Ghana duties: ~15% sobre CIF. Confirmar con agente antes de cotizar.');
+  }
+
+  // INDIA
+  if (destLower === 'india') {
+    verify.push('🇮🇳 India: BIS certification requerida para equipo IT. MTCTE permit para algunos equipos. Trámite lento — verificar antes de cotizar.');
+    verify.push('🇮🇳 India duties: ~18% VAT + Social Welfare Cess. HSN code crítico: 8523.51.90 solo paga VAT.');
+  }
+
+  // SOUTH KOREA
+  if (destLower.includes('korea') || destLower.includes('corea')) {
+    verify.push('🇰🇷 Korea del Sur: KC Certification requerida para todos los equipos eléctricos. Radio Certification si tiene WiFi/BT/GPS. Solicitar al fabricante antes de shipping.');
+    knows.push('🇰🇷 Korea duties: ~8% + IVA 10% sobre CIF. Transit 14-18 días.');
+  }
+
+  // TUNISIA
+  if (destLower.includes('tun') || destLower.includes('tunes')) {
+    verify.push('⚠️ Tunisia: Import Authorization requerida. Lead time autorización: 10-12 días hábiles. Post-autorización: 7-10 días más. Total ~22 días mínimo.');
+    knows.push('🇹🇳 Tunisia IOR fee: ~$1,700 flat. Duties ~39% CIF. No cotizar sin confirmar import permit.');
+  }
+
+  // CANADA
+  if (destLower === 'canada') {
+    const isCOO_USMCA = /usa|mexico|canada/i.test(coo||'');
+    if (isCOO_USMCA) {
+      knows.push('🇨🇦 Canada: COO USA/Mexico/Canada → USMCA, 0% duties. RAHI servers tampoco pagan duties.');
+    } else {
+      knows.push('🇨🇦 Canada duties: ~5% general + IVA 5% GST. COO China: verificar tarifa específica.');
+    }
+  }
+
+  // BRAZIL additional intel
+  if (destLower === 'brazil') {
+    knows.push('🇧🇷 Brazil: Cascade II+IPI+PIS+COFINS+ICMS = ~71% CIF. GPS $115/kg + 15% valor declarado + $50 entrega SP.');
+  }
+
+  // MEXICO additional intel  
+  if (destLower === 'mexico') {
+    knows.push('🇲🇽 Mexico: DTA 0.93% + IVA 16%. GPS: $4.50/lb (mín $95) + $35 manejo + 10% fuel + 10% valor declarado.');
+  }
+
+  // UAE / DUBAI
+  if (destLower.includes('dubai') || destLower.includes('uae') || destLower.includes('emirates')) {
+    knows.push('🇦🇪 UAE/Dubai: 5% duties general. Sin IVA para re-exportación. Transit vía DXB ~7-10 días desde Miami.');
+  }
+
+  // PANAMA
+  if (destLower === 'panama') {
+    knows.push('🇵🇦 Panama: Zona Libre de Colón — 0% duties si destino ZLC. Para consumo local: ~5-10%. Confirmar tipo de importación.');
+  }
+
+  // ── Confidence score
   const total = knows.length + verify.length + unknown.length;
   const score = total > 0 ? Math.round((knows.length / total) * 100) : 50;
   const scoreColor = score >= 75 ? 'var(--green)' : score >= 50 ? 'var(--yellow)' : 'var(--red)';
