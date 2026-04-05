@@ -3419,9 +3419,36 @@ COSTOS INTERNOS DISPONIBLES:
 ${getInternalCostsContext('', 0, 0, 0)}
 ${getKBContext()}
 
+INTELIGENCIA DE PAÍSES (datos reales de operaciones DDP Global):
+
+BRASIL: Cascade II+IPI+PIS+COFINS+ICMS = ~71% CIF. GPS $115/kg + 15% valor declarado + $50 entrega SP. ANATEL requerido para equipo wireless.
+MEXICO: DTA 0.93% + IVA 16%. GPS $4.50/lb (mín $95) + $35 manejo + 10% fuel + 10% valor declarado.
+ARGENTINA: Cascade ~60% CIF. SIRA import authorization. AFIP cross-check de valores.
+COLOMBIA: Electrónica general 5% duties + IVA 19%. SERVIDORES 0% duties + IVA 19%. Tasa confirmada en operaciones.
+CHILE: ~6% duties + IVA 19%.
+USA IOR: Entry $85 + FIOR $50 + Bond 0.45% CIF + MPF 0.3464%. China origin: S.301 25% + IEEPA 20% = 45% total.
+CANADA: USMCA 0% si COO USA/Mexico/Canada. Servidores RAHI sin duties. COO China: verificar tarifa.
+INDIA: BIS certification requerida para IT equipment. MTCTE permit para algunos equipos. Duties ~18% + VAT. HSN 8523.51.90 solo paga VAT. Transit 14 días.
+KOREA DEL SUR: KC Certification obligatoria para equipos eléctricos. Radio Cert si tiene WiFi/BT/GPS. Duties ~8% + IVA 10%.
+GHANA: IOR fee €350 + 1.5% CI value. Permisos NCA & GSA requeridos. Duties ~15% CIF. CoC no requerido si valor < $200.
+TUNISIA: Import Authorization obligatoria (10-12 días hábiles). Post-autorización 7-10 días más. IOR ~$1,700. Duties ~39%.
+DUBAI/UAE: 5% duties general. Sin IVA para re-exportación. Via DXB.
+PANAMA: Zona Libre Colón 0%. Consumo local 5-10%.
+SINGAPUR: 9% GST. Sin duties para IT hardware. Hub regional para Asia.
+ISRAEL: ~12% duties + 17% VAT. Requiere certificación de seguridad para algunos equipos.
+AUSTRALIA: ~5% duties + 10% GST.
+HONG KONG: 0% duties. IVA 0%. Hub libre de impuestos.
+TAIWAN: ~0% duties para IT. IVA 5%.
+
+REGLAS DE NEGOCIO DDP GLOBAL:
+- Margen siempre embebido en líneas operacionales — nunca mostrar como línea separada
+- IOR fee es ingreso de Toto, no costo
+- D&T siempre pass-through, pagado por adelantado por el cliente
+- Países sancionados OFAC: Iran, Rusia, Cuba, Corea del Norte, Siria — NO COTIZAR
+
 ${activeQuoteData ? 'COTIZACIÓN ACTIVA:\n' + JSON.stringify({qn:activeQuoteData.qn, product:activeQuoteData.product, dest:activeQuoteData.dest, fob:activeQuoteData.fob, tot:activeQuoteData.tot}) : 'Sin cotización activa en este momento.'}
 
-Respondé en el mismo idioma que usa Toto (español o inglés). Sé directo y conciso.`;
+Respondé en el mismo idioma que usa Toto (español o inglés). Sé directo y conciso. Si no sabés algo con certeza, decilo claramente en lugar de inventar.`;
 
     const r = await fetch('https://ddp-proxy.nicolasjuarezroldan.workers.dev', {
       method: 'POST',
