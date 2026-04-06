@@ -564,32 +564,58 @@ Please advise on DDP cost and transit time. Thanks"></textarea>
 <!-- PAGE: CASE LIBRARY                               -->
 <!-- ════════════════════════════════════════════════ -->
 <div class="page" id="page-cases">
-  <div class="page-title">CASE LIBRARY</div>
-  <div class="page-sub">Real operational cases — problems, solutions, and lessons learned</div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;flex-wrap:wrap;gap:8px">
+    <div class="page-title" style="margin-bottom:0">CASE LIBRARY</div>
+    <button class="btn btn-primary btn-sm" onclick="openNewCasePanel()" style="background:#7c3aed;border:none">✦ NUEVO CASO CON AI</button>
+  </div>
+  <div class="page-sub">Casos operacionales reales — problemas, soluciones y lecciones aprendidas</div>
 
-  <input class="search-box" placeholder="Search cases by country, product, problem, or keyword..." oninput="filterCases(this.value)" id="case-search"/>
+  <!-- AI New Case Panel -->
+  <div id="new-case-panel" style="display:none;background:var(--bg2);border:1px solid #7c3aed;padding:20px;margin-bottom:16px">
+    <div style="font-family:Barlow,sans-serif;font-weight:700;font-size:10px;letter-spacing:3px;color:#a78bfa;margin-bottom:12px">✦ CARGAR NUEVO CASO CON AI</div>
+    <div style="font-size:11px;color:var(--tx4);margin-bottom:10px">Pegá el texto del problema — email, notas, descripción. Claude lo analiza y arma el caso completo.</div>
+    <textarea id="new-case-input" style="width:100%;min-height:120px;background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:10px;font-size:12px;font-family:'DM Mono',monospace;resize:vertical;margin-bottom:10px" placeholder="Ej: Tuvimos un problema con un envío de Cisco switches a Brasil. El cliente declaró $1,200 por unidad cuando el precio de mercado es $8,000. Customs seleccionó Canal Cinza y tardó 60 días en liberar..."></textarea>
+    <div id="new-case-status" style="display:none;margin-bottom:10px" class="flag flag-blue">
+      <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--teal)">
+        <div class="dot-pulse"><span></span><span></span><span></span></div>
+        <span>Analizando con AI...</span>
+      </div>
+    </div>
+    <div id="new-case-preview" style="display:none;margin-bottom:12px"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-primary btn-sm" onclick="analyzeNewCase()" id="analyze-case-btn" style="background:#7c3aed">ANALIZAR CON AI →</button>
+      <button class="btn btn-ghost btn-sm" onclick="closeNewCasePanel()">CANCELAR</button>
+    </div>
+  </div>
+
+  <input class="search-box" placeholder="Buscar por país, producto, problema, keyword..." oninput="filterCases(this.value)" id="case-search"/>
 
   <div class="grid2" style="margin-bottom:14px">
     <div class="field">
-      <div class="field-label">Filter by Country</div>
+      <div class="field-label">Filtrar por País</div>
       <select onchange="filterCases(document.getElementById('case-search').value)" id="case-ctry">
-        <option value="">All Countries</option>
+        <option value="">Todos los países</option>
         <option>Brazil</option>
         <option>Mexico</option>
         <option>Argentina</option>
         <option>Colombia</option>
         <option>USA</option>
+        <option>Chile</option>
+        <option>India</option>
+        <option>Other</option>
       </select>
     </div>
     <div class="field">
-      <div class="field-label">Filter by Type</div>
+      <div class="field-label">Filtrar por Tipo</div>
       <select onchange="filterCases(document.getElementById('case-search').value)" id="case-type">
-        <option value="">All Types</option>
+        <option value="">Todos los tipos</option>
         <option>Customs Inspection</option>
         <option>Valuation Dispute</option>
         <option>Regulatory Compliance</option>
         <option>Freight Issue</option>
         <option>Documentation</option>
+        <option>EOR/IOR Issue</option>
+        <option>Compliance Alert</option>
       </select>
     </div>
   </div>
@@ -2331,32 +2357,152 @@ function filterReg(){
 // CASE LIBRARY
 // ════════════════════════════════════════════════════════
 
+function getUserCases(){try{return JSON.parse(localStorage.getItem('ddp_user_cases')||'[]');}catch(e){return[];}}
+function saveUserCases(arr){localStorage.setItem('ddp_user_cases',JSON.stringify(arr));}
+
 function renderCases(search,ctry,type){
-  let list=CASE_DB;
+  // Combine hardcoded + user-saved cases
+  const userCases = getUserCases();
+  let list = [...userCases, ...CASE_DB];
   if(ctry) list=list.filter(c=>c.country===ctry);
   if(type) list=list.filter(c=>c.type===type);
   if(search) list=list.filter(c=>{
     const s=search.toLowerCase();
-    return c.title.toLowerCase().includes(s)||c.desc.toLowerCase().includes(s)||
-           c.problem.toLowerCase().includes(s)||c.lesson.toLowerCase().includes(s)||
-           c.product.toLowerCase().includes(s)||(c.tags||[]).some(t=>t.toLowerCase().includes(s));
+    return (c.title||'').toLowerCase().includes(s)||(c.desc||'').toLowerCase().includes(s)||
+           (c.problem||'').toLowerCase().includes(s)||(c.lesson||'').toLowerCase().includes(s)||
+           (c.product||'').toLowerCase().includes(s)||(c.tags||[]).some(t=>t.toLowerCase().includes(s));
   });
   const el=document.getElementById("case-list");
-  if(!list.length){el.innerHTML="<div class='flag flag-yellow'>No cases found.</div>";return;}
+  const total = getUserCases().length + CASE_DB.length;
+  if(!list.length){el.innerHTML=`<div class='flag flag-yellow'>No se encontraron casos.</div>`;return;}
   el.innerHTML=list.map(c=>`
-    <div class="case-card">
-      <div class="case-id">${c.id}</div>
-      <div class="case-title">${c.title}</div>
-      <div class="case-meta">${c.country} · ${c.type} · ${c.product}</div>
+    <div class="case-card" style="border-left:3px solid ${c._userAdded?'#7c3aed':'var(--bd)'}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div class="case-id">${c.id}${c._userAdded?' <span style="color:#a78bfa;font-size:8px">● USER</span>':''}</div>
+        ${c._userAdded?`<button onclick="deleteUserCase('${c.id}')" style="background:none;border:none;color:var(--tx5);cursor:pointer;font-size:10px">✕</button>`:''}
+      </div>
+      <div class="case-title">${c.title||''}</div>
+      <div class="case-meta">${c.country||''} · ${c.type||''} · ${c.product||''}</div>
       <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px">
         ${(c.tags||[]).map(t=>`<span class="tag">${t}</span>`).join("")}
       </div>
-      <div class="case-section"><div class="case-section-label">Problem</div><div class="case-section-text">${c.problem}</div></div>
-      <div class="case-section" style="margin-top:6px"><div class="case-section-label">Solution</div><div class="case-section-text">${c.solution}</div></div>
-      <div class="case-section" style="margin-top:6px"><div class="case-section-label">Outcome</div><div class="case-section-text">${c.outcome}</div></div>
-      <div class="case-lesson">💡 <strong>Lesson:</strong> ${c.lesson}</div>
+      <div class="case-section"><div class="case-section-label">Problema</div><div class="case-section-text">${c.problem||''}</div></div>
+      <div class="case-section" style="margin-top:6px"><div class="case-section-label">Solución</div><div class="case-section-text">${c.solution||''}</div></div>
+      <div class="case-section" style="margin-top:6px"><div class="case-section-label">Resultado</div><div class="case-section-text">${c.outcome||''}</div></div>
+      <div class="case-lesson">💡 <strong>Lección:</strong> ${c.lesson||''}</div>
     </div>
   `).join("");
+}
+
+function deleteUserCase(id){
+  if(!confirm('¿Eliminar este caso?')) return;
+  const arr = getUserCases().filter(x=>x.id!==id);
+  saveUserCases(arr);
+  filterCases(document.getElementById('case-search')?.value||'');
+}
+
+function openNewCasePanel(){
+  document.getElementById('new-case-panel').style.display='block';
+  document.getElementById('new-case-panel').scrollIntoView({behavior:'smooth'});
+}
+function closeNewCasePanel(){
+  document.getElementById('new-case-panel').style.display='none';
+  document.getElementById('new-case-input').value='';
+  document.getElementById('new-case-preview').style.display='none';
+  document.getElementById('new-case-status').style.display='none';
+}
+
+async function analyzeNewCase(){
+  const text = document.getElementById('new-case-input').value.trim();
+  if(!text){alert('Pegá la descripción del caso primero.');return;}
+  
+  document.getElementById('new-case-status').style.display='block';
+  document.getElementById('new-case-preview').style.display='none';
+  document.getElementById('analyze-case-btn').disabled=true;
+
+  const sysPrompt = `Sos el asistente operacional de DDP Global LLC. Analizá el texto del caso logístico y devolvé SOLO un JSON con esta estructura exacta (sin markdown, sin explicación):
+{
+  "title": "Título descriptivo del caso (máx 80 chars)",
+  "country": "País destino (en inglés: Brazil, Mexico, USA, etc.)",
+  "type": "Tipo: Customs Inspection | Valuation Dispute | Regulatory Compliance | Freight Issue | Documentation | EOR/IOR Issue | Compliance Alert",
+  "product": "Producto o equipo involucrado",
+  "desc": "Descripción breve del caso (1-2 oraciones)",
+  "problem": "Cuál fue el problema específico",
+  "analysis": "Análisis de causa raíz",
+  "solution": "Cómo se resolvió",
+  "outcome": "Resultado final (tiempo, costos adicionales, etc.)",
+  "lesson": "Lección clave para operaciones futuras (crítica, accionable)",
+  "tags": ["tag1", "tag2", "tag3"]
+}`;
+
+  try {
+    const r = await fetch('https://ddp-proxy.nicolasjuarezroldan.workers.dev',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1500,
+        system:sysPrompt,
+        messages:[{role:'user',content:`Analizá este caso y generá el JSON:
+
+${text}`}]
+      })
+    });
+    const d = await r.json();
+    if(d.error) throw new Error(d.error.message);
+    const raw = d.content?.[0]?.text||'';
+    const clean = raw.replace(/```json|```/g,'').trim();
+    const parsed = JSON.parse(clean);
+    
+    // Show preview
+    showCasePreview(parsed);
+  } catch(e) {
+    document.getElementById('new-case-status').style.display='none';
+    alert('Error al analizar: '+e.message);
+  } finally {
+    document.getElementById('analyze-case-btn').disabled=false;
+  }
+}
+
+function showCasePreview(caseData){
+  document.getElementById('new-case-status').style.display='none';
+  const preview = document.getElementById('new-case-preview');
+  preview.style.display='block';
+  preview.innerHTML=`
+    <div style="background:var(--bg3);border:1px solid #7c3aed;padding:16px;margin-bottom:10px">
+      <div style="font-size:9px;color:#a78bfa;letter-spacing:3px;margin-bottom:12px;font-family:Barlow,sans-serif;font-weight:700">✓ CASO GENERADO — REVISÁ Y CONFIRMÁ</div>
+      <div style="font-family:Barlow,sans-serif;font-weight:800;font-size:14px;color:#fff;margin-bottom:4px">${caseData.title}</div>
+      <div style="font-size:11px;color:var(--teal);margin-bottom:10px">${caseData.country} · ${caseData.type} · ${caseData.product}</div>
+      <div style="display:grid;gap:8px;font-size:11px">
+        <div><span style="color:var(--tx5)">PROBLEMA:</span> <span style="color:var(--tx2)">${caseData.problem}</span></div>
+        <div><span style="color:var(--tx5)">SOLUCIÓN:</span> <span style="color:var(--tx2)">${caseData.solution}</span></div>
+        <div><span style="color:var(--tx5)">RESULTADO:</span> <span style="color:var(--tx2)">${caseData.outcome}</span></div>
+        <div style="background:var(--yellowbg);border-left:2px solid var(--yellow);padding:8px;color:#fde68a">💡 ${caseData.lesson}</div>
+      </div>
+      <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
+        ${(caseData.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('')}
+      </div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-primary btn-sm" onclick='saveNewCase(${JSON.stringify(JSON.stringify(caseData))})' style="background:#7c3aed">✓ GUARDAR EN CASE LIBRARY</button>
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('new-case-preview').style.display='none'">REGENERAR</button>
+    </div>`;
+}
+
+function saveNewCase(caseDataStr){
+  const caseData = JSON.parse(caseDataStr);
+  const arr = getUserCases();
+  const newCase = {
+    ...caseData,
+    id: 'USR-'+new Date().toISOString().slice(0,10).replace(/-/g,'')+'-'+String(arr.length+1).padStart(3,'0'),
+    _userAdded: true,
+    _date: new Date().toISOString().slice(0,10)
+  };
+  arr.unshift(newCase);
+  saveUserCases(arr);
+  closeNewCasePanel();
+  filterCases('');
+  alert('✓ Caso guardado en el Case Library');
 }
 function filterCases(search){
   renderCases(search,document.getElementById("case-ctry").value,document.getElementById("case-type").value);
