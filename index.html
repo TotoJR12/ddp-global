@@ -169,8 +169,8 @@ a{color:var(--teal);text-decoration:none}
     <button class="nav-btn" onclick="showPage('regulatory')">REGULATORY</button>
     <button class="nav-btn" onclick="showPage('cases')">CASE LIBRARY</button>
     <button class="nav-btn" onclick="showPage('freight')" style="display:none">FREIGHT INTEL</button>
-    <button class="nav-btn" onclick="showPage('log')" style="color:#22c55e">📋 SHIP LOG</button>
-    <button class="nav-btn" onclick="showPage('shipments')" style="color:#f59e0b">🚚 SHIPMENTS</button>
+    <button class="nav-btn" onclick="showPage('log')" style="color:#22c55e">📄 QUOTES</button>
+    <button class="nav-btn" onclick="showPage('shipments')" style="color:#f59e0b">✈️ SHIPMENTS</button>
     <button class="nav-btn" onclick="showPage('freechat')" style="color:var(--teal)">💬 CHAT IA</button>
     <button class="nav-btn" onclick="showPage('eor')" style="color:#f97316">🛡 EOR</button>
   </nav>
@@ -704,11 +704,11 @@ Please advise on DDP cost and transit time. Thanks"></textarea>
 <!-- PAGE: SHIPMENT LOG                               -->
 <!-- ════════════════════════════════════════════════ -->
 <div class="page" id="page-log">
-  <div class="page-title" style="display:flex;align-items:center;justify-content:space-between">
-    <span>📋 SHIPMENT LOG</span>
-    <button class="btn btn-ghost btn-sm" onclick="clearLog()" style="font-size:10px;color:var(--red);border-color:var(--red)">CLEAR ALL</button>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;flex-wrap:wrap;gap:8px">
+    <div class="page-title" style="margin-bottom:0">📄 QUOTES LIST</div>
+    <button class="btn btn-ghost btn-sm" onclick="clearLog()" style="font-size:9px;color:var(--red);border-color:var(--red)">CLEAR ALL</button>
   </div>
-  <div class="page-sub">Historial de cotizaciones — guardadas automáticamente, persistentes entre sesiones</div>
+  <div class="page-sub">Historial de cotizaciones — guardadas automáticamente desde el Quoter o AI Quote</div>
 
   <!-- Stats bar -->
   <div id="log-stats" class="meta-bar" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px"></div>
@@ -763,7 +763,7 @@ Please advise on DDP cost and transit time. Thanks"></textarea>
 <!-- ════════════════════════════════════════════════ -->
 <div class="page" id="page-shipments">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-    <div class="page-title">🚚 SHIPMENTS</div>
+    <div class="page-title">✈️ SHIPMENTS</div>
     <button class="btn btn-ghost btn-sm" onclick="toggleNewShipmentForm()">+ NUEVO MANUAL</button>
     <button class="btn btn-ghost btn-sm" onclick="importHistoricalShipments()" style="border-color:var(--yellow);color:var(--yellow)">⬆ IMPORTAR HISTÓRICOS</button>
   </div>
@@ -3420,8 +3420,13 @@ function addChatMsg(containerId, role, text) {
   const el = document.getElementById(containerId);
   const isUser = role === 'user';
   const div = document.createElement('div');
-  div.style.cssText = `padding:10px 14px;font-size:12px;line-height:1.7;border-left:3px solid ${isUser?'var(--teal)':'var(--bd)'};background:${isUser?'rgba(0,181,200,.08)':'var(--bg3)'};color:var(--tx2);white-space:pre-wrap`;
-  div.innerHTML = `<span style="font-size:9px;color:${isUser?'var(--teal)':'var(--tx5)'};letter-spacing:2px;display:block;margin-bottom:4px">${isUser?'VOS':'CLAUDE'}</span>${text}`;
+  div.style.cssText = `display:flex;gap:10px;align-items:flex-start;flex-direction:${isUser?'row-reverse':'row'}`;
+  const avatar = `<div style="flex-shrink:0;width:30px;height:30px;border-radius:50%;background:${isUser?'var(--teal)':'#7c3aed'};display:flex;align-items:center;justify-content:center;font-family:Barlow,sans-serif;font-weight:800;font-size:10px;color:#fff">${isUser?'TU':'AI'}</div>`;
+  const bubble = `<div style="max-width:82%;display:flex;flex-direction:column;align-items:${isUser?'flex-end':'flex-start'}">
+    <div style="font-size:8px;color:${isUser?'var(--teal)':'#a78bfa'};letter-spacing:2px;margin-bottom:4px;font-family:Barlow,sans-serif;font-weight:700">${isUser?'VOS':'CLAUDE IA'}</div>
+    <div style="background:${isUser?'#0a1f38':'var(--bg2)'};border:1px solid ${isUser?'var(--teal)':'var(--bd)'};border-${isUser?'right':'left'}:3px solid ${isUser?'var(--teal)':'#7c3aed'};padding:10px 14px;font-size:12px;color:var(--tx2);line-height:1.8;white-space:pre-wrap">${text}</div>
+  </div>`;
+  div.innerHTML = avatar + bubble;
   el.appendChild(div);
   el.scrollTop = el.scrollHeight;
 }
@@ -3593,14 +3598,22 @@ async function sendFreeChatMsg() {
   // Add user message
   const msgsEl = document.getElementById('freechat-messages');
   const userDiv = document.createElement('div');
-  userDiv.style.cssText = 'padding:10px 14px;font-size:12px;line-height:1.7;border-left:3px solid var(--teal);background:rgba(0,181,200,.08);color:var(--tx2);white-space:pre-wrap';
-  userDiv.innerHTML = '<span style="font-size:9px;color:var(--teal);letter-spacing:2px;display:block;margin-bottom:4px">VOS</span>' + msg;
+  userDiv.style.cssText = 'display:flex;gap:10px;align-items:flex-start;flex-direction:row-reverse';
+  userDiv.innerHTML = `<div style="flex-shrink:0;width:30px;height:30px;border-radius:50%;background:var(--teal);display:flex;align-items:center;justify-content:center;font-family:Barlow,sans-serif;font-weight:800;font-size:10px;color:var(--bg)">TU</div>
+    <div style="max-width:82%;display:flex;flex-direction:column;align-items:flex-end">
+      <div style="font-size:8px;color:var(--teal);letter-spacing:2px;margin-bottom:4px;font-family:Barlow,sans-serif;font-weight:700">VOS</div>
+      <div style="background:#0a1f38;border:1px solid var(--teal);border-right:3px solid var(--teal);padding:10px 14px;font-size:12px;color:var(--tx2);line-height:1.8;white-space:pre-wrap">${msg}</div>
+    </div>`;
   msgsEl.appendChild(userDiv);
 
   // Thinking indicator
   const thinkDiv = document.createElement('div');
-  thinkDiv.style.cssText = 'padding:10px 14px;font-size:12px;border-left:3px solid var(--bd);background:var(--bg3);color:var(--tx4)';
-  thinkDiv.innerHTML = '<span style="font-size:9px;color:var(--tx5);letter-spacing:2px;display:block;margin-bottom:4px">CLAUDE</span>...';
+  thinkDiv.style.cssText = 'display:flex;gap:10px;align-items:flex-start';
+  thinkDiv.innerHTML = `<div style="flex-shrink:0;width:30px;height:30px;border-radius:50%;background:#7c3aed;display:flex;align-items:center;justify-content:center;font-family:Barlow,sans-serif;font-weight:800;font-size:10px;color:#fff">AI</div>
+    <div style="max-width:82%;display:flex;flex-direction:column;">
+      <div style="font-size:8px;color:#a78bfa;letter-spacing:2px;margin-bottom:4px;font-family:Barlow,sans-serif;font-weight:700">CLAUDE IA</div>
+      <div style="background:var(--bg2);border:1px solid var(--bd);border-left:3px solid #7c3aed;padding:10px 14px;font-size:12px;color:var(--tx4);line-height:1.8">...</div>
+    </div>`;
   msgsEl.appendChild(thinkDiv);
   msgsEl.scrollTop = msgsEl.scrollHeight;
 
@@ -3670,16 +3683,21 @@ Respondé en el mismo idioma que usa Toto (español o inglés). Sé directo y co
 
     msgsEl.removeChild(thinkDiv);
     const replyDiv = document.createElement('div');
-    replyDiv.style.cssText = 'padding:10px 14px;font-size:12px;line-height:1.7;border-left:3px solid var(--bd);background:var(--bg3);color:var(--tx2);white-space:pre-wrap';
-    replyDiv.innerHTML = '<span style="font-size:9px;color:var(--tx5);letter-spacing:2px;display:block;margin-bottom:4px">CLAUDE</span>' + reply;
+    replyDiv.style.cssText = 'display:flex;gap:10px;align-items:flex-start';
+    replyDiv.innerHTML = `<div style="flex-shrink:0;width:30px;height:30px;border-radius:50%;background:#7c3aed;display:flex;align-items:center;justify-content:center;font-family:Barlow,sans-serif;font-weight:800;font-size:10px;color:#fff">AI</div>
+      <div style="max-width:82%;display:flex;flex-direction:column;">
+        <div style="font-size:8px;color:#a78bfa;letter-spacing:2px;margin-bottom:4px;font-family:Barlow,sans-serif;font-weight:700">CLAUDE IA</div>
+        <div style="background:var(--bg2);border:1px solid var(--bd);border-left:3px solid #7c3aed;padding:10px 14px;font-size:12px;color:var(--tx2);line-height:1.8;white-space:pre-wrap">${reply}</div>
+      </div>`;
     msgsEl.appendChild(replyDiv);
     msgsEl.scrollTop = msgsEl.scrollHeight;
 
   } catch(e) {
     msgsEl.removeChild(thinkDiv);
     const errDiv = document.createElement('div');
-    errDiv.style.cssText = 'padding:10px 14px;font-size:12px;border-left:3px solid var(--red);background:var(--redbg);color:#fca5a5';
-    errDiv.innerHTML = '<span style="font-size:9px;letter-spacing:2px;display:block;margin-bottom:4px">ERROR</span>⚠ ' + e.message;
+    errDiv.style.cssText = 'display:flex;gap:10px;align-items:flex-start';
+    errDiv.innerHTML = `<div style="flex-shrink:0;width:30px;height:30px;border-radius:50%;background:var(--red);display:flex;align-items:center;justify-content:center;font-size:14px">⚠</div>
+      <div style="background:var(--redbg);border:1px solid var(--red);border-left:3px solid var(--red);padding:10px 14px;font-size:12px;color:#fca5a5">${e.message}</div>`;
     msgsEl.appendChild(errDiv);
     msgsEl.scrollTop = msgsEl.scrollHeight;
   }
@@ -3897,12 +3915,17 @@ function openShipmentModal(id){
         <div style="font-family:Barlow,sans-serif;font-weight:800;font-size:18px;color:#fff">${s.ref}</div>
         <div style="font-size:12px;color:var(--teal)">${s.client} · ${s.origin} → ${s.dest}</div>
       </div>
-      <div style="display:flex;gap:8px;align-items:center">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <span id="shipment-save-indicator" style="font-size:11px;font-family:Barlow,sans-serif;font-weight:700;min-width:80px"></span>
         <select onchange="updateShipmentField(${id},'status',this.value);renderShipments();renderShipmentsStats();" 
           style="background:var(--bg3);border:1px solid var(--bd);color:var(--tx);padding:6px 10px;font-size:11px;font-family:'DM Mono',monospace">
           ${Object.entries(SHIP_STATUS).map(([v,d])=>`<option value="${v}"${v===s.status?' selected':''}>${d.label}</option>`).join('')}
         </select>
+        <input type="text" placeholder="Estado personalizado..." 
+          style="background:var(--bg3);border:1px solid var(--bd);color:var(--tx);padding:6px 10px;font-size:11px;font-family:'DM Mono',monospace;width:180px"
+          onblur="if(this.value.trim()){updateShipmentField(${id},'customStatus',this.value.trim());renderShipments();renderShipmentsStats();}"
+          value="${s.customStatus||''}"
+          title="Escribí un estado libre — ej: En retorno, Bloqueado en aduana, etc."/>
       </div>
     </div>
 
@@ -3913,89 +3936,106 @@ function openShipmentModal(id){
       <div style="font-size:10px;color:var(--tx4);text-align:right">Revenue: $${fmt(revenue)}<br/>Costos: $${fmt(costsOrigin+costsDest)}</div>
     </div>
 
-    <!-- Info general -->
-    <div class="card-title" style="margin-bottom:10px">INFO GENERAL</div>
-    <div class="grid3" style="gap:8px;margin-bottom:16px">
-      <div class="field"><div class="field-label">Tracking #</div>
-        <input value="${s.tracking||''}" onchange="updateShipmentField(${id},'tracking',this.value)" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
-      <div class="field"><div class="field-label">ETA</div>
-        <input type="date" value="${s.eta||''}" onchange="updateShipmentField(${id},'eta',this.value)" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
-      <div class="field"><div class="field-label">Delivery Date</div>
-        <input type="date" value="${s.deliveryDate||''}" onchange="updateShipmentField(${id},'deliveryDate',this.value)" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
-      <div class="field"><div class="field-label">POD</div>
-        <input value="${s.pod||''}" onchange="updateShipmentField(${id},'pod',this.value)" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
-      <div class="field"><div class="field-label">Peso (kg)</div>
-        <input type="number" value="${s.kg||''}" onchange="updateShipmentField(${id},'kg',this.value)" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
-      <div class="field"><div class="field-label">Dimensiones</div>
-        <input value="${s.dims||''}" onchange="updateShipmentField(${id},'dims',this.value)" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+    <!-- INFO GENERAL -->
+    <div style="background:#071e3d;border:1px solid var(--teal);border-left:4px solid var(--teal);padding:10px 16px;margin-bottom:12px;display:flex;align-items:center;gap:10px">
+      <span style="font-size:16px">📋</span>
+      <span style="font-family:Barlow,sans-serif;font-weight:800;font-size:11px;color:var(--teal);letter-spacing:3px">INFO GENERAL</span>
     </div>
-    <div class="field" style="margin-bottom:16px"><div class="field-label">Notas</div>
-      <input value="${s.notes||''}" onchange="updateShipmentField(${id},'notes',this.value)" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+    <div style="background:#071e3d;border:1px solid #0f3460;padding:14px;margin-bottom:8px">
+    <div class="grid3" style="gap:8px;margin-bottom:10px">
+      <div class="field"><div class="field-label">Tracking #</div>
+        <input value="${s.tracking||''}" onchange="updateShipmentField(${id},'tracking',this.value)" style="background:var(--bg);border:1px solid #0f3460;color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+      <div class="field"><div class="field-label">ETA</div>
+        <input type="date" value="${s.eta||''}" onchange="updateShipmentField(${id},'eta',this.value)" style="background:var(--bg);border:1px solid #0f3460;color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+      <div class="field"><div class="field-label">Delivery Date</div>
+        <input type="date" value="${s.deliveryDate||''}" onchange="updateShipmentField(${id},'deliveryDate',this.value)" style="background:var(--bg);border:1px solid #0f3460;color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+      <div class="field"><div class="field-label">POD</div>
+        <input value="${s.pod||''}" onchange="updateShipmentField(${id},'pod',this.value)" style="background:var(--bg);border:1px solid #0f3460;color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+      <div class="field"><div class="field-label">Peso (kg)</div>
+        <input type="number" value="${s.kg||''}" onchange="updateShipmentField(${id},'kg',this.value)" style="background:var(--bg);border:1px solid #0f3460;color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+      <div class="field"><div class="field-label">Dimensiones</div>
+        <input value="${s.dims||''}" onchange="updateShipmentField(${id},'dims',this.value)" style="background:var(--bg);border:1px solid #0f3460;color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+    </div>
+    <div class="field"><div class="field-label">Notas</div>
+      <input value="${s.notes||''}" onchange="updateShipmentField(${id},'notes',this.value)" style="background:var(--bg);border:1px solid #0f3460;color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+    </div>
 
-    <!-- Costos Origen -->
-    <div class="card-title" style="margin-bottom:10px">COSTOS ORIGEN</div>
-    <div class="grid3" style="gap:8px;margin-bottom:16px">
+    <!-- COSTOS ORIGEN -->
+    <div style="background:#1a0a00;border:1px solid #f97316;border-left:4px solid #f97316;padding:10px 16px;margin-top:16px;margin-bottom:12px;display:flex;align-items:center;gap:10px">
+      <span style="font-size:16px">✈️</span>
+      <span style="font-family:Barlow,sans-serif;font-weight:800;font-size:11px;color:#f97316;letter-spacing:3px">COSTOS ORIGEN</span>
+      <span style="margin-left:auto;font-family:Barlow,sans-serif;font-weight:800;font-size:13px;color:#f97316" id="modal-costs-origin-${id}">$${fmt(costsOrigin)}</span>
+    </div>
+    <div style="background:#1a0a00;border:1px solid #431407;padding:14px;margin-bottom:8px">
+    <div class="grid3" style="gap:8px;margin-bottom:8px">
       <div class="field"><div class="field-label">Proveedor</div>
-        <input value="${s.originProv||''}" onchange="updateShipmentField(${id},'originProv',this.value)" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px;font-size:12px;width:100%" placeholder="IBC / NH / DHL"/></div>
+        <input value="${s.originProv||''}" onchange="updateShipmentField(${id},'originProv',this.value)" style="background:var(--bg);border:1px solid #431407;color:var(--tx);padding:8px;font-size:12px;width:100%" placeholder="IBC / NH / DHL"/></div>
       <div class="field"><div class="field-label">Pickup (USD)</div>
-        <input type="number" value="${s.originPickup||''}" onchange="updateShipmentField(${id},'originPickup',this.value)" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+        <input type="number" value="${s.originPickup||''}" onchange="updateShipmentField(${id},'originPickup',this.value);recalcModal(${id})" style="background:var(--bg);border:1px solid #431407;color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
       <div class="field"><div class="field-label">Flete (USD)</div>
-        <input type="number" value="${s.originFreight||''}" onchange="updateShipmentField(${id},'originFreight',this.value)" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+        <input type="number" value="${s.originFreight||''}" onchange="updateShipmentField(${id},'originFreight',this.value);recalcModal(${id})" style="background:var(--bg);border:1px solid #431407;color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
       <div class="field"><div class="field-label">Otros (USD)</div>
-        <input type="number" value="${s.originOther||''}" onchange="updateShipmentField(${id},'originOther',this.value)" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+        <input type="number" value="${s.originOther||''}" onchange="updateShipmentField(${id},'originOther',this.value);recalcModal(${id})" style="background:var(--bg);border:1px solid #431407;color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
       <div class="field"><div class="field-label"># Invoice</div>
-        <input value="${s.originInvoice||''}" onchange="updateShipmentField(${id},'originInvoice',this.value)" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+        <input value="${s.originInvoice||''}" onchange="updateShipmentField(${id},'originInvoice',this.value)" style="background:var(--bg);border:1px solid #431407;color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
       <div class="field"><div class="field-label">Pagado</div>
-        <select onchange="updateShipmentField(${id},'originPaid',this.value==='true')" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px;font-size:12px;width:100%">
+        <select onchange="updateShipmentField(${id},'originPaid',this.value==='true')" style="background:var(--bg);border:1px solid #431407;color:var(--tx);padding:8px;font-size:12px;width:100%">
           <option value="false"${!s.originPaid?' selected':''}>⏳ Pendiente</option>
           <option value="true"${s.originPaid?' selected':''}>✓ Pagado</option>
         </select></div>
     </div>
-    <div style="background:var(--bg3);padding:8px 12px;margin-bottom:16px;font-size:12px;color:var(--tx2)">
-      Total Costos Origen: <strong id="modal-costs-origin-${id}" style="color:var(--teal)">$${fmt(costsOrigin)}</strong>
     </div>
 
-    <!-- Costos Destino -->
-    <div class="card-title" style="margin-bottom:10px">COSTOS DESTINO</div>
-    <div class="grid3" style="gap:8px;margin-bottom:16px">
+    <!-- COSTOS DESTINO -->
+    <div style="background:#0d1f12;border:1px solid var(--green);border-left:4px solid var(--green);padding:10px 16px;margin-top:16px;margin-bottom:12px;display:flex;align-items:center;gap:10px">
+      <span style="font-size:16px">🛬</span>
+      <span style="font-family:Barlow,sans-serif;font-weight:800;font-size:11px;color:var(--green);letter-spacing:3px">COSTOS DESTINO</span>
+      <span style="margin-left:auto;font-family:Barlow,sans-serif;font-weight:800;font-size:13px;color:var(--green)" id="modal-costs-dest-${id}">$${fmt(costsDest)}</span>
+    </div>
+    <div style="background:#0d1f12;border:1px solid #052e16;padding:14px;margin-bottom:8px">
+    <div class="grid3" style="gap:8px;margin-bottom:8px">
       <div class="field"><div class="field-label">Proveedor</div>
-        <input value="${s.destProv||''}" onchange="updateShipmentField(${id},'destProv',this.value)" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px;font-size:12px;width:100%" placeholder="GPS / NH"/></div>
+        <input value="${s.destProv||''}" onchange="updateShipmentField(${id},'destProv',this.value)" style="background:var(--bg);border:1px solid #052e16;color:var(--tx);padding:8px;font-size:12px;width:100%" placeholder="GPS / NH"/></div>
       <div class="field"><div class="field-label">Liberación (USD)</div>
-        <input type="number" value="${s.destLiberation||''}" onchange="updateShipmentField(${id},'destLiberation',this.value)" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+        <input type="number" value="${s.destLiberation||''}" onchange="updateShipmentField(${id},'destLiberation',this.value);recalcModal(${id})" style="background:var(--bg);border:1px solid #052e16;color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
       <div class="field"><div class="field-label">Entrega (USD)</div>
-        <input type="number" value="${s.destDelivery||''}" onchange="updateShipmentField(${id},'destDelivery',this.value)" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+        <input type="number" value="${s.destDelivery||''}" onchange="updateShipmentField(${id},'destDelivery',this.value);recalcModal(${id})" style="background:var(--bg);border:1px solid #052e16;color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
       <div class="field"><div class="field-label">Otros (USD)</div>
-        <input type="number" value="${s.destOther||''}" onchange="updateShipmentField(${id},'destOther',this.value)" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+        <input type="number" value="${s.destOther||''}" onchange="updateShipmentField(${id},'destOther',this.value);recalcModal(${id})" style="background:var(--bg);border:1px solid #052e16;color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
       <div class="field"><div class="field-label"># Invoice</div>
-        <input value="${s.destInvoice||''}" onchange="updateShipmentField(${id},'destInvoice',this.value)" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+        <input value="${s.destInvoice||''}" onchange="updateShipmentField(${id},'destInvoice',this.value)" style="background:var(--bg);border:1px solid #052e16;color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
       <div class="field"><div class="field-label">Pagado</div>
-        <select onchange="updateShipmentField(${id},'destPaid',this.value==='true')" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px;font-size:12px;width:100%">
+        <select onchange="updateShipmentField(${id},'destPaid',this.value==='true')" style="background:var(--bg);border:1px solid #052e16;color:var(--tx);padding:8px;font-size:12px;width:100%">
           <option value="false"${!s.destPaid?' selected':''}>⏳ Pendiente</option>
           <option value="true"${s.destPaid?' selected':''}>✓ Pagado</option>
         </select></div>
     </div>
-    <div style="background:var(--bg3);padding:8px 12px;margin-bottom:16px;font-size:12px;color:var(--tx2)">
-      Total Costos Destino: <strong id="modal-costs-dest-${id}" style="color:var(--teal)">$${fmt(costsDest)}</strong>
     </div>
 
-    <!-- Facturación -->
-    <div class="card-title" style="margin-bottom:10px">FACTURACIÓN AL CLIENTE</div>
-    <div class="grid3" style="gap:8px;margin-bottom:16px">
+    <!-- FACTURACIÓN AL CLIENTE -->
+    <div style="background:#1a0a2e;border:1px solid #a78bfa;border-left:4px solid #a78bfa;padding:10px 16px;margin-top:16px;margin-bottom:12px;display:flex;align-items:center;gap:10px">
+      <span style="font-size:16px">🧾</span>
+      <span style="font-family:Barlow,sans-serif;font-weight:800;font-size:11px;color:#a78bfa;letter-spacing:3px">FACTURACIÓN AL CLIENTE</span>
+      <span style="margin-left:auto;font-size:10px;color:${s.clientPaid?'var(--green)':'var(--yellow)'};font-family:Barlow,sans-serif;font-weight:700">${s.clientPaid?'✓ COBRADO':'⏳ PENDIENTE COBRO'}</span>
+    </div>
+    <div style="background:#1a0a2e;border:1px solid #2d1b69;padding:14px;margin-bottom:8px">
+    <div class="grid3" style="gap:8px;margin-bottom:8px">
       <div class="field"><div class="field-label">DDP Cotizado (USD)</div>
-        <input type="number" value="${s.ddpQuoted||''}" onchange="updateShipmentField(${id},'ddpQuoted',this.value)" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+        <input type="number" value="${s.ddpQuoted||''}" onchange="updateShipmentField(${id},'ddpQuoted',this.value)" style="background:var(--bg);border:1px solid #2d1b69;color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
       <div class="field"><div class="field-label">D&T x Separado (USD)</div>
-        <input type="number" value="${s.dtSeparate||''}" onchange="updateShipmentField(${id},'dtSeparate',this.value)" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+        <input type="number" value="${s.dtSeparate||''}" onchange="updateShipmentField(${id},'dtSeparate',this.value)" style="background:var(--bg);border:1px solid #2d1b69;color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
       <div class="field"><div class="field-label"># Invoice</div>
-        <input value="${s.clientInvoice||''}" onchange="updateShipmentField(${id},'clientInvoice',this.value)" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+        <input value="${s.clientInvoice||''}" onchange="updateShipmentField(${id},'clientInvoice',this.value)" style="background:var(--bg);border:1px solid #2d1b69;color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
       <div class="field"><div class="field-label">Fecha Invoice</div>
-        <input type="date" value="${s.clientInvoiceDate||''}" onchange="updateShipmentField(${id},'clientInvoiceDate',this.value)" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+        <input type="date" value="${s.clientInvoiceDate||''}" onchange="updateShipmentField(${id},'clientInvoiceDate',this.value)" style="background:var(--bg);border:1px solid #2d1b69;color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
       <div class="field"><div class="field-label">Cobrado</div>
-        <select onchange="updateShipmentField(${id},'clientPaid',this.value==='true');renderShipments()" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px;font-size:12px;width:100%">
+        <select onchange="updateShipmentField(${id},'clientPaid',this.value==='true');renderShipments()" style="background:var(--bg);border:1px solid #2d1b69;color:var(--tx);padding:8px;font-size:12px;width:100%">
           <option value="false"${!s.clientPaid?' selected':''}>⏳ Pendiente</option>
           <option value="true"${s.clientPaid?' selected':''}>✓ Cobrado</option>
         </select></div>
       <div class="field"><div class="field-label">Fecha Cobro</div>
-        <input type="date" value="${s.clientPaidDate||''}" onchange="updateShipmentField(${id},'clientPaidDate',this.value)" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+        <input type="date" value="${s.clientPaidDate||''}" onchange="updateShipmentField(${id},'clientPaidDate',this.value)" style="background:var(--bg);border:1px solid #2d1b69;color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+    </div>
     </div>
 
     <div style="display:flex;gap:8px;margin-top:8px">
@@ -4007,6 +4047,21 @@ function openShipmentModal(id){
 
 function closeShipmentModal(){
   document.getElementById('shipment-modal').style.display = 'none';
+}
+
+function recalcModal(id){
+  const s = getShipments().find(x=>x.id===id);
+  if(!s) return;
+  const co=(s.originPickup||0)+(s.originFreight||0)+(s.originOther||0);
+  const cd=(s.destLiberation||0)+(s.destDelivery||0)+(s.destOther||0);
+  const rev=(s.ddpQuoted||0)+(s.dtSeparate||0);
+  const profit=rev-co-cd;
+  const elO=document.getElementById('modal-costs-origin-'+id);
+  const elD=document.getElementById('modal-costs-dest-'+id);
+  const elP=document.getElementById('modal-profit-'+id);
+  if(elO) elO.textContent='$'+fmt(co);
+  if(elD) elD.textContent='$'+fmt(cd);
+  if(elP){ elP.textContent='$'+fmt(profit); elP.style.color=profit>=0?'var(--green)':'var(--red)'; }
 }
 
 function deleteShipment(id){
@@ -4221,48 +4276,71 @@ async function runEORAnalysis(){
 }
 
 function showEORResult(ref, text, searches, originalInput){
-  // Detect risk level
   const isH3 = /H3|HIGH|CONTROLLED|STOP/i.test(text);
   const isE2 = /E2|ENHANCED/i.test(text);
   const riskColor = isH3 ? 'var(--red)' : isE2 ? '#f97316' : 'var(--green)';
   const riskBg = isH3 ? 'var(--redbg)' : isE2 ? 'var(--orangebg)' : 'var(--greenbg)';
+  const riskLabel = isH3 ? 'H3 — HIGH RISK' : isE2 ? 'E2 — ENHANCED' : 'S1 — STANDARD';
+  const riskIcon = isH3 ? '🔴' : isE2 ? '🟡' : '🟢';
 
-  // Format text as HTML
-  const formatted = text
-    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
-    .replace(/^(#{1,3})\s+(.+)$/gm,'<div style="font-family:Barlow,sans-serif;font-weight:700;font-size:11px;color:var(--teal);letter-spacing:2px;margin:12px 0 4px">$2</div>')
-    .replace(/🔴/g,'<span style="color:var(--red)">🔴</span>')
-    .replace(/🟡/g,'<span style="color:var(--yellow)">🟡</span>')
-    .replace(/🟢/g,'<span style="color:var(--green)">🟢</span>')
-    .replace(/\n/g,'<br/>');
+  // Format sections — each numbered section gets its own styled block
+  let formatted = text;
+
+  // Bold
+  formatted = formatted.replace(/\*\*(.+?)\*\*/g,'<strong style="color:#fff">$1</strong>');
+
+  // Section headers: "1. CLASIFICACIÓN ECCN" → styled divider
+  formatted = formatted.replace(/^(\d+)\.\s+([A-ZÁÉÍÓÚ\/\s&]+)$/gm, (match, num, title) => {
+    const sectionColors = {'1':'#00B5C8','2':'#f97316','3':'#a78bfa','4':'#22c55e','5':'#f59e0b','6':'#ef4444'};
+    const col = sectionColors[num] || 'var(--teal)';
+    return `</div><div class="eor-section" style="background:var(--bg3);border:1px solid var(--bd);border-left:4px solid ${col};padding:14px 16px;margin-top:8px">
+      <div style="font-family:Barlow,sans-serif;font-weight:800;font-size:11px;color:${col};letter-spacing:3px;margin-bottom:10px">${num}. ${title.trim()}</div>`;
+  });
+
+  // Emojis
+  formatted = formatted.replace(/🔴/g,'<span style="color:var(--red);font-size:14px">🔴</span>');
+  formatted = formatted.replace(/🟡/g,'<span style="color:var(--yellow);font-size:14px">🟡</span>');
+  formatted = formatted.replace(/🟢/g,'<span style="color:var(--green);font-size:14px">🟢</span>');
+  formatted = formatted.replace(/⚠/g,'<span style="color:var(--yellow)">⚠</span>');
+
+  // Bullets
+  formatted = formatted.replace(/^[-•]\s+(.+)$/gm,'<div style="padding:3px 0 3px 12px;border-left:2px solid var(--bd2);margin:3px 0;color:var(--tx2)">$1</div>');
+
+  // Line breaks
+  formatted = formatted.replace(/\n/g,'<br/>');
+
+  // Wrap opening content (before first section)
+  formatted = `<div style="font-size:12px;color:var(--tx2);line-height:1.9">${formatted}</div>`;
 
   document.getElementById('eor-result').style.display='block';
   document.getElementById('eor-result').innerHTML=`
     <div style="margin-top:8px">
-      <!-- Header -->
-      <div style="background:var(--bg2);border:1px solid var(--bd);border-left:4px solid ${riskColor};padding:14px 18px;margin-bottom:2px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-        <div>
-          <div style="font-family:Barlow,sans-serif;font-weight:800;font-size:15px;color:#fff">${ref}</div>
-          <div style="font-size:11px;color:var(--tx4);margin-top:2px">${new Date().toLocaleDateString('es-AR')} · EOR Compliance Analysis</div>
+      <!-- Risk header -->
+      <div style="display:flex;align-items:stretch;margin-bottom:8px;gap:0">
+        <div style="background:var(--bg2);border:1px solid var(--bd);border-right:none;border-left:4px solid ${riskColor};padding:14px 18px;flex:1">
+          <div style="font-family:Barlow,sans-serif;font-weight:800;font-size:16px;color:#fff">${ref}</div>
+          <div style="font-size:10px;color:var(--tx5);margin-top:3px;letter-spacing:1px">${new Date().toLocaleDateString('es-AR')} &nbsp;·&nbsp; EOR COMPLIANCE ANALYSIS</div>
         </div>
-        <div style="background:${riskBg};padding:4px 12px;font-family:Barlow,sans-serif;font-weight:800;font-size:11px;color:${riskColor};letter-spacing:2px">
-          ${isH3?'H3 — HIGH RISK':isE2?'E2 — ENHANCED':'S1 — STANDARD'}
+        <div style="background:${riskBg};border:1px solid ${riskColor};padding:14px 20px;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:120px">
+          <div style="font-size:20px;margin-bottom:4px">${riskIcon}</div>
+          <div style="font-family:Barlow,sans-serif;font-weight:800;font-size:10px;color:${riskColor};letter-spacing:2px;text-align:center">${riskLabel}</div>
         </div>
       </div>
 
       ${searches.length?`
-      <div style="background:var(--bg3);border:1px solid var(--bd);padding:8px 14px;margin-bottom:2px;font-size:10px;color:var(--tx5)">
-        🔍 Web searches realizadas: ${searches.map(s=>`<span style="color:var(--teal)">${s}</span>`).join(' · ')}
+      <div style="background:var(--bg3);border:1px solid var(--bd);border-left:3px solid var(--teal);padding:8px 14px;margin-bottom:8px;font-size:10px;color:var(--tx4);display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="color:var(--teal);font-weight:700">🔍 WEB SEARCHES:</span>
+        ${searches.map(s=>`<span style="background:var(--bg2);padding:2px 8px;color:var(--tx3)">${s}</span>`).join('')}
       </div>`:''}
 
-      <!-- Analysis -->
-      <div style="background:var(--bg2);border:1px solid var(--bd);padding:18px;margin-bottom:14px;font-size:12px;color:var(--tx2);line-height:1.8">
+      <!-- Sections -->
+      <div style="font-size:12px;color:var(--tx2);line-height:1.9">
         ${formatted}
       </div>
 
       <!-- Actions -->
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn btn-primary" style="padding:12px 20px;background:#f97316" onclick="document.getElementById('eor-input').value='';document.getElementById('eor-result').style.display='none';document.getElementById('eor-input-panel').style.display='block'">NUEVA CONSULTA</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
+        <button class="btn btn-primary" style="padding:12px 20px;background:#f97316" onclick="document.getElementById('eor-input').value='';document.getElementById('eor-result').style.display='none';">NUEVA CONSULTA</button>
         <button class="btn btn-ghost" style="padding:12px 20px" onclick="copyEORResult('${ref}')">COPIAR ANÁLISIS</button>
       </div>
     </div>`;
@@ -4816,35 +4894,64 @@ function renderLog(){
 
   const el=document.getElementById('log-list');
   if(!arr.length){
-    el.innerHTML=`<div class="flag flag-blue" style="margin-top:8px">No hay cotizaciones en el log todavía. Generá una cotización en el Quoter y hacé click en "GUARDAR EN LOG", o agregá una manualmente arriba.</div>`;
+    el.innerHTML=`<div class="flag flag-blue" style="margin-top:8px">No hay cotizaciones todavía. Generá una cotización en el Quoter o AI Quote y guardala.</div>`;
     return;
   }
 
-  el.innerHTML=arr.map(e=>`
-    <div style="background:var(--bg2);border:1px solid var(--bd);border-left:3px solid ${STATUS_COLORS[e.status]||'var(--bd)'};padding:14px 16px;margin-bottom:8px">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px">
-        <div>
-          <div style="font-family:Barlow,sans-serif;font-weight:800;font-size:14px;color:#fff">${e.qn}</div>
-          <div style="font-size:11px;color:var(--teal);margin-top:2px">${e.client||'—'} · ${e.dest||'—'} · ${e.date||'—'}</div>
-          <div style="font-size:11px;color:var(--tx3);margin-top:4px">${e.product||'—'}</div>
-          ${e.notes?`<div style="font-size:10px;color:var(--tx5);margin-top:4px">📝 ${e.notes}</div>`:''}
+  const SL = {
+    quote:   {label:'ENVIADA',  bg:'#0c1a2e', color:'#7dd3fc', dot:'#3b82f6'},
+    won:     {label:'GANADA',   bg:'var(--greenbg)', color:'var(--green)', dot:'var(--green)'},
+    lost:    {label:'PERDIDA',  bg:'var(--redbg)', color:'var(--red)', dot:'var(--red)'},
+    pending: {label:'EN PROCESO', bg:'var(--yellowbg)', color:'var(--yellow)', dot:'var(--yellow)'},
+    delivered:{label:'ENTREGADA', bg:'var(--greenbg)', color:'#86efac', dot:'var(--green)'},
+  };
+
+  el.innerHTML=arr.map(e=>{
+    const s = SL[e.status] || {label:e.status||'—', bg:'var(--bg3)', color:'var(--tx4)', dot:'var(--bd)'};
+    return `
+    <div style="background:var(--bg2);border:1px solid var(--bd);margin-bottom:10px;overflow:hidden">
+      <!-- Header strip -->
+      <div style="background:${s.bg};border-left:4px solid ${s.dot};padding:10px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:8px;height:8px;border-radius:50%;background:${s.dot};flex-shrink:0"></div>
+          <div>
+            <span style="font-family:Barlow,sans-serif;font-weight:800;font-size:15px;color:#fff">${e.qn}</span>
+            <span style="font-size:10px;color:${s.color};font-weight:700;letter-spacing:1px;margin-left:12px">${s.label}</span>
+          </div>
         </div>
-        <div style="text-align:right;flex-shrink:0">
-          <div style="font-size:9px;color:var(--tx5);letter-spacing:2px">TOTAL DDP</div>
-          <div style="font-family:Barlow,sans-serif;font-weight:800;font-size:18px;color:var(--teal)">$${fmt(e.total||0)}</div>
+        <div style="text-align:right">
+          <div style="font-family:Barlow,sans-serif;font-weight:800;font-size:20px;color:var(--teal)">$${fmt(e.total||0)}</div>
           <div style="font-size:10px;color:var(--tx5)">FOB $${fmt(e.fob||0)}</div>
         </div>
       </div>
-      <div style="margin-top:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        <span style="font-size:10px;font-weight:700;color:${STATUS_COLORS[e.status]}">${STATUS_LABELS[e.status]||e.status}</span>
-        <select onchange="updateLogStatus(${e.id},this.value)" style="background:var(--bg3);border:1px solid var(--bd);color:var(--tx3);padding:3px 8px;font-size:10px;font-family:'DM Mono',monospace">
-          ${Object.entries(STATUS_LABELS).map(([v,l])=>`<option value="${v}"${v===e.status?' selected':''}>${l}</option>`).join('')}
-        </select>
-        <button onclick="deleteLogEntry(${e.id})" style="background:none;border:1px solid var(--bd);color:var(--tx5);padding:3px 10px;font-size:10px;cursor:pointer">✕ ELIMINAR</button>
-        ${e.quoteSnapshot?`<button onclick="openLogQuote(${e.id})" style="background:var(--teal);border:none;color:var(--bg);padding:3px 14px;font-size:10px;font-family:Barlow,sans-serif;font-weight:700;cursor:pointer">📄 ABRIR</button>`:''}
+      <!-- Body -->
+      <div style="padding:12px 16px">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px">
+          <div>
+            <div style="font-size:8px;color:var(--tx5);letter-spacing:2px;margin-bottom:2px">CLIENTE</div>
+            <div style="font-size:12px;color:var(--tx);font-weight:600">${e.client||'—'}</div>
+          </div>
+          <div>
+            <div style="font-size:8px;color:var(--tx5);letter-spacing:2px;margin-bottom:2px">DESTINO</div>
+            <div style="font-size:12px;color:var(--teal)">${e.dest||'—'}</div>
+          </div>
+          <div>
+            <div style="font-size:8px;color:var(--tx5);letter-spacing:2px;margin-bottom:2px">FECHA</div>
+            <div style="font-size:12px;color:var(--tx3)">${e.date||'—'}</div>
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--tx4);border-top:1px solid var(--bd2);padding-top:8px;margin-bottom:10px">${e.product||'—'}${e.notes?` &nbsp;·&nbsp; 📝 ${e.notes}`:''}</div>
+        <!-- Actions -->
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <select onchange="updateLogStatus(${e.id},this.value)" style="background:var(--bg3);border:1px solid var(--bd);color:var(--tx3);padding:5px 10px;font-size:10px;font-family:'DM Mono',monospace;flex:1;min-width:140px">
+            ${Object.entries(STATUS_LABELS).map(([v,l])=>`<option value="${v}"${v===e.status?' selected':''}>${l}</option>`).join('')}
+          </select>
+          ${e.quoteSnapshot?`<button onclick="openLogQuote(${e.id})" style="background:var(--teal);border:none;color:var(--bg);padding:6px 16px;font-size:10px;font-family:Barlow,sans-serif;font-weight:800;cursor:pointer;letter-spacing:1px">📄 ABRIR QUOTE</button>`:''}
+          <button onclick="deleteLogEntry(${e.id})" style="background:none;border:1px solid var(--bd);color:var(--tx5);padding:5px 12px;font-size:10px;cursor:pointer;margin-left:auto">✕</button>
+        </div>
       </div>
-    </div>
-  `).join('');
+    </div>`
+  }).join('');
 }
 
 function initLog(){renderLogStats();renderLog();}
