@@ -4108,7 +4108,7 @@ async function runEORAnalysis(){
     'Clasificando ECCN y nivel de riesgo...',
     'Verificando OFAC SDN List en tiempo real...',
     'Consultando BIS Entity List actualizada...',
-    'Analizando requerimientos AES/EEI...',
+    'Revisando casos anteriores DDP Global...',
     'Generando determinación final...'
   ];
   let stepIdx = 0;
@@ -4120,19 +4120,36 @@ async function runEORAnalysis(){
 
   const ref = generateEORRef();
 
+  // Build context from previous EOR cases
+  const eorHist = getEORHistory().slice(0,10);
+  const caseLibrary = getUserCases ? getUserCases().slice(0,10) : [];
+
+  let prevCasesCtx = '';
+  if(eorHist.length){
+    prevCasesCtx += `\n\nCASOS EOR ANTERIORES DDP GLOBAL (aprendé de estos para mejorar tu análisis):\n`;
+    eorHist.forEach(h=>{
+      prevCasesCtx += `\n--- ${h.id} (${h.date}) ---\nConsulta: ${h.input.slice(0,150)}\nDeterminación: ${h.result.slice(0,300)}...\n`;
+    });
+  }
+  if(caseLibrary.length){
+    prevCasesCtx += `\n\nCASOS OPERACIONALES REALES DDP GLOBAL:\n`;
+    caseLibrary.forEach(c=>{
+      prevCasesCtx += `\n[${c.id}] ${c.country} — ${c.title}\nProblema: ${c.problem}\nLección: ${c.lesson}\n`;
+    });
+  }
+
   try {
-    // First call — with web search tool
     const r = await fetch('https://ddp-proxy.nicolasjuarezroldan.workers.dev',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         model:'claude-sonnet-4-20250514',
         max_tokens:3000,
-        system:EOR_SYSTEM_PROMPT,
+        system: EOR_SYSTEM_PROMPT + prevCasesCtx,
         tools:[{type:'web_search_20250305',name:'web_search'}],
         messages:[{
           role:'user',
-          content:`REF: ${ref}\nFECHA: ${new Date().toLocaleDateString('es-AR')}\n\nAnalizá esta operación. Usá web search para verificar el estado actual de sanciones OFAC, BIS Entity List, y cualquier restricción reciente relevante:\n\n${input}`
+          content:`REF: ${ref}\nFECHA: ${new Date().toLocaleDateString('es-AR')}\n\nAnalizá esta operación. Usá web search para verificar sanciones OFAC, BIS Entity List y restricciones recientes. Considerá los casos anteriores de DDP Global en tu análisis:\n\n${input}`
         }]
       })
     });
@@ -4152,7 +4169,6 @@ async function runEORAnalysis(){
       });
     }
 
-    // If model used web search, make follow-up call with tool results
     if(d.stop_reason==='tool_use'){
       const toolResults = d.content
         .filter(b=>b.type==='tool_use')
@@ -4164,10 +4180,10 @@ async function runEORAnalysis(){
         body:JSON.stringify({
           model:'claude-sonnet-4-20250514',
           max_tokens:3000,
-          system:EOR_SYSTEM_PROMPT,
+          system: EOR_SYSTEM_PROMPT + prevCasesCtx,
           tools:[{type:'web_search_20250305',name:'web_search'}],
           messages:[
-            {role:'user', content:`REF: ${ref}\nFECHA: ${new Date().toLocaleDateString('es-AR')}\n\nAnalizá esta operación. Usá web search para verificar el estado actual de sanciones OFAC, BIS Entity List, y cualquier restricción reciente relevante:\n\n${input}`},
+            {role:'user', content:`REF: ${ref}\nFECHA: ${new Date().toLocaleDateString('es-AR')}\n\nAnalizá esta operación. Usá web search para verificar sanciones OFAC, BIS Entity List y restricciones recientes. Considerá los casos anteriores de DDP Global en tu análisis:\n\n${input}`},
             {role:'assistant', content:d.content},
             {role:'user', content:toolResults}
           ]
