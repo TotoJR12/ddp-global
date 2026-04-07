@@ -172,6 +172,7 @@ a{color:var(--teal);text-decoration:none}
     <button class="nav-btn" onclick="showPage('log')" style="color:#22c55e">📋 SHIP LOG</button>
     <button class="nav-btn" onclick="showPage('shipments')" style="color:#f59e0b">🚚 SHIPMENTS</button>
     <button class="nav-btn" onclick="showPage('freechat')" style="color:var(--teal)">💬 CHAT IA</button>
+    <button class="nav-btn" onclick="showPage('eor')" style="color:#f97316">🛡 EOR</button>
   </nav>
   <div class="version" style="display:flex;flex-direction:column;align-items:center;line-height:1.4;padding:3px 10px"><span style="font-size:9px;font-weight:700;letter-spacing:2px">v2.2</span><span style="font-size:7px;opacity:.75">2026-03-29</span></div>
 </div>
@@ -829,6 +830,56 @@ Please advise on DDP cost and transit time. Thanks"></textarea>
   <div style="max-width:800px;margin:40px auto;background:var(--bg2);border:1px solid var(--bd);padding:24px;position:relative">
     <button onclick="closeShipmentModal()" style="position:absolute;top:12px;right:12px;background:none;border:none;color:var(--tx4);font-size:20px;cursor:pointer">✕</button>
     <div id="shipment-modal-content"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════ -->
+<!-- PAGE: EOR COMPLIANCE                             -->
+<!-- ════════════════════════════════════════════════ -->
+<div class="page" id="page-eor">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:4px">
+    <span style="color:#f97316;font-size:20px">🛡</span>
+    <div class="page-title" style="margin-bottom:0">EOR COMPLIANCE INTELLIGENCE</div>
+  </div>
+  <div class="page-sub">Análisis EOR/IOR con web search en tiempo real — BIS, OFAC, EAR, AES. Verifica sanciones y Entity List actualizadas antes de cada análisis.</div>
+
+  <!-- Input panel -->
+  <div id="eor-input-panel">
+    <div class="card">
+      <div class="card-title">DESCRIBÍ LA OPERACIÓN</div>
+      <div style="font-size:11px;color:var(--tx4);margin-bottom:12px">Pegá el email del cliente, describí el envío, o hacé cualquier consulta de compliance. El sistema busca en BIS/OFAC en tiempo real.</div>
+      <div class="field" style="margin-bottom:12px">
+        <div class="field-label">Descripción / Email / Consulta</div>
+        <textarea id="eor-input" style="min-height:160px;font-size:12px;line-height:1.7" placeholder="Ejemplos:
+• Necesito exportar 8x NVIDIA H100 desde USA a Mexico para datacenter
+• Cliente en UAE quiere comprar Cisco switches, COO China, valor $45,000
+• ¿Puedo exportar equipos de networking a India sin licencia BIS?
+• Email: Hi, we need IOR services for servers going to Saudi Arabia..."></textarea>
+      </div>
+      <button class="btn btn-primary btn-full" id="eor-analyze-btn" onclick="runEORAnalysis()" style="background:#f97316;font-size:13px;padding:14px">
+        🛡 &nbsp; ANALIZAR COMPLIANCE + WEB SEARCH →
+      </button>
+    </div>
+
+    <div id="eor-status" style="display:none" class="flag flag-blue">
+      <div class="ai-thinking">
+        <div class="dot-pulse"><span></span><span></span><span></span></div>
+        <span id="eor-status-text">Iniciando análisis de compliance...</span>
+      </div>
+    </div>
+    <div id="eor-error" style="display:none" class="flag flag-red"></div>
+  </div>
+
+  <!-- Result panel -->
+  <div id="eor-result" style="display:none"></div>
+
+  <!-- History -->
+  <div id="eor-history-section" style="margin-top:20px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div style="font-family:Barlow,sans-serif;font-weight:700;font-size:10px;letter-spacing:3px;color:var(--tx4)">HISTORIAL EOR</div>
+      <button class="btn btn-ghost btn-sm" onclick="renderEORHistory()" style="font-size:9px">REFRESH</button>
+    </div>
+    <div id="eor-history-list"></div>
   </div>
 </div>
 
@@ -2605,8 +2656,7 @@ function init(){
   initLog();
   renderShipments();
   renderShipmentsStats();
-
-  // Live input binding for quoter
+  renderEORHistory();
   ["q-product","q-fob","q-type","q-coo"].forEach(id=>{
     const el=document.getElementById(id);
     if(el) el.addEventListener("input",updateInlineChecks);
@@ -3981,6 +4031,265 @@ function importHistoricalShipments(){
   renderShipmentsStats();
   alert('✓ '+toAdd.length+' shipments históricos importados desde Shipping Master.');
 }
+// ════════════════════════════════════════════════════════
+// EOR COMPLIANCE INTELLIGENCE MODULE
+// ════════════════════════════════════════════════════════
+
+function getEORHistory(){try{return JSON.parse(localStorage.getItem('ddp_eor_history')||'[]');}catch(e){return[];}}
+function saveEORHistory(arr){localStorage.setItem('ddp_eor_history',JSON.stringify(arr));}
+
+function generateEORRef(){
+  const d=new Date();
+  const dd=String(d.getDate()).padStart(2,'0');
+  const mm=String(d.getMonth()+1).padStart(2,'0');
+  const yy=String(d.getFullYear()).slice(2);
+  const arr=getEORHistory();
+  const seq=String(arr.length+1).padStart(3,'0');
+  return `DDP-EOR-${yy}${mm}${dd}-${seq}`;
+}
+
+const EOR_SYSTEM_PROMPT = `Sos el asistente de compliance de DDP Global LLC, especializado en EOR (Exporter of Record) e IOR (Importer of Record) con base en Miami, FL.
+
+EXPERTISE:
+- EAR (Export Administration Regulations) — BIS, ECCN classification, License Exceptions
+- OFAC screening — SDN List, embargos totales y sectoriales
+- AES/EEI filing requirements (>$2,500 o con licencia)
+- CBP export/import requirements
+- Documentación EOR/IOR completa
+
+RISK MATRIX:
+- S1 STANDARD: EAR99, <$2,500, destinos aliados, EOR 2-4%
+- E2 ENHANCED: ECCN 5A992/4A994/5D992, $2,500-$50,000, AES obligatorio, EOR 4-7%
+- H3 HIGH/CONTROLLED: ECCN 4A090/5E002/5A002 (AI/GPU/dual-use), >$50,000 o con licencia, STOP antes de mover, EOR 7-12%+
+
+ALERTAS:
+🔴 STOP TOTAL: Cuba, Iran, North Korea, Syria
+🔴 STOP-REVISAR: Rusia, Bielorrusia
+🟡 ENHANCED REVIEW: China (military end-use), Venezuela, Myanmar
+🟢 STANDARD: LATAM (salvo VE/CU), Europa occidental, Canadá, AU, JP, KR, IL, IN, SG, UAE (caso a caso)
+
+FORMATO DE RESPUESTA OBLIGATORIO — siempre estructurado así:
+
+**REF:** [auto-generado]
+**NIVEL DE RIESGO:** S1 / E2 / H3
+
+**1. CLASIFICACIÓN ECCN**
+[ECCN + justificación + License Exceptions aplicables]
+
+**2. SCREENING OFAC**
+[Estado país + entidad + resultado: CLEAR / WATCH / BLOCKED]
+
+**3. AES/EEI**
+[¿Filing obligatorio? + Schedule B/HTS + datos requeridos]
+
+**4. DOCUMENTACIÓN REQUERIDA**
+[Lista completa: obligatorios vs recomendados]
+
+**5. COSTO EOR ESTIMADO**
+[Rango USD + servicios incluidos]
+
+**6. DETERMINACIÓN FINAL**
+[PROCEED / ENHANCED REVIEW / STOP + pasos específicos + tiempos]
+
+Usá web search para verificar: Entity List actualizada, SDN List, cambios BIS/OFAC recientes, restricciones específicas del país destino. NUNCA inventes información regulatoria — si no estás seguro, indicalo claramente y recomendá Export Counsel.
+
+Respondé siempre en español, documentos oficiales en inglés.`;
+
+async function runEORAnalysis(){
+  const input = document.getElementById('eor-input').value.trim();
+  if(!input){alert('Describí la operación antes de analizar.');return;}
+
+  document.getElementById('eor-status').style.display='block';
+  document.getElementById('eor-error').style.display='none';
+  document.getElementById('eor-result').style.display='none';
+  document.getElementById('eor-analyze-btn').disabled=true;
+
+  const steps = [
+    'Clasificando ECCN y nivel de riesgo...',
+    'Verificando OFAC SDN List en tiempo real...',
+    'Consultando BIS Entity List actualizada...',
+    'Analizando requerimientos AES/EEI...',
+    'Generando determinación final...'
+  ];
+  let stepIdx = 0;
+  const stepInterval = setInterval(()=>{
+    stepIdx = (stepIdx+1) % steps.length;
+    const el = document.getElementById('eor-status-text');
+    if(el) el.textContent = steps[stepIdx];
+  }, 2500);
+
+  const ref = generateEORRef();
+
+  try {
+    // First call — with web search tool
+    const r = await fetch('https://ddp-proxy.nicolasjuarezroldan.workers.dev',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:3000,
+        system:EOR_SYSTEM_PROMPT,
+        tools:[{type:'web_search_20250305',name:'web_search'}],
+        messages:[{
+          role:'user',
+          content:`REF: ${ref}\nFECHA: ${new Date().toLocaleDateString('es-AR')}\n\nAnalizá esta operación. Usá web search para verificar el estado actual de sanciones OFAC, BIS Entity List, y cualquier restricción reciente relevante:\n\n${input}`
+        }]
+      })
+    });
+
+    const d = await r.json();
+    if(d.error) throw new Error(d.error.message||JSON.stringify(d.error));
+
+    let fullText = '';
+    let searchesUsed = [];
+
+    if(d.content && Array.isArray(d.content)){
+      d.content.forEach(block=>{
+        if(block.type==='text') fullText += block.text;
+        if(block.type==='tool_use' && block.name==='web_search'){
+          searchesUsed.push(block.input?.query||'');
+        }
+      });
+    }
+
+    // If model used web search, make follow-up call with tool results
+    if(d.stop_reason==='tool_use'){
+      const toolResults = d.content
+        .filter(b=>b.type==='tool_use')
+        .map(b=>({type:'tool_result', tool_use_id:b.id, content:'Search completed successfully.'}));
+
+      const r2 = await fetch('https://ddp-proxy.nicolasjuarezroldan.workers.dev',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          model:'claude-sonnet-4-20250514',
+          max_tokens:3000,
+          system:EOR_SYSTEM_PROMPT,
+          tools:[{type:'web_search_20250305',name:'web_search'}],
+          messages:[
+            {role:'user', content:`REF: ${ref}\nFECHA: ${new Date().toLocaleDateString('es-AR')}\n\nAnalizá esta operación. Usá web search para verificar el estado actual de sanciones OFAC, BIS Entity List, y cualquier restricción reciente relevante:\n\n${input}`},
+            {role:'assistant', content:d.content},
+            {role:'user', content:toolResults}
+          ]
+        })
+      });
+      const d2 = await r2.json();
+      if(d2.content) d2.content.forEach(b=>{if(b.type==='text') fullText+=b.text;});
+    }
+
+    if(!fullText) fullText = 'No se pudo generar el análisis. Intentá nuevamente.';
+
+    const histEntry = {
+      id: ref,
+      date: new Date().toISOString().slice(0,10),
+      input: input.slice(0,200),
+      result: fullText,
+      searches: searchesUsed
+    };
+    const hist = getEORHistory();
+    hist.unshift(histEntry);
+    if(hist.length>50) hist.pop();
+    saveEORHistory(hist);
+
+    showEORResult(ref, fullText, searchesUsed, input);
+    renderEORHistory();
+
+  } catch(e){
+    document.getElementById('eor-error').style.display='block';
+    document.getElementById('eor-error').innerHTML=`⚠ <strong>Error:</strong> ${e.message}`;
+  } finally {
+    clearInterval(stepInterval);
+    document.getElementById('eor-status').style.display='none';
+    document.getElementById('eor-analyze-btn').disabled=false;
+  }
+}
+
+function showEORResult(ref, text, searches, originalInput){
+  // Detect risk level
+  const isH3 = /H3|HIGH|CONTROLLED|STOP/i.test(text);
+  const isE2 = /E2|ENHANCED/i.test(text);
+  const riskColor = isH3 ? 'var(--red)' : isE2 ? '#f97316' : 'var(--green)';
+  const riskBg = isH3 ? 'var(--redbg)' : isE2 ? 'var(--orangebg)' : 'var(--greenbg)';
+
+  // Format text as HTML
+  const formatted = text
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/^(#{1,3})\s+(.+)$/gm,'<div style="font-family:Barlow,sans-serif;font-weight:700;font-size:11px;color:var(--teal);letter-spacing:2px;margin:12px 0 4px">$2</div>')
+    .replace(/🔴/g,'<span style="color:var(--red)">🔴</span>')
+    .replace(/🟡/g,'<span style="color:var(--yellow)">🟡</span>')
+    .replace(/🟢/g,'<span style="color:var(--green)">🟢</span>')
+    .replace(/\n/g,'<br/>');
+
+  document.getElementById('eor-result').style.display='block';
+  document.getElementById('eor-result').innerHTML=`
+    <div style="margin-top:8px">
+      <!-- Header -->
+      <div style="background:var(--bg2);border:1px solid var(--bd);border-left:4px solid ${riskColor};padding:14px 18px;margin-bottom:2px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <div>
+          <div style="font-family:Barlow,sans-serif;font-weight:800;font-size:15px;color:#fff">${ref}</div>
+          <div style="font-size:11px;color:var(--tx4);margin-top:2px">${new Date().toLocaleDateString('es-AR')} · EOR Compliance Analysis</div>
+        </div>
+        <div style="background:${riskBg};padding:4px 12px;font-family:Barlow,sans-serif;font-weight:800;font-size:11px;color:${riskColor};letter-spacing:2px">
+          ${isH3?'H3 — HIGH RISK':isE2?'E2 — ENHANCED':'S1 — STANDARD'}
+        </div>
+      </div>
+
+      ${searches.length?`
+      <div style="background:var(--bg3);border:1px solid var(--bd);padding:8px 14px;margin-bottom:2px;font-size:10px;color:var(--tx5)">
+        🔍 Web searches realizadas: ${searches.map(s=>`<span style="color:var(--teal)">${s}</span>`).join(' · ')}
+      </div>`:''}
+
+      <!-- Analysis -->
+      <div style="background:var(--bg2);border:1px solid var(--bd);padding:18px;margin-bottom:14px;font-size:12px;color:var(--tx2);line-height:1.8">
+        ${formatted}
+      </div>
+
+      <!-- Actions -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-primary" style="padding:12px 20px;background:#f97316" onclick="document.getElementById('eor-input').value='';document.getElementById('eor-result').style.display='none';document.getElementById('eor-input-panel').style.display='block'">NUEVA CONSULTA</button>
+        <button class="btn btn-ghost" style="padding:12px 20px" onclick="copyEORResult('${ref}')">COPIAR ANÁLISIS</button>
+      </div>
+    </div>`;
+}
+
+function copyEORResult(ref){
+  const hist = getEORHistory().find(x=>x.id===ref);
+  if(!hist) return;
+  navigator.clipboard.writeText(`${ref}\n\n${hist.result}`).then(()=>{
+    alert('✓ Análisis copiado al portapapeles');
+  });
+}
+
+function renderEORHistory(){
+  const hist = getEORHistory();
+  const el = document.getElementById('eor-history-list');
+  if(!el) return;
+  if(!hist.length){
+    el.innerHTML='<div style="font-size:11px;color:var(--tx5)">Sin análisis anteriores.</div>';
+    return;
+  }
+  el.innerHTML = hist.slice(0,10).map(h=>{
+    const isH3 = /H3|HIGH|CONTROLLED|STOP/i.test(h.result);
+    const isE2 = /E2|ENHANCED/i.test(h.result);
+    const color = isH3?'var(--red)':isE2?'#f97316':'var(--green)';
+    return `
+    <div style="background:var(--bg2);border:1px solid var(--bd);border-left:3px solid ${color};padding:10px 14px;margin-bottom:6px;cursor:pointer" onclick="showEORFromHistory('${h.id}')">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div style="font-family:Barlow,sans-serif;font-weight:700;font-size:12px;color:#fff">${h.id}</div>
+        <div style="font-size:9px;color:${color};font-weight:700">${isH3?'H3':isE2?'E2':'S1'}</div>
+      </div>
+      <div style="font-size:10px;color:var(--tx4);margin-top:2px">${h.date} · ${h.input.slice(0,80)}${h.input.length>80?'...':''}</div>
+    </div>`;
+  }).join('');
+}
+
+function showEORFromHistory(ref){
+  const h = getEORHistory().find(x=>x.id===ref);
+  if(!h) return;
+  showEORResult(ref, h.result, h.searches||[], h.input);
+  document.getElementById('eor-result').scrollIntoView({behavior:'smooth'});
+}
+
 function saveApiKey(val) {
   if (val && val.startsWith('sk-ant-')) {
     localStorage.setItem('ddp_api_key', val);
