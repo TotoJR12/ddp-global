@@ -414,6 +414,12 @@ Please advise on DDP cost and transit time. Thanks"></textarea>
       </div>
     </div>
 
+    <!-- ADDITIONAL ITEMS -->
+    <div id="extra-items-wrap" style="margin-top:14px">
+      <div id="extra-items-list"></div>
+      <button class="btn btn-ghost btn-sm" onclick="addQuoteItem()" type="button" style="width:100%;border-style:dashed;color:var(--teal);border-color:var(--teal);margin-top:4px">+ ADD ITEM (producto adicional con distinto HS code)</button>
+    </div>
+
     <div style="height:14px"></div>
     <button class="btn btn-primary btn-full" id="calc-btn" onclick="doQuote()">CALCULATE QUOTE + INTELLIGENCE REPORT →</button>
   </div>
@@ -2276,6 +2282,28 @@ function buildIntelligenceReport(product, hs, coo, fob, lbs, dest, type) {
       </div>` : ''}
     </div>`;
 }
+let extraItemCount = 0;
+function addQuoteItem(){
+  extraItemCount++;
+  const id = extraItemCount;
+  const row = document.createElement('div');
+  row.className = 'extra-item-row';
+  row.style.cssText = 'background:var(--bg3);border:1px solid var(--bd);border-left:3px solid var(--teal);padding:12px;margin-bottom:8px;display:grid;grid-template-columns:2fr 1fr 80px 80px 90px 32px;gap:8px;align-items:end';
+  row.innerHTML =
+    `<div class="field"><div class="field-label">Producto / Modelo</div><input class="ei-product" type="text" placeholder="e.g. Dell Latitude 5540" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px 10px;font-size:12px;width:100%;font-family:'DM Mono',monospace"/></div>` +
+    `<div class="field"><div class="field-label">Tipo</div><select class="ei-type" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px 10px;font-size:12px;width:100%;font-family:'DM Mono',monospace"><option value="">Tipo...</option><option>Switch / Router</option><option>Server</option><option>Laptop / Notebook</option><option>GPU / AI Hardware</option><option>Storage</option><option>Cable / Accessory</option><option>Refurbished Hardware</option><option>Other</option></select></div>` +
+    `<div class="field"><div class="field-label">HS Code</div><input class="ei-hs" type="text" placeholder="8517.62" value="8517.62" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px 10px;font-size:12px;width:100%;font-family:'DM Mono',monospace"/></div>` +
+    `<div class="field"><div class="field-label">FOB (USD)</div><input class="ei-fob" type="number" placeholder="0" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px 10px;font-size:12px;width:100%;font-family:'DM Mono',monospace"/></div>` +
+    `<div class="field"><div class="field-label">Peso (lbs)</div><input class="ei-wt" type="number" placeholder="0" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px 10px;font-size:12px;width:100%;font-family:'DM Mono',monospace"/></div>` +
+    `<button onclick="this.parentElement.remove()" style="background:var(--redbg);border:1px solid var(--red);color:var(--red);padding:8px;cursor:pointer;font-size:14px;align-self:end">✕</button>`;
+  // Auto-fill HS when type changes
+  row.querySelector('.ei-type').addEventListener('change', function(){
+    const hsMap={'Switch / Router':'8517.62','Server':'8471.49','Laptop / Notebook':'8471.30','GPU / AI Hardware':'8473.30','Storage':'8471.70','Cable / Accessory':'8544.42'};
+    if(hsMap[this.value]) row.querySelector('.ei-hs').value=hsMap[this.value];
+  });
+  document.getElementById('extra-items-list').appendChild(row);
+}
+
 function doQuote(){
   const fob=parseFloat(document.getElementById("q-fob").value);
   const lbs=parseFloat(document.getElementById("q-wt").value);
@@ -2286,8 +2314,44 @@ function doQuote(){
   const hs=document.getElementById("q-hs").value||"8517.62";
   const fo=parseFloat(document.getElementById("q-freight").value)||0;
 
-  const r=calcQuote(currentCtry,fob,lbs,coo,fo,product,hs,type);
+  // Recopilar ítems extra
+  const extraItems=[];
+  document.querySelectorAll('.extra-item-row').forEach((row,i)=>{
+    const ep=row.querySelector('.ei-product').value;
+    const ef=parseFloat(row.querySelector('.ei-fob').value)||0;
+    const ew=parseFloat(row.querySelector('.ei-wt').value)||0;
+    const eh=row.querySelector('.ei-hs').value||'8517.62';
+    const et=row.querySelector('.ei-type').value||'';
+    if(ef>0&&ew>0) extraItems.push({product:ep,fobValue:ef,weightLbs:ew,hsCode:eh,equipmentType:et});
+  });
+
+  const allItems=[{product,fobValue:fob,weightLbs:lbs,hsCode:hs,equipmentType:type},...extraItems];
+  const totalFob=allItems.reduce((s,i)=>s+(i.fobValue||0),0);
+  const totalLbs=allItems.reduce((s,i)=>s+(i.weightLbs||0),0);
+  const multiItem=allItems.length>1;
+
+  const r=calcQuote(currentCtry,totalFob,totalLbs,coo,fo,product,hs,type);
   if(!r) return;
+
+  // Recalcular taxes por ítem si hay múltiples con distintos HS
+  let taxLines=r.tx, totalTax=r.tt, hasLaptop=r.isLaptop||false;
+  if(multiItem && currentCtry==='brazil'){
+    const cif=r.cif;
+    let ct={ii:0,ip:0,ps:0,co:0,ic:0};
+    allItems.forEach(it=>{
+      const ratio=totalFob>0?(it.fobValue||0)/totalFob:1/allItems.length;
+      const itCif=cif*ratio;
+      const lap=isLaptop(it.product,it.hsCode,it.equipmentType);
+      if(lap) hasLaptop=true;
+      const tx=lap?bTaxLaptop(itCif):bTax(itCif);
+      ct.ii+=tx.ii;ct.ip+=tx.ip;ct.ps+=tx.ps;ct.co+=tx.co;ct.ic+=tx.ic;
+    });
+    totalTax=ct.ii+ct.ip+ct.ps+ct.co+ct.ic;
+    taxLines=[["II (mixto por HS)",ct.ii],["IPI (mixto por HS)",ct.ip],["PIS (2.1%)",ct.ps],["COFINS (9.65%)",ct.co],["ICMS SP (18%)",ct.ic]];
+  }
+  const serviceTotal=r.li.reduce((s,[,,v])=>s+v,0);
+  const grandTotal=serviceTotal+totalTax;
+
   const code=COUNTRIES.find(c=>c.id===currentCtry).code;
   const qn=nextQN(code);
   const dest=COUNTRIES.find(c=>c.id===currentCtry).lb;
@@ -2325,10 +2389,18 @@ function doQuote(){
       ${flags.length?`<div style="margin-bottom:14px">${flags.map(f=>`<div class="flag ${flagColors[f.level]||"flag-blue"}">⚠ ${f.msg}</div>`).join("")}</div>`:""}
 
       <!-- Laptop Brazil flag -->
-      ${r.isLaptop&&currentCtry==="brazil"?`<div class="flag flag-yellow" style="margin-bottom:14px">⚠ <strong>LAPTOP / HS 8471.30 — GECEX 852/2026:</strong> II aplicado al 7.2% (antes 0%). IPI = 0% permanente. <strong>Verificar ex-tarifário activo en SISCOMEX antes de confirmar</strong> — si hay ex-tarifário vigente, II vuelve a 0% y el costo baja ~5% sobre CIF.</div>`:""}
+      ${hasLaptop&&currentCtry==="brazil"?`<div class="flag flag-yellow" style="margin-bottom:14px">⚠ <strong>LAPTOP / HS 8471.30 — GECEX 852/2026:</strong> II aplicado al 7.2% (antes 0%). IPI = 0% permanente. <strong>Verificar ex-tarifário activo en SISCOMEX antes de confirmar</strong> — si hay ex-tarifário vigente, II vuelve a 0% y el costo baja ~5% sobre CIF.</div>`:""}
 
       <!-- DV Assessment -->
       ${dv?`<div class="flag ${flagColors[dv.level]||"flag-blue"}" style="margin-bottom:14px">📊 <strong>DECLARED VALUE:</strong> ${dv.msg}</div>`:""}
+
+      <!-- Items breakdown si multi-item -->
+      ${multiItem?`<div style="background:var(--bg3);border:1px solid var(--teal);border-left:4px solid var(--teal);padding:14px 16px;margin-bottom:14px">
+        <div style="font-family:Barlow,sans-serif;font-weight:800;font-size:10px;color:var(--teal);letter-spacing:2px;margin-bottom:10px">📦 BREAKDOWN POR ÍTEM — ${allItems.length} PRODUCTOS</div>
+        <div style="display:grid;grid-template-columns:2fr 60px 90px 70px 90px;gap:6px;padding:4px 0;font-size:9px;color:var(--tx5);letter-spacing:1px;border-bottom:1px solid var(--bd);margin-bottom:4px"><div>PRODUCTO / HS</div><div>QTY</div><div>FOB</div><div>PESO</div><div>IMPUESTO</div></div>
+        ${allItems.map(it=>{const lap=isLaptop(it.product,it.hsCode,it.equipmentType);return`<div style="display:grid;grid-template-columns:2fr 60px 90px 70px 90px;gap:6px;padding:7px 0;border-bottom:1px solid var(--bd2);font-size:11px;align-items:center"><div><span style="color:var(--tx5);font-size:9px">HS ${it.hsCode||'—'}</span><br/><span style="color:var(--tx)">${it.product||'—'}</span></div><div style="color:var(--tx4)">—</div><div style="color:var(--tx2)">$${fmt(it.fobValue||0)}</div><div style="color:var(--tx3)">${it.weightLbs||0} lbs</div><div style="color:${lap?'var(--teal)':'var(--tx4)'};font-size:10px">${lap?'II 7.2%':'II Std'}</div></div>`;}).join('')}
+        <div style="display:grid;grid-template-columns:2fr 60px 90px 70px 90px;gap:6px;padding:8px 0;font-size:11px;font-weight:700"><div style="color:var(--tx4);font-family:Barlow,sans-serif">TOTAL</div><div></div><div style="color:var(--teal)">$${fmt(totalFob)}</div><div style="color:var(--teal)">${totalLbs} lbs</div><div></div></div>
+      </div>`:""}
 
       <!-- Service Lines -->
       <div class="table-wrap">
@@ -2337,17 +2409,17 @@ function doQuote(){
       </div>
 
       <!-- Tax Lines -->
-      ${r.tx.length?`
+      ${taxLines.length?`
       <div class="table-wrap" style="margin-top:2px">
-        <div class="table-head" style="grid-template-columns:1fr 90px"><span>DUTIES & TAXES (PASS-THROUGH)</span><span style="text-align:right">USD</span></div>
-        ${r.tx.map(([l,v])=>`<div class="table-row" style="grid-template-columns:1fr 90px"><div style="font-size:12px;color:var(--tx3)">${l}</div><div style="font-size:12px;color:var(--tx3);text-align:right">$${fmt(v)}</div></div>`).join("")}
+        <div class="table-head" style="grid-template-columns:1fr 90px"><span>DUTIES & TAXES (PASS-THROUGH)${multiItem?' — POR HS/ÍTEM':''}</span><span style="text-align:right">USD</span></div>
+        ${taxLines.map(([l,v])=>`<div class="table-row" style="grid-template-columns:1fr 90px"><div style="font-size:12px;color:var(--tx3)">${l}</div><div style="font-size:12px;color:var(--tx3);text-align:right">$${fmt(v)}</div></div>`).join("")}
       </div>
       `:""}
 
       <!-- Total -->
       <div class="total-bar" style="margin-top:2px">
         <div class="total-lbl">TOTAL DDP</div>
-        <div class="total-val">$${fmt(r.tot)}</div>
+        <div class="total-val">$${fmt(grandTotal)}</div>
       </div>
 
       <!-- Related Cases -->
@@ -2394,6 +2466,8 @@ function doQuote(){
 function resetQuote(){
   document.getElementById("quoter-form").style.display="block";
   document.getElementById("quoter-result").style.display="none";
+  document.getElementById("extra-items-list").innerHTML="";
+  extraItemCount=0;
 }
 
 function copyQuote(qn,dest,product,hs,coo,fob,lbs,cif,tot,tr){
@@ -2771,18 +2845,44 @@ const AI_SYSTEM_PROMPT = `You are an expert logistics data extractor for DDP Glo
 
 Extract shipment details from the client email and return ONLY a raw JSON object — no markdown, no explanation, no backticks.
 
-Fields to extract:
-- product: string (product name/model, e.g. "Cisco Catalyst 9300-48T")
-- equipmentType: one of: "Switch / Router", "Server", "GPU / AI Hardware", "Storage", "Cable / Accessory", "Refurbished Hardware", "Laptop / Notebook", "Other" — use "Laptop / Notebook" for any laptop, notebook, netbook, ultrabook, chromebook, 2-in-1, or portable computer
-- quantity: number (default 1)
-- fobValue: number in USD total (if per-unit, multiply by qty)
-- weightLbs: number in lbs (convert kg × 2.205 if needed)
-- countryOfOrigin: string (infer from brand if not stated: Cisco/HPE/Dell = Taiwan or USA)
-- destination: one of: "brazil","mexico","argentina","colombia","chile","peru","ecuador","costarica","panama","domrep","guatemala","honduras","bolivia","paraguay","uruguay","dubai","qatar","saudiarabia","bahrain","israel","uk","spain","france","germany","netherlands","turkey","india","singapore","japan","australia","canada","usa"
-- hsCode: infer from type (switch/router=8517.62, server=8471.49, storage=8471.70, gpu=8473.30, cable=8544.42, laptop/notebook/netbook/ultrabook/chromebook/2-in-1/portable computer=8471.30)
-- notes: any special instructions from the email (max 200 chars)
-- confidence: 0-100 (deduct for missing/ambiguous fields)
-- missingFields: array of field names that were guessed or missing
+CRITICAL: If the email mentions MULTIPLE different products, extract EACH as a separate entry in the items array. One product type = one item.
+
+Return this exact JSON structure:
+{
+  "destination": "brazil",
+  "countryOfOrigin": "Taiwan",
+  "notes": "any special instructions max 200 chars",
+  "confidence": 90,
+  "missingFields": [],
+  "items": [
+    {
+      "product": "Cisco Catalyst 9300-48T",
+      "equipmentType": "Switch / Router",
+      "quantity": 2,
+      "fobValue": 20000,
+      "weightLbs": 40,
+      "hsCode": "8517.62"
+    },
+    {
+      "product": "Dell Latitude 5540",
+      "equipmentType": "Laptop / Notebook",
+      "quantity": 5,
+      "fobValue": 8000,
+      "weightLbs": 20,
+      "hsCode": "8471.30"
+    }
+  ]
+}
+
+Field rules:
+- destination: one of: brazil,mexico,argentina,colombia,chile,peru,ecuador,costarica,panama,domrep,guatemala,honduras,bolivia,paraguay,uruguay,dubai,qatar,saudiarabia,bahrain,israel,uk,spain,france,germany,netherlands,turkey,india,singapore,japan,australia,canada,usa
+- equipmentType: Switch / Router | Server | GPU / AI Hardware | Storage | Cable / Accessory | Refurbished Hardware | Laptop / Notebook | Other
+- hsCode: switch/router=8517.62, server=8471.49, storage=8471.70, gpu=8473.30, cable=8544.42, laptop/notebook/netbook/ultrabook/chromebook/2-in-1=8471.30
+- fobValue: USD total for that item (qty x unit price)
+- weightLbs: total lbs for that item (convert kg x 2.205)
+- countryOfOrigin: infer from brand if not stated (Cisco/HPE/Dell = Taiwan or USA)
+- confidence: 0-100, deduct for missing/ambiguous
+- missingFields: field names that were guessed
 
 Return ONLY the JSON object.`;
 
@@ -3194,89 +3294,239 @@ function extractFromEmail(text) {
 }
 
 function showExtracted(d) {
-  document.getElementById("ai-status").style.display = "none";
-  document.getElementById("ai-extracted").style.display = "block";
+  document.getElementById('ai-status').style.display = 'none';
+  document.getElementById('ai-extracted').style.display = 'block';
 
-  const confColor = d.confidence >= 85 ? "var(--green)" : d.confidence >= 65 ? "var(--yellow)" : "var(--red)";
-  const destLabel = {brazil:"🇧🇷 Brazil", mexico:"🇲🇽 Mexico", argentina:"🇦🇷 Argentina", colombia:"🇨🇴 Colombia", chile:"🇨🇱 Chile", peru:"🇵🇪 Peru", ecuador:"🇪🇨 Ecuador", costarica:"🇨🇷 Costa Rica", panama:"🇵🇦 Panama", domrep:"🇩🇴 Dom. Rep.", guatemala:"🇬🇹 Guatemala", honduras:"🇭🇳 Honduras", bolivia:"🇧🇴 Bolivia", paraguay:"🇵🇾 Paraguay", uruguay:"🇺🇾 Uruguay", usa:"🇺🇸 USA IOR"}[d.destination] || d.destination;
+  const confColor = d.confidence >= 85 ? 'var(--green)' : d.confidence >= 65 ? 'var(--yellow)' : 'var(--red)';
+  const DEST_LABELS = {brazil:'🇧🇷 Brazil',mexico:'🇲🇽 Mexico',argentina:'🇦🇷 Argentina',colombia:'🇨🇴 Colombia',chile:'🇨🇱 Chile',peru:'🇵🇪 Peru',ecuador:'🇪🇨 Ecuador',costarica:'🇨🇷 Costa Rica',panama:'🇵🇦 Panama',domrep:'🇩🇴 Dom. Rep.',guatemala:'🇬🇹 Guatemala',honduras:'🇭🇳 Honduras',bolivia:'🇧🇴 Bolivia',paraguay:'🇵🇾 Paraguay',uruguay:'🇺🇾 Uruguay',usa:'🇺🇸 USA IOR',dubai:'🇦🇪 Dubai/UAE',qatar:'🇶🇦 Qatar',saudiarabia:'🇸🇦 Saudi Arabia',uk:'🇬🇧 UK',canada:'🇨🇦 Canada'};
+  const destLabel = DEST_LABELS[d.destination] || d.destination;
 
-  const fields = [
-    ["Product / Model", d.product || "—"],
-    ["Equipment Type", d.equipmentType || "—"],
-    ["Quantity", d.quantity || 1],
-    ["FOB Value (Total)", d.fobValue ? `$${fmt(d.fobValue)}` : "—"],
-    ["Weight", d.weightLbs ? `${d.weightLbs} lbs${d.weightEstimated?' ⚡ estimado':''}` : "— (no indicado)"],
-    ["Country of Origin", d.countryOfOrigin || "—"],
-    ["Destination", destLabel],
-    ["HS Code", d.hsCode || "8517.62"],
-  ];
+  // Normalize: si no tiene items array, crearlo desde campos legacy
+  if (!d.items || !d.items.length) {
+    d.items = [{
+      product: d.product || '',
+      equipmentType: d.equipmentType || '',
+      quantity: d.quantity || 1,
+      fobValue: d.fobValue || 0,
+      weightLbs: d.weightLbs || 0,
+      hsCode: d.hsCode || '8517.62'
+    }];
+  }
 
-  document.getElementById("ai-fields-grid").innerHTML = fields.map(([l,v]) => `
-    <div style="background:var(--bg3);border:1px solid var(--bd);padding:10px 12px">
-      <div style="font-size:9px;color:var(--tx5);letter-spacing:2px;margin-bottom:4px">${l}</div>
-      <div style="font-size:13px;color:var(--tx);font-family:Barlow,sans-serif;font-weight:600">${v}</div>
-    </div>
-  `).join("") + `
-    <div style="grid-column:1/-1;background:var(--bg3);border:1px solid var(--bd);padding:10px 12px">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <div>
-          <div style="font-size:9px;color:var(--tx5);letter-spacing:2px;margin-bottom:4px">AI CONFIDENCE</div>
-          <div class="score-meter" style="margin:0">
-            <div class="score-bar-bg" style="width:200px"><div class="score-bar-fill" style="width:${d.confidence}%;background:${confColor}"></div></div>
-            <div class="score-label" style="color:${confColor}">${d.confidence}%</div>
-          </div>
-        </div>
-        ${d.missingFields?.length ? `<div style="font-size:10px;color:var(--yellow)">⚠ Inferido: ${d.missingFields.join(", ")}</div>` : `<div style="font-size:10px;color:var(--green)">✓ Todos los campos encontrados</div>`}
-      </div>
-      <div style="margin-top:6px;font-size:9px;color:var(--tx5)">
-        ${d._source==='ai-online' ? '✦ Procesado con IA online (Claude)' : '⚡ Procesado localmente (sin conexión)'}
-      </div>
-      </div>
-      ${d.notes ? `<div style="margin-top:8px;font-size:11px;color:var(--tx4)">📝 ${d.notes}</div>` : ""}
-    </div>
-  `;
+  const totalFob = d.items.reduce((s,i) => s + (i.fobValue||0), 0);
+  const totalLbs = d.items.reduce((s,i) => s + (i.weightLbs||0), 0);
+  const multiItem = d.items.length > 1;
+
+  let itemsHTML = '';
+  if (multiItem) {
+    const rows = d.items.map((it,i) =>
+      `<div style="display:grid;grid-template-columns:2fr 60px 90px 70px 100px;gap:6px;padding:8px 0;border-bottom:1px solid var(--bd2);font-size:11px;align-items:center">` +
+        `<div><span style="color:var(--teal);font-size:9px">#${i+1} HS ${it.hsCode||'—'}</span><br/><span style="color:var(--tx)">${it.product||'—'}</span></div>` +
+        `<div style="color:var(--tx4)">×${it.quantity||1}</div>` +
+        `<div style="color:var(--tx2)">$${fmt(it.fobValue||0)}</div>` +
+        `<div style="color:var(--tx3)">${it.weightLbs||0} lbs</div>` +
+        `<div style="color:var(--tx4);font-size:10px">${it.equipmentType||''}</div>` +
+      `</div>`
+    ).join('');
+    itemsHTML = `<div style="grid-column:1/-1;background:var(--bg3);border:1px solid var(--bd);padding:12px">` +
+      `<div style="font-size:9px;color:var(--teal);letter-spacing:2px;font-family:Barlow,sans-serif;font-weight:700;margin-bottom:10px">ITEMS EXTRAÍDOS (${d.items.length})</div>` +
+      `<div style="display:grid;grid-template-columns:2fr 60px 90px 70px 100px;gap:6px;padding:4px 0;font-size:9px;color:var(--tx5);letter-spacing:1px">` +
+        `<div>PRODUCTO / HS</div><div>QTY</div><div>FOB</div><div>PESO</div><div>TIPO</div>` +
+      `</div>` +
+      rows +
+      `<div style="display:grid;grid-template-columns:2fr 60px 90px 70px 100px;gap:6px;padding:8px 0;font-size:11px">` +
+        `<div style="color:var(--tx4);font-family:Barlow,sans-serif;font-weight:700">TOTAL</div>` +
+        `<div></div>` +
+        `<div style="color:var(--teal);font-weight:700">$${fmt(totalFob)}</div>` +
+        `<div style="color:var(--teal);font-weight:700">${totalLbs} lbs</div>` +
+        `<div></div>` +
+      `</div>` +
+    `</div>`;
+  } else {
+    const it = d.items[0];
+    itemsHTML =
+      `<div style="background:var(--bg3);border:1px solid var(--bd);padding:10px 12px">` +
+        `<div style="font-size:9px;color:var(--tx5);letter-spacing:2px;margin-bottom:4px">PRODUCT / MODEL</div>` +
+        `<div style="font-size:13px;color:var(--tx);font-family:Barlow,sans-serif;font-weight:600">${it.product||'—'}</div>` +
+      `</div>` +
+      `<div style="background:var(--bg3);border:1px solid var(--bd);padding:10px 12px">` +
+        `<div style="font-size:9px;color:var(--tx5);letter-spacing:2px;margin-bottom:4px">HS CODE</div>` +
+        `<div style="font-size:13px;color:var(--tx);font-family:Barlow,sans-serif;font-weight:600">${it.hsCode||'8517.62'}</div>` +
+      `</div>` +
+      `<div style="background:var(--bg3);border:1px solid var(--bd);padding:10px 12px">` +
+        `<div style="font-size:9px;color:var(--tx5);letter-spacing:2px;margin-bottom:4px">QTY</div>` +
+        `<div style="font-size:13px;color:var(--tx);font-family:Barlow,sans-serif;font-weight:600">${it.quantity||1}</div>` +
+      `</div>` +
+      `<div style="background:var(--bg3);border:1px solid var(--bd);padding:10px 12px">` +
+        `<div style="font-size:9px;color:var(--tx5);letter-spacing:2px;margin-bottom:4px">FOB VALUE</div>` +
+        `<div style="font-size:13px;color:var(--tx);font-family:Barlow,sans-serif;font-weight:600">$${fmt(totalFob)}</div>` +
+      `</div>` +
+      `<div style="background:var(--bg3);border:1px solid var(--bd);padding:10px 12px">` +
+        `<div style="font-size:9px;color:var(--tx5);letter-spacing:2px;margin-bottom:4px">WEIGHT</div>` +
+        `<div style="font-size:13px;color:var(--tx);font-family:Barlow,sans-serif;font-weight:600">${totalLbs} lbs</div>` +
+      `</div>`;
+  }
+
+  document.getElementById('ai-fields-grid').innerHTML =
+    `<div style="background:var(--bg3);border:1px solid var(--bd);padding:10px 12px">` +
+      `<div style="font-size:9px;color:var(--tx5);letter-spacing:2px;margin-bottom:4px">DESTINATION</div>` +
+      `<div style="font-size:13px;color:var(--tx);font-family:Barlow,sans-serif;font-weight:600">${destLabel}</div>` +
+    `</div>` +
+    `<div style="background:var(--bg3);border:1px solid var(--bd);padding:10px 12px">` +
+      `<div style="font-size:9px;color:var(--tx5);letter-spacing:2px;margin-bottom:4px">COUNTRY OF ORIGIN</div>` +
+      `<div style="font-size:13px;color:var(--tx);font-family:Barlow,sans-serif;font-weight:600">${d.countryOfOrigin||'—'}</div>` +
+    `</div>` +
+    itemsHTML +
+    `<div style="grid-column:1/-1;background:var(--bg3);border:1px solid var(--bd);padding:10px 12px">` +
+      `<div style="display:flex;justify-content:space-between;align-items:center">` +
+        `<div>` +
+          `<div style="font-size:9px;color:var(--tx5);letter-spacing:2px;margin-bottom:4px">AI CONFIDENCE</div>` +
+          `<div class="score-meter" style="margin:0">` +
+            `<div class="score-bar-bg" style="width:200px"><div class="score-bar-fill" style="width:${d.confidence}%;background:${confColor}"></div></div>` +
+            `<div class="score-label" style="color:${confColor}">${d.confidence}%</div>` +
+          `</div>` +
+        `</div>` +
+        `${d.missingFields?.length ? `<div style="font-size:10px;color:var(--yellow)">⚠ Inferido: ${d.missingFields.join(', ')}</div>` : `<div style="font-size:10px;color:var(--green)">✓ Todos los campos encontrados</div>`}` +
+      `</div>` +
+      `${d.notes ? `<div style="margin-top:8px;font-size:11px;color:var(--tx4)">📝 ${d.notes}</div>` : ''}` +
+    `</div>`;
 }
+
 
 function runFromAI() {
   if (!aiExtracted) return;
   const d = aiExtracted;
 
-  // Map destination to country ID
-  const destMap = { brazil:"brazil", mexico:"mexico", argentina:"argentina", colombia:"colombia", chile:"chile", peru:"peru", ecuador:"ecuador", "costa rica":"costarica", costarica:"costarica", panama:"panama", "dom. rep.":"domrep", "dominican":"domrep", domrep:"domrep", guatemala:"guatemala", honduras:"honduras", bolivia:"bolivia", paraguay:"paraguay", uruguay:"uruguay", usa:"usa" };
+  // Normalize items array
+  if (!d.items || !d.items.length) {
+    d.items = [{
+      product: d.product || '',
+      equipmentType: d.equipmentType || '',
+      quantity: d.quantity || 1,
+      fobValue: d.fobValue || 0,
+      weightLbs: d.weightLbs || 5,
+      hsCode: d.hsCode || '8517.62'
+    }];
+  }
+  // Ensure minimum weight per item
+  d.items.forEach(it => { if (!it.weightLbs || it.weightLbs < 1) it.weightLbs = 5; });
+
+  const destMap = { brazil:"brazil", mexico:"mexico", argentina:"argentina", colombia:"colombia", chile:"chile", peru:"peru", ecuador:"ecuador", costarica:"costarica", panama:"panama", domrep:"domrep", guatemala:"guatemala", honduras:"honduras", bolivia:"bolivia", paraguay:"paraguay", uruguay:"uruguay", dubai:"dubai", qatar:"qatar", saudiarabia:"saudiarabia", bahrain:"bahrain", israel:"israel", uk:"uk", spain:"spain", france:"france", germany:"germany", netherlands:"netherlands", turkey:"turkey", india:"india", singapore:"singapore", japan:"japan", australia:"australia", canada:"canada", usa:"usa" };
   const ctry = destMap[d.destination] || "brazil";
-
-  // Pre-fill quoter form
   currentCtry = ctry;
-  const fob = d.fobValue || 0;
-  const lbs = d.weightLbs || 5; // use 5 lbs minimum if no weight (triggers min freight anyway)
 
-  // Run quote directly
-  const r = calcQuote(ctry, fob, lbs, d.countryOfOrigin || "", 0, d.product, d.hsCode, d.equipmentType);
+  const totalFob = d.items.reduce((s,i) => s + (i.fobValue||0), 0);
+  const totalLbs = d.items.reduce((s,i) => s + (i.weightLbs||0), 0);
+  const multiItem = d.items.length > 1;
+
+  // ── CÁLCULO MULTI-ITEM ──────────────────────────────
+  // Para cada ítem: calcular taxes con su propio HS/tipo
+  // Freight, Insurance, FOB charges, Destination, IOR: se calculan sobre el total
+  // Taxes: se calculan por ítem y se suman
+
+  const r = calcQuote(ctry, totalFob, totalLbs, d.countryOfOrigin || "", 0, d.items[0].product, d.items[0].hsCode, d.items[0].equipmentType);
   if (!r) return;
+
+  // Si hay múltiples ítems con distintos HS, recalcular taxes por separado
+  let taxLines = r.tx;
+  let totalTax = r.tt;
+  let hasLaptop = false;
+
+  if (multiItem) {
+    // Calcular CIF proporcional para cada ítem y aplicar sus tasas
+    const cif = r.cif;
+    const fobRatio = totalFob > 0 ? 1 : 0;
+    let combinedTaxes = {};
+
+    d.items.forEach(it => {
+      const itFobRatio = totalFob > 0 ? (it.fobValue||0) / totalFob : 1/d.items.length;
+      const itCif = cif * itFobRatio;
+      const laptop = isLaptop(it.product, it.hsCode, it.equipmentType);
+      if (laptop) hasLaptop = true;
+      const itTax = laptop ? bTaxLaptop(itCif) : bTax(itCif);
+
+      // Accumulate taxes — only works cleanly for Brazil (cascade)
+      // For other countries use standard calc
+      if (ctry === 'brazil') {
+        combinedTaxes.ii  = (combinedTaxes.ii  || 0) + itTax.ii;
+        combinedTaxes.ip  = (combinedTaxes.ip  || 0) + itTax.ip;
+        combinedTaxes.ps  = (combinedTaxes.ps  || 0) + itTax.ps;
+        combinedTaxes.co  = (combinedTaxes.co  || 0) + itTax.co;
+        combinedTaxes.ic  = (combinedTaxes.ic  || 0) + itTax.ic;
+      }
+    });
+
+    if (ctry === 'brazil' && Object.keys(combinedTaxes).length) {
+      totalTax = combinedTaxes.ii + combinedTaxes.ip + combinedTaxes.ps + combinedTaxes.co + combinedTaxes.ic;
+      taxLines = [
+        ["II (mixto por ítem)", combinedTaxes.ii],
+        ["IPI (mixto por ítem)", combinedTaxes.ip],
+        ["PIS (2.1%)", combinedTaxes.ps],
+        ["COFINS (9.65%)", combinedTaxes.co],
+        ["ICMS SP (18%)", combinedTaxes.ic]
+      ];
+    }
+  } else {
+    hasLaptop = r.isLaptop;
+  }
+
+  // Recalcular total con taxes correctas
+  const serviceTotal = r.li.reduce((s,[,, v]) => s + v, 0);
+  const grandTotal = serviceTotal + totalTax;
 
   const code = COUNTRIES.find(c => c.id === ctry).code;
   const qn = nextQN(code);
   const dest = COUNTRIES.find(c => c.id === ctry).lb;
-  const flags = getRegFlags(d.product, d.equipmentType, d.countryOfOrigin, ctry);
-  const dv = getDVCheck(d.product, fob, d.equipmentType);
+  const flags = getRegFlags(d.items[0].product, d.items[0].equipmentType, d.countryOfOrigin, ctry);
+  const dv = getDVCheck(d.items[0].product, totalFob, d.items[0].equipmentType);
 
-  const _cm2={brazil:'brazil',mexico:'mexico',argentina:'argentina',colombia:'colombia',chile:'chile',peru:'peru',usa:'usa'};
-  const relCases=CASE_DB.filter(c=>(_cm2[c.country.toLowerCase()]||c.country.toLowerCase())===ctry).slice(0,2);
-
+  const _cm2 = {brazil:'brazil',mexico:'mexico',argentina:'argentina',colombia:'colombia',chile:'chile',peru:'peru',usa:'usa'};
+  const relCases = CASE_DB.filter(c => (_cm2[c.country.toLowerCase()]||c.country.toLowerCase()) === ctry).slice(0,2);
   const flagColors = { critical:"flag-red", high:"flag-red", medium:"flag-yellow", green:"flag-green", low:"flag-green" };
+
+  // ── ITEMS BREAKDOWN TABLE (solo si multi-item) ──────
+  const itemsBreakdown = multiItem ? `
+    <div style="background:var(--bg3);border:1px solid var(--teal);border-left:4px solid var(--teal);padding:14px 16px;margin-bottom:14px">
+      <div style="font-family:Barlow,sans-serif;font-weight:800;font-size:10px;color:var(--teal);letter-spacing:2px;margin-bottom:10px">📦 BREAKDOWN POR ÍTEM — ${d.items.length} PRODUCTOS</div>
+      <div style="display:grid;grid-template-columns:2fr 60px 90px 70px 90px;gap:6px;padding:4px 0;font-size:9px;color:var(--tx5);letter-spacing:1px;border-bottom:1px solid var(--bd);margin-bottom:4px">
+        <div>PRODUCTO / HS</div><div>QTY</div><div>FOB</div><div>PESO</div><div>TIPO IMPUESTO</div>
+      </div>
+      ${d.items.map((it,i) => {
+        const laptop = isLaptop(it.product, it.hsCode, it.equipmentType);
+        const taxType = laptop ? 'II 7.2% (Laptop)' : ctry==='brazil' ? 'II 16% (Std)' : 'Estándar';
+        const taxColor = laptop ? 'var(--teal)' : 'var(--tx4)';
+        return `<div style="display:grid;grid-template-columns:2fr 60px 90px 70px 90px;gap:6px;padding:7px 0;border-bottom:1px solid var(--bd2);font-size:11px;align-items:center">
+          <div><span style="color:var(--tx5);font-size:9px">HS ${it.hsCode||'—'}</span><br/><span style="color:var(--tx)">${it.product||'—'}</span></div>
+          <div style="color:var(--tx4)">×${it.quantity||1}</div>
+          <div style="color:var(--tx2)">$${fmt(it.fobValue||0)}</div>
+          <div style="color:var(--tx3)">${it.weightLbs||0} lbs</div>
+          <div style="color:${taxColor};font-size:10px">${taxType}</div>
+        </div>`;
+      }).join('')}
+      <div style="display:grid;grid-template-columns:2fr 60px 90px 70px 90px;gap:6px;padding:8px 0;font-size:11px;font-weight:700">
+        <div style="color:var(--tx4);font-family:Barlow,sans-serif">TOTAL</div>
+        <div></div>
+        <div style="color:var(--teal)">$${fmt(totalFob)}</div>
+        <div style="color:var(--teal)">${totalLbs} lbs</div>
+        <div></div>
+      </div>
+    </div>` : '';
 
   const html = `
     <div style="margin-top:0">
       <!-- AI Source Badge -->
       <div style="background:var(--bg3);border:1px solid var(--bd);border-left:3px solid var(--teal);padding:10px 14px;margin-bottom:14px;font-size:11px;color:var(--teal)">
-        ✦ <strong>GENERATED FROM EMAIL</strong> — AI extracted ${d.confidence}% confidence · ${d.missingFields?.length ? `Inferred: ${d.missingFields.join(", ")}` : "All fields confirmed"} · <button onclick="resetAI()" style="background:none;border:none;color:var(--tx4);cursor:pointer;font-size:11px;text-decoration:underline">Edit & re-run</button>
+        ✦ <strong>GENERATED FROM EMAIL</strong> — AI extracted ${d.confidence}% confidence · ${d.missingFields?.length ? `Inferred: ${d.missingFields.join(", ")}` : "All fields confirmed"}${multiItem ? ` · <strong>${d.items.length} productos detectados</strong>` : ''} · <button onclick="resetAI()" style="background:none;border:none;color:var(--tx4);cursor:pointer;font-size:11px;text-decoration:underline">Edit & re-run</button>
       </div>
 
       <!-- QN Header -->
       <div style="background:var(--bg2);border:1px solid var(--bd);padding:14px 18px;margin-bottom:2px;display:flex;justify-content:space-between;align-items:center">
         <div>
           <div style="font-family:Barlow,sans-serif;font-weight:800;font-size:15px;color:#fff">${qn}</div>
-          <div style="font-size:11px;color:var(--tx4);margin-top:3px">${d.product || "—"} × ${d.quantity || 1} ${d.itemLines&&d.itemLines.length>1?`<span style="color:var(--teal)">(${d.itemLines.length} tipos)</span>`:''} · HS ${d.hsCode || "8517.62"} · ${d.countryOfOrigin || "COO TBC"} → ${dest}</div>
+          <div style="font-size:11px;color:var(--tx4);margin-top:3px">
+            ${multiItem ? `${d.items.length} productos · <span style="color:var(--teal)">Multi-HS</span>` : `${d.items[0].product||'—'} × ${d.items[0].quantity||1} · HS ${d.items[0].hsCode||'8517.62'}`}
+            · ${d.countryOfOrigin||'COO TBC'} → ${dest}
+          </div>
         </div>
         <div style="text-align:right">
           <div style="font-size:8px;color:var(--tx5);letter-spacing:2px">TRANSIT</div>
@@ -3286,92 +3536,41 @@ function runFromAI() {
 
       <!-- Meta -->
       <div class="meta-bar" style="grid-template-columns:repeat(4,1fr);margin-bottom:14px">
-        <div class="meta-item"><div class="ml">FOB VALUE</div><div class="mv">$${fmt(fob)}</div></div>
-        <div class="meta-item"><div class="ml">QTY</div><div class="mv">${d.quantity || 1} units</div></div>
-        <div class="meta-item"><div class="ml">WEIGHT${d.weightEstimated?' ⚡':''}</div><div class="mv">${lbs} lbs${d.weightEstimated?' <span style="font-size:9px;color:var(--yellow)">(est.)</span>':''}</div></div>
+        <div class="meta-item"><div class="ml">FOB TOTAL</div><div class="mv">$${fmt(totalFob)}</div></div>
+        <div class="meta-item"><div class="ml">ITEMS</div><div class="mv">${d.items.length} tipo${d.items.length>1?'s':''}</div></div>
+        <div class="meta-item"><div class="ml">WEIGHT</div><div class="mv">${totalLbs} lbs</div></div>
         <div class="meta-item"><div class="ml">CIF</div><div class="mv">$${fmt(r.cif)}</div></div>
       </div>
 
+      <!-- Items breakdown -->
+      ${itemsBreakdown}
+
       <!-- Regulatory Flags -->
-      ${flags.length ? `<div style="margin-bottom:14px">${flags.map(f => `<div class="flag ${flagColors[f.level] || "flag-blue"}">⚠ ${f.msg}</div>`).join("")}</div>` : ""}
+      ${flags.length ? `<div style="margin-bottom:14px">${flags.map(f => `<div class="flag ${flagColors[f.level]||"flag-blue"}">⚠ ${f.msg}</div>`).join("")}</div>` : ""}
 
       <!-- Laptop Brazil flag -->
-      ${r.isLaptop&&ctry==="brazil"?`<div class="flag flag-yellow" style="margin-bottom:14px">⚠ <strong>LAPTOP / HS 8471.30 — GECEX 852/2026:</strong> II aplicado al 7.2% (antes 0%). IPI = 0% permanente. <strong>Verificar ex-tarifário activo en SISCOMEX antes de confirmar</strong> — si hay ex-tarifário vigente, II vuelve a 0% y el costo baja ~5% sobre CIF.</div>`:""}
+      ${hasLaptop&&ctry==="brazil"?`<div class="flag flag-yellow" style="margin-bottom:14px">⚠ <strong>LAPTOP / HS 8471.30 — GECEX 852/2026:</strong> II aplicado al 7.2% (antes 0%). IPI = 0% permanente. <strong>Verificar ex-tarifário activo en SISCOMEX antes de confirmar.</strong></div>`:""}
 
-      <!-- DV Assessment — per item -->
-      ${d.dvWarnings && d.dvWarnings.length > 0 ? `
-      <div style="background:var(--redbg);border:1px solid var(--red);border-left:4px solid var(--red);padding:14px 16px;margin-bottom:14px">
-        <div style="font-family:Barlow,sans-serif;font-weight:800;font-size:11px;color:var(--red);letter-spacing:2px;margin-bottom:10px">⚠ ALERTA VALOR DECLARADO — ITEMS ESPECÍFICOS</div>
-        ${d.dvWarnings.map(w=>`
-          <div style="background:rgba(0,0,0,.3);padding:10px 12px;margin-bottom:8px;border-left:2px solid var(--red)">
-            <div style="font-size:11px;color:#fca5a5;font-weight:700">${w.item}</div>
-            <div style="font-size:11px;color:var(--tx3);margin-top:4px;line-height:1.7">
-              Valor declarado estimado para este item: <strong style="color:var(--red)">$${fmt(w.declared)}</strong><br/>
-              Rango de mercado: <strong style="color:var(--green)">$${fmt(w.suggestedMin)} – $${fmt(w.suggestedMax)}</strong> (${w.label})<br/>
-              Fuente referencia: <span style="color:var(--teal)">${w.source}</span>
-            </div>
-          </div>
-        `).join('')}
-        <div style="font-size:10px;color:#fca5a5;margin-top:6px">
-          ⚠ Confirmar valor real con el cliente antes de procesar. Un valor significativamente bajo puede generar Canal Cinza en Brazil o retención en aduana en otros países.
-        </div>
-      </div>` : dv ? `<div class="flag ${flagColors[dv.level] || "flag-blue"}" style="margin-bottom:14px">
-        📊 <strong>DECLARED VALUE:</strong> ${dv.msg}
-        ${dv.level==='critical'||dv.level==='high' ? `<div style="margin-top:8px;font-size:11px;border-top:1px solid rgba(255,255,255,.1);padding-top:8px">
-          <strong>Producto:</strong> ${d.product||'Ver items'} — <strong>Valor sugerido:</strong> $${fmt(dv.lo||0)} – $${fmt(dv.hi||0)}
-        </div>` : ''}
-      </div>` : ""}
-
-      <!-- Multi-HS Code breakdown -->
-      ${d.multiHS && d.hsCodes && d.hsCodes.length > 1 ? `
-      <div style="background:var(--bg3);border:1px solid var(--teal);border-left:4px solid var(--teal);padding:14px 16px;margin-bottom:14px">
-        <div style="font-family:Barlow,sans-serif;font-weight:800;font-size:10px;color:var(--teal);letter-spacing:2px;margin-bottom:10px">📦 MÚLTIPLES HS CODES DETECTADOS — DECLARAR POR SEPARADO</div>
-        <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">Este shipment contiene productos de distintas categorías aduaneras. Se recomienda declarar con HS codes separados para optimizar costos y evitar reclasificación.</div>
-        ${d.hsCodes.map(h=>`
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:rgba(0,0,0,.25);margin-bottom:4px;border-left:2px solid var(--teal)">
-            <div>
-              <span style="font-family:Barlow,sans-serif;font-weight:700;font-size:12px;color:var(--teal)">${h.code}</span>
-              <span style="font-size:10px;color:var(--tx4);margin-left:8px">${h.label}</span>
-            </div>
-            <div style="font-size:10px;color:var(--tx3)">${h.totalQty} unidades — ${h.items.slice(0,2).map(i=>i.slice(0,30)).join(', ')}${h.items.length>2?` +${h.items.length-2} más`:''}</div>
-          </div>
-        `).join('')}
-        <div style="font-size:10px;color:var(--tx5);margin-top:6px">El cálculo de D&T aplica el HS code del item de mayor valor. Para cotización precisa, separar en shipments o consultar broker.</div>
-      </div>` : ''}
-
-      <!-- Multi-item breakdown -->
-      ${d.itemLines && d.itemLines.length > 1 ? `
-      <div style="background:var(--bg3);border:1px solid var(--bd);border-left:3px solid var(--teal);padding:12px 16px;margin-bottom:14px">
-        <div style="font-size:9px;color:var(--teal);letter-spacing:2px;margin-bottom:8px;font-family:Barlow,sans-serif;font-weight:700">ITEMS DETECTADOS — ${d.quantity} UNIDADES TOTALES</div>
-        ${d.itemLines.map(item=>{
-          const il = typeof item === 'string' ? item : item.raw;
-          const hs = typeof item === 'object' ? item.hs : null;
-          const wt = typeof item === 'object' && item.weightEst ? `~${item.weightEst.lbs} lbs` : '';
-          return `<div style="font-size:11px;color:var(--tx3);padding:3px 0;border-bottom:1px solid var(--bd2);display:flex;justify-content:space-between">
-            <span>· ${il.slice ? il.slice(0,60) : il}</span>
-            <span style="font-size:10px;color:var(--tx5);flex-shrink:0;margin-left:8px">${hs?hs.code:''} ${wt}</span>
-          </div>`;
-        }).join('')}
-        ${d.weightEstimated ? `<div style="font-size:10px;color:var(--yellow);margin-top:6px">⚡ Peso estimado según base de datos interna (~${d.weightLbs} lbs). Confirmar peso real con cliente antes de reservar.</div>` : ''}
-      </div>` : d.weightEstimated ? `<div class="flag flag-yellow" style="margin-bottom:14px">⚡ <strong>PESO ESTIMADO:</strong> ~${d.weightLbs} lbs basado en base de datos interna de productos similares. Confirmar con cliente.</div>` : ''}
+      <!-- DV Assessment -->
+      ${dv?`<div class="flag ${flagColors[dv.level]||"flag-blue"}" style="margin-bottom:14px">📊 <strong>DECLARED VALUE:</strong> ${dv.msg}</div>`:""}
 
       <!-- Service Lines -->
       <div class="table-wrap">
         <div class="table-head" style="grid-template-columns:1fr 160px 90px"><span>SERVICE</span><span>BASIS</span><span style="text-align:right">USD</span></div>
-        ${r.li.map(([l,b,v]) => `<div class="table-row" style="grid-template-columns:1fr 160px 90px"><div style="font-size:12px;color:var(--tx2)">${l}</div><div style="font-size:10px;color:var(--tx5)">${b}</div><div style="font-size:12px;text-align:right">$${fmt(v)}</div></div>`).join("")}
+        ${r.li.map(([l,b,v])=>`<div class="table-row" style="grid-template-columns:1fr 160px 90px"><div style="font-size:12px;color:var(--tx2)">${l}</div><div style="font-size:10px;color:var(--tx5)">${b}</div><div style="font-size:12px;text-align:right">$${fmt(v)}</div></div>`).join("")}
       </div>
 
       <!-- Tax Lines -->
-      ${r.tx.length ? `
+      ${taxLines.length ? `
       <div class="table-wrap" style="margin-top:2px">
-        <div class="table-head" style="grid-template-columns:1fr 90px"><span>DUTIES & TAXES (PASS-THROUGH)</span><span style="text-align:right">USD</span></div>
-        ${r.tx.map(([l,v]) => `<div class="table-row" style="grid-template-columns:1fr 90px"><div style="font-size:12px;color:var(--tx3)">${l}</div><div style="font-size:12px;color:var(--tx3);text-align:right">$${fmt(v)}</div></div>`).join("")}
+        <div class="table-head" style="grid-template-columns:1fr 90px"><span>DUTIES & TAXES (PASS-THROUGH)${multiItem?' — CALCULADAS POR HS/ÍTEM':''}</span><span style="text-align:right">USD</span></div>
+        ${taxLines.map(([l,v])=>`<div class="table-row" style="grid-template-columns:1fr 90px"><div style="font-size:12px;color:var(--tx3)">${l}</div><div style="font-size:12px;color:var(--tx3);text-align:right">$${fmt(v)}</div></div>`).join("")}
       </div>` : ""}
 
       <!-- Total -->
       <div class="total-bar" style="margin-top:2px">
         <div class="total-lbl">TOTAL DDP</div>
-        <div class="total-val">$${fmt(r.tot)}</div>
+        <div class="total-val">$${fmt(grandTotal)}</div>
       </div>
 
       <!-- Related Cases -->
@@ -3397,15 +3596,15 @@ function runFromAI() {
         • COO confirmation required prior to booking · Rate valid 7 days
       </div>
 
-      <!-- Intelligence Report (internal only) -->
-      ${buildIntelligenceReport(d.product||'',d.hsCode||'',d.countryOfOrigin||'',fob,lbs,ctry,d.equipmentType||'')}
+      <!-- Intelligence Report -->
+      ${buildIntelligenceReport(d.items[0].product||'',d.items[0].hsCode||'',d.countryOfOrigin||'',totalFob,totalLbs,ctry,d.items[0].equipmentType||'')}
 
       <!-- Actions -->
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-primary" style="padding:12px 18px" onclick="downloadQuotePDF()">⬇ DESCARGAR PDF</button>
         <button class="btn btn-ghost" style="padding:12px 16px" onclick="openAIChat()">💬 CHAT</button>
-        <button class="btn btn-ghost" style="flex:1;padding:12px;min-width:160px" onclick="copyAIQuote('${qn}','${dest}',${fob},${lbs},${r.cif},${r.tot},'${r.tr}','${(d.product||"").replace(/'/g,"\\'")}','${d.hsCode||"8517.62"}','${d.countryOfOrigin||"TBC"}')">COPY QUOTE TEXT</button>
-        <button class="btn btn-ghost" style="padding:12px 18px;background:var(--greenbg);border-color:var(--green);color:var(--green);font-weight:800" onclick="saveAIQuoteToLog('${qn}','${dest}','${(d.product||"—").replace(/'/g,"\\'")}',${fob},${r.tot},${r.cif},'${(d.client||"").replace(/'/g,"\\'")}')">📋 GUARDAR EN LOG</button>
+        <button class="btn btn-ghost" style="flex:1;padding:12px;min-width:160px" onclick="copyAIQuote('${qn}','${dest}',${totalFob},${totalLbs},${r.cif},${grandTotal},'${r.tr}','${(d.items[0].product||"").replace(/'/g,"\\'")}','${d.items[0].hsCode||"8517.62"}','${d.countryOfOrigin||"TBC"}')">COPY QUOTE TEXT</button>
+        <button class="btn btn-ghost" style="padding:12px 18px;background:var(--greenbg);border-color:var(--green);color:var(--green);font-weight:800" onclick="saveAIQuoteToLog('${qn}','${dest}','${(d.items[0].product||"—").replace(/'/g,"\\'")}',${totalFob},${grandTotal},${r.cif},'${(d.client||"").replace(/'/g,"\\'")}')">📋 GUARDAR EN LOG</button>
         <button class="btn btn-ghost" style="padding:12px 18px" onclick="resetAI()">NUEVO EMAIL</button>
       </div>
     </div>`;
@@ -3413,9 +3612,10 @@ function runFromAI() {
   document.getElementById("ai-input-section").style.display = "none";
   document.getElementById("ai-quote-result").style.display = "block";
   document.getElementById("ai-quote-result").innerHTML = html;
-  setActiveQuote({qn,dest,product:d.product||'—',hs:d.hsCode||'8517.62',coo:d.countryOfOrigin||'TBC',fob,lbs,cif:r.cif,tot:r.tot,tr:r.tr,country:ctry,lines:r.li,taxes:r.tx,flags,dv,origin:'Miami, USA (DDP Global warehouse)',type:d.equipmentType||'—',qty:d.quantity||1});
+  setActiveQuote({qn,dest,product:d.items[0].product||'—',hs:d.items[0].hsCode||'8517.62',coo:d.countryOfOrigin||'TBC',fob:totalFob,lbs:totalLbs,cif:r.cif,tot:grandTotal,tr:r.tr,country:ctry,lines:r.li,taxes:taxLines,flags,dv,origin:'Miami, USA (DDP Global warehouse)',type:d.items[0].equipmentType||'—',qty:d.items.reduce((s,i)=>s+(i.quantity||1),0)});
   window.scrollTo(0, 0);
 }
+
 
 function saveAIQuoteToLog(qn, dest, product, fob, total, cif, client) {
   const aiEntry={qn, client: client||'—', dest, product, fob, total, cif, status:'quote', notes:'Via AI Quote', source:'ai-email'};
