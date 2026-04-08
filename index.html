@@ -913,6 +913,68 @@ Please advise on DDP cost and transit time. Thanks"></textarea>
 
 <script>
 // ════════════════════════════════════════════════════════
+// KV STORAGE LAYER — sync-first híbrido (localStorage inmediato + KV en background)
+// ════════════════════════════════════════════════════════
+const KV_PROXY = 'https://ddp-proxy.nicolasjuarezroldan.workers.dev/kv';
+
+// Escribe en KV en background sin bloquear nada
+function kvSyncToCloud(key, value) {
+  const str = typeof value === 'string' ? value : JSON.stringify(value);
+  fetch(KV_PROXY, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ method: 'set', key, value: str })
+  }).catch(() => {}); // silencioso si falla
+}
+
+// Lee desde KV y actualiza localStorage si hay datos más nuevos
+async function kvSyncFromCloud(key) {
+  try {
+    const r = await fetch(KV_PROXY, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ method: 'get', key })
+    });
+    const data = await r.json();
+    if (data.value !== null && data.value !== undefined) {
+      localStorage.setItem(key, typeof data.value === 'string' ? data.value : JSON.stringify(data.value));
+      return true;
+    }
+  } catch(e) {}
+  return false;
+}
+
+// Al cargar la app, sincronizar todas las colecciones desde KV → localStorage
+async function kvInitialSync() {
+  const keys = ['ddp_user_cases','ddp_shipments','ddp_eor_history','ddp_kb','ddp_log'];
+  const synced = await Promise.all(keys.map(k => kvSyncFromCloud(k)));
+  const count = synced.filter(Boolean).length;
+  if (count > 0) {
+    console.log(`[KV] Sincronizado ${count}/${keys.length} colecciones desde la nube`);
+    // Re-render si estamos en páginas con datos
+    if (typeof renderLog === 'function') try { renderLog(); } catch(e) {}
+    if (typeof renderShipments === 'function') try { renderShipments(); } catch(e) {}
+    if (typeof renderCases === 'function') try { renderCases('','',''); } catch(e) {}
+  }
+}
+
+// Wrappers síncronos — igual que antes pero escriben a KV en background
+function getUserCases(){try{const v=JSON.parse(localStorage.getItem('ddp_user_cases')||'[]');return v;}catch(e){return[];}}
+function saveUserCases(arr){localStorage.setItem('ddp_user_cases',JSON.stringify(arr));kvSyncToCloud('ddp_user_cases',arr);}
+
+function getShipments(){try{return JSON.parse(localStorage.getItem('ddp_shipments')||'[]');}catch(e){return[];}}
+function saveShipments(arr){localStorage.setItem('ddp_shipments',JSON.stringify(arr));kvSyncToCloud('ddp_shipments',arr);}
+
+function getEORHistory(){try{return JSON.parse(localStorage.getItem('ddp_eor_history')||'[]');}catch(e){return[];}}
+function saveEORHistory(arr){localStorage.setItem('ddp_eor_history',JSON.stringify(arr));kvSyncToCloud('ddp_eor_history',arr);}
+
+function getKB(){try{return JSON.parse(localStorage.getItem('ddp_kb')||'[]');}catch(e){return[];}}
+function saveKB(arr){localStorage.setItem('ddp_kb',JSON.stringify(arr));kvSyncToCloud('ddp_kb',arr);}
+
+function getLog(){try{return JSON.parse(localStorage.getItem('ddp_log')||'[]');}catch(e){return[];}}
+function saveLog(arr){localStorage.setItem('ddp_log',JSON.stringify(arr));kvSyncToCloud('ddp_log',arr);}
+
+// ════════════════════════════════════════════════════════
 // KNOWLEDGE BASE
 // ════════════════════════════════════════════════════════
 
@@ -2408,8 +2470,7 @@ function filterReg(){
 // CASE LIBRARY
 // ════════════════════════════════════════════════════════
 
-function getUserCases(){try{return JSON.parse(localStorage.getItem('ddp_user_cases')||'[]');}catch(e){return[];}}
-function saveUserCases(arr){localStorage.setItem('ddp_user_cases',JSON.stringify(arr));}
+
 
 function renderCases(search,ctry,type){
   // Combine hardcoded + user-saved cases
@@ -2661,6 +2722,8 @@ function init(){
     const el=document.getElementById(id);
     if(el) el.addEventListener("input",updateInlineChecks);
   });
+  // Sincronizar desde KV en background
+  kvInitialSync();
 }
 
 init();
@@ -3708,8 +3771,7 @@ Respondé en el mismo idioma que usa Toto (español o inglés). Sé directo y co
 // ════════════════════════════════════════════════════════
 
 
-function getShipments(){try{return JSON.parse(localStorage.getItem('ddp_shipments')||'[]');}catch(e){return[];}}
-function saveShipments(arr){localStorage.setItem('ddp_shipments',JSON.stringify(arr));}
+
 
 function createShipmentFromLog(logEntry){
   let snap = null;
@@ -4090,8 +4152,7 @@ function importHistoricalShipments(){
 // EOR COMPLIANCE INTELLIGENCE MODULE
 // ════════════════════════════════════════════════════════
 
-function getEORHistory(){try{return JSON.parse(localStorage.getItem('ddp_eor_history')||'[]');}catch(e){return[];}}
-function saveEORHistory(arr){localStorage.setItem('ddp_eor_history',JSON.stringify(arr));}
+
 
 function generateEORRef(){
   const d=new Date();
@@ -4618,8 +4679,7 @@ function getInternalCostsContext(corridor, fob, lbs, cif) {
   return ctx;
 }
 
-function getKB(){try{return JSON.parse(localStorage.getItem('ddp_kb')||'[]');}catch(e){return[];}}
-function saveKB(arr){localStorage.setItem('ddp_kb',JSON.stringify(arr));}
+
 
 function addToKB(snap){
   if(!snap||!snap.product) return;
@@ -4704,8 +4764,7 @@ function getKBContext(){
   return ctx;
 }
 
-function getLog(){try{return JSON.parse(localStorage.getItem('ddp_log')||'[]');}catch(e){return[];}}
-function saveLog(arr){localStorage.setItem('ddp_log',JSON.stringify(arr));}
+
 
 function addToLog(entry){
   const arr=getLog();
