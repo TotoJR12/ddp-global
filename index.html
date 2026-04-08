@@ -2285,29 +2285,45 @@ function buildIntelligenceReport(product, hs, coo, fob, lbs, dest, type) {
 let extraItemCount = 0;
 function addQuoteItem(){
   extraItemCount++;
-  const id = extraItemCount;
   const row = document.createElement('div');
   row.className = 'extra-item-row';
-  row.style.cssText = 'background:var(--bg3);border:1px solid var(--bd);border-left:3px solid var(--teal);padding:12px;margin-bottom:8px;display:grid;grid-template-columns:2fr 1fr 80px 80px 90px 32px;gap:8px;align-items:end';
+  row.style.cssText = 'background:var(--bg3);border:1px solid var(--bd);border-left:3px solid var(--teal);padding:12px;margin-bottom:8px;display:grid;grid-template-columns:2fr 1fr 60px 80px 80px 80px 32px;gap:8px;align-items:end';
   row.innerHTML =
     `<div class="field"><div class="field-label">Producto / Modelo</div><input class="ei-product" type="text" placeholder="e.g. Dell Latitude 5540" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px 10px;font-size:12px;width:100%;font-family:'DM Mono',monospace"/></div>` +
     `<div class="field"><div class="field-label">Tipo</div><select class="ei-type" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px 10px;font-size:12px;width:100%;font-family:'DM Mono',monospace"><option value="">Tipo...</option><option>Switch / Router</option><option>Server</option><option>Laptop / Notebook</option><option>GPU / AI Hardware</option><option>Storage</option><option>Cable / Accessory</option><option>Refurbished Hardware</option><option>Other</option></select></div>` +
+    `<div class="field"><div class="field-label">Qty</div><input class="ei-qty" type="number" placeholder="1" value="1" min="1" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px 10px;font-size:12px;width:100%;font-family:'DM Mono',monospace"/></div>` +
     `<div class="field"><div class="field-label">HS Code</div><input class="ei-hs" type="text" placeholder="8517.62" value="8517.62" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px 10px;font-size:12px;width:100%;font-family:'DM Mono',monospace"/></div>` +
-    `<div class="field"><div class="field-label">FOB (USD)</div><input class="ei-fob" type="number" placeholder="0" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px 10px;font-size:12px;width:100%;font-family:'DM Mono',monospace"/></div>` +
-    `<div class="field"><div class="field-label">Peso (lbs)</div><input class="ei-wt" type="number" placeholder="0" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px 10px;font-size:12px;width:100%;font-family:'DM Mono',monospace"/></div>` +
-    `<button onclick="this.parentElement.remove()" style="background:var(--redbg);border:1px solid var(--red);color:var(--red);padding:8px;cursor:pointer;font-size:14px;align-self:end">✕</button>`;
+    `<div class="field"><div class="field-label">FOB Total (USD)</div><input class="ei-fob" type="number" placeholder="0" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px 10px;font-size:12px;width:100%;font-family:'DM Mono',monospace"/></div>` +
+    `<div class="field"><div class="field-label">Peso Total (lbs)</div><input class="ei-wt" type="number" placeholder="0" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px 10px;font-size:12px;width:100%;font-family:'DM Mono',monospace"/></div>` +
+    `<button onclick="this.parentElement.remove();checkMainFieldsRequired()" style="background:var(--redbg);border:1px solid var(--red);color:var(--red);padding:8px;cursor:pointer;font-size:14px;align-self:end">✕</button>`;
   // Auto-fill HS when type changes
   row.querySelector('.ei-type').addEventListener('change', function(){
     const hsMap={'Switch / Router':'8517.62','Server':'8471.49','Laptop / Notebook':'8471.30','GPU / AI Hardware':'8473.30','Storage':'8471.70','Cable / Accessory':'8544.42'};
     if(hsMap[this.value]) row.querySelector('.ei-hs').value=hsMap[this.value];
   });
   document.getElementById('extra-items-list').appendChild(row);
+  checkMainFieldsRequired();
+}
+
+// Hace opcionales FOB y Peso del formulario principal cuando hay ítems extra
+function checkMainFieldsRequired(){
+  const hasExtra = document.querySelectorAll('.extra-item-row').length > 0;
+  const fobEl = document.getElementById('q-fob');
+  const wtEl  = document.getElementById('q-wt');
+  if(hasExtra){
+    fobEl.placeholder='Opcional (si hay ítems abajo)';
+    wtEl.placeholder='Opcional (si hay ítems abajo)';
+    fobEl.style.borderColor='var(--bd)';
+    wtEl.style.borderColor='var(--bd)';
+  } else {
+    fobEl.placeholder='0.00';
+    wtEl.placeholder='0';
+  }
 }
 
 function doQuote(){
-  const fob=parseFloat(document.getElementById("q-fob").value);
-  const lbs=parseFloat(document.getElementById("q-wt").value);
-  if(!fob||!lbs){alert("Please enter FOB value and weight.");return;}
+  const fob=parseFloat(document.getElementById("q-fob").value)||0;
+  const lbs=parseFloat(document.getElementById("q-wt").value)||0;
   const product=document.getElementById("q-product").value;
   const type=document.getElementById("q-type").value;
   const coo=document.getElementById("q-coo").value;
@@ -2316,16 +2332,29 @@ function doQuote(){
 
   // Recopilar ítems extra
   const extraItems=[];
-  document.querySelectorAll('.extra-item-row').forEach((row,i)=>{
+  document.querySelectorAll('.extra-item-row').forEach(row=>{
     const ep=row.querySelector('.ei-product').value;
     const ef=parseFloat(row.querySelector('.ei-fob').value)||0;
     const ew=parseFloat(row.querySelector('.ei-wt').value)||0;
     const eh=row.querySelector('.ei-hs').value||'8517.62';
     const et=row.querySelector('.ei-type').value||'';
-    if(ef>0&&ew>0) extraItems.push({product:ep,fobValue:ef,weightLbs:ew,hsCode:eh,equipmentType:et});
+    const eq=parseInt(row.querySelector('.ei-qty').value)||1;
+    if(ef>0&&ew>0) extraItems.push({product:ep,fobValue:ef,weightLbs:ew,hsCode:eh,equipmentType:et,quantity:eq});
   });
 
-  const allItems=[{product,fobValue:fob,weightLbs:lbs,hsCode:hs,equipmentType:type},...extraItems];
+  // Si hay ítems extra, FOB/Peso arriba son opcionales
+  // Si NO hay ítems extra, son obligatorios
+  if(extraItems.length===0 && (!fob||!lbs)){
+    alert("Please enter FOB value and weight.");return;
+  }
+
+  // Ítem principal (solo si tiene FOB y peso)
+  const mainItems=[];
+  if(fob>0&&lbs>0) mainItems.push({product,fobValue:fob,weightLbs:lbs,hsCode:hs,equipmentType:type,quantity:parseInt(document.getElementById("q-qty").value)||1});
+
+  const allItems=[...mainItems,...extraItems];
+  if(allItems.length===0){alert("Please enter at least one item with FOB and weight.");return;}
+
   const totalFob=allItems.reduce((s,i)=>s+(i.fobValue||0),0);
   const totalLbs=allItems.reduce((s,i)=>s+(i.weightLbs||0),0);
   const multiItem=allItems.length>1;
@@ -2398,7 +2427,7 @@ function doQuote(){
       ${multiItem?`<div style="background:var(--bg3);border:1px solid var(--teal);border-left:4px solid var(--teal);padding:14px 16px;margin-bottom:14px">
         <div style="font-family:Barlow,sans-serif;font-weight:800;font-size:10px;color:var(--teal);letter-spacing:2px;margin-bottom:10px">📦 BREAKDOWN POR ÍTEM — ${allItems.length} PRODUCTOS</div>
         <div style="display:grid;grid-template-columns:2fr 60px 90px 70px 90px;gap:6px;padding:4px 0;font-size:9px;color:var(--tx5);letter-spacing:1px;border-bottom:1px solid var(--bd);margin-bottom:4px"><div>PRODUCTO / HS</div><div>QTY</div><div>FOB</div><div>PESO</div><div>IMPUESTO</div></div>
-        ${allItems.map(it=>{const lap=isLaptop(it.product,it.hsCode,it.equipmentType);return`<div style="display:grid;grid-template-columns:2fr 60px 90px 70px 90px;gap:6px;padding:7px 0;border-bottom:1px solid var(--bd2);font-size:11px;align-items:center"><div><span style="color:var(--tx5);font-size:9px">HS ${it.hsCode||'—'}</span><br/><span style="color:var(--tx)">${it.product||'—'}</span></div><div style="color:var(--tx4)">—</div><div style="color:var(--tx2)">$${fmt(it.fobValue||0)}</div><div style="color:var(--tx3)">${it.weightLbs||0} lbs</div><div style="color:${lap?'var(--teal)':'var(--tx4)'};font-size:10px">${lap?'II 7.2%':'II Std'}</div></div>`;}).join('')}
+        ${allItems.map(it=>{const lap=isLaptop(it.product,it.hsCode,it.equipmentType);return`<div style="display:grid;grid-template-columns:2fr 60px 90px 70px 90px;gap:6px;padding:7px 0;border-bottom:1px solid var(--bd2);font-size:11px;align-items:center"><div><span style="color:var(--tx5);font-size:9px">HS ${it.hsCode||'—'}</span><br/><span style="color:var(--tx)">${it.product||'—'}</span></div><div style="color:var(--tx4)">×${it.quantity||1}</div><div style="color:var(--tx2)">$${fmt(it.fobValue||0)}</div><div style="color:var(--tx3)">${it.weightLbs||0} lbs</div><div style="color:${lap?'var(--teal)':'var(--tx4)'};font-size:10px">${lap?'II 7.2%':'II Std'}</div></div>`;}).join('')}
         <div style="display:grid;grid-template-columns:2fr 60px 90px 70px 90px;gap:6px;padding:8px 0;font-size:11px;font-weight:700"><div style="color:var(--tx4);font-family:Barlow,sans-serif">TOTAL</div><div></div><div style="color:var(--teal)">$${fmt(totalFob)}</div><div style="color:var(--teal)">${totalLbs} lbs</div><div></div></div>
       </div>`:""}
 
