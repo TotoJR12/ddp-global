@@ -356,6 +356,7 @@ Please advise on DDP cost and transit time. Thanks"></textarea>
                 <option value="">Select type...</option>
                 <option>Switch / Router</option>
                 <option>Server</option>
+                <option>Laptop / Notebook</option>
                 <option>GPU / AI Hardware</option>
                 <option>Storage</option>
                 <option>Cable / Accessory</option>
@@ -1447,6 +1448,21 @@ function bTax(cif){
   const ic=(cif+ii+ip+ps+co)/(1-.18)*.18;
   return{ii,ip,ps,co,ic,t:ii+ip+ps+co+ic};
 }
+// LAPTOPS / HS 8471.30 — GECEX 852/2026 (vigente desde 01-Mar-2026)
+// II: 7.2% (antes 0% bajo exencion BIT GECEX 323/2022)
+// IPI: 0% permanente (NT — Nao Tributado, Decreto TIPI 11.158/2022)
+// PIS: 2.1% | COFINS: 9.65% | ICMS SP: 18% por dentro
+// VERIFICAR ex-tarifario activo en SISCOMEX antes de cotizar (si activo -> II=0%)
+function bTaxLaptop(cif){
+  const ii=cif*.072,ip=0,ps=(cif+ii)*.021,co=(cif+ii)*.0965;
+  const ic=(cif+ii+ip+ps+co)/(1-.18)*.18;
+  return{ii,ip,ps,co,ic,t:ii+ip+ps+co+ic};
+}
+function isLaptop(product,hs,type){
+  return /8471\.30/i.test(hs||"")||
+    /laptop|notebook|netbook|ultrabook|chromebook|macbook|thinkpad|ideapad|latitude|xps|elitebook|probook|inspiron|vivobook|zenbook|spectre|envy|pavilion|swift|spin|aspire|predator|helios|nitro|rog|zephyrus|gram|matebook|surface\s*(pro|laptop|go|book)|portege|tecra|satellite|dynabook|vaio|legion|yoga|flex|convertible|2-in-1|2in1/i.test(product||"")||
+    /laptop|notebook|netbook|ultrabook|chromebook|portable|2-in-1/i.test(type||"");
+}
 function mTax(cif){const d=cif*.0093,v=(cif+d)*.16;return{d,v,t:d+v};}
 function aTax(cif){
   const d=cif*.16,e=cif*.025,v=(cif+d+e)*.21,g=(cif+d+e)*.06,i=(cif+d+e)*.03,a=(cif+d+e)*.10;
@@ -1502,14 +1518,18 @@ function ausTax(cif){const v=cif*.10;return{v,t:v};}
 // Canada: 0% duties + 5% GST
 function canTax(cif){const v=cif*.05;return{v,t:v};}
 
-function calcQuote(ct, fob, lbs, coo, fo){
+function calcQuote(ct, fob, lbs, coo, fo, product, hs, type){
   const isCN=/china/i.test(coo||"");
   if(ct==="brazil"){
     const fc=mx(fob*.01,270),fr=mx(lbs*3.76,350),ins=mx((fob+fr)*.01,80),cif=fob+fr+ins;
-    const ds=mx(cif*.02,400),ior=mx(cif*.02,860),tx=bTax(cif);
+    const ds=mx(cif*.02,400),ior=mx(cif*.02,860);
+    const laptop=isLaptop(product,hs,type);
+    const tx=laptop?bTaxLaptop(cif):bTax(cif);
+    const txLines=laptop
+      ?[["II (7.2%) — GECEX 852/2026",tx.ii],["IPI (0% — NT Laptops)",tx.ip],["PIS (2.1%)",tx.ps],["COFINS (9.65%)",tx.co],["ICMS SP (18%)",tx.ic]]
+      :[["II (16%)",tx.ii],["IPI (15%)",tx.ip],["PIS (2.1%)",tx.ps],["COFINS (9.65%)",tx.co],["ICMS (18%)",tx.ic]];
     return{li:[["FOB Charges","1% / min $270",fc],["Freight (Air Miami→GRU)","$3.76/lb / min $350",fr],["Insurance","1% CIF / min $80",ins],["Destination Services","2% CIF / min $400",ds],["Import License (IOR)","2% CIF / min $860",ior]],
-      tx:[["II (16%)",tx.ii],["IPI (15%)",tx.ip],["PIS (2.1%)",tx.ps],["COFINS (9.65%)",tx.co],["ICMS (18%)",tx.ic]],
-      tt:tx.t,tot:fc+fr+ins+ds+ior+tx.t,cif,tr:"21 Days"};
+      tx:txLines,tt:tx.t,tot:fc+fr+ins+ds+ior+tx.t,cif,tr:"21 Days",isLaptop:laptop};
   }
   if(ct==="mexico"){
     const fc=mx(fob*.015,270),fr=mx(lbs*1.57,350),ins=mx((fob+fr)*.01,80),cif=fob+fr+ins;
@@ -2266,7 +2286,7 @@ function doQuote(){
   const hs=document.getElementById("q-hs").value||"8517.62";
   const fo=parseFloat(document.getElementById("q-freight").value)||0;
 
-  const r=calcQuote(currentCtry,fob,lbs,coo,fo);
+  const r=calcQuote(currentCtry,fob,lbs,coo,fo,product,hs,type);
   if(!r) return;
   const code=COUNTRIES.find(c=>c.id===currentCtry).code;
   const qn=nextQN(code);
@@ -2303,6 +2323,9 @@ function doQuote(){
 
       <!-- Regulatory Flags -->
       ${flags.length?`<div style="margin-bottom:14px">${flags.map(f=>`<div class="flag ${flagColors[f.level]||"flag-blue"}">⚠ ${f.msg}</div>`).join("")}</div>`:""}
+
+      <!-- Laptop Brazil flag -->
+      ${r.isLaptop&&currentCtry==="brazil"?`<div class="flag flag-yellow" style="margin-bottom:14px">⚠ <strong>LAPTOP / HS 8471.30 — GECEX 852/2026:</strong> II aplicado al 7.2% (antes 0%). IPI = 0% permanente. <strong>Verificar ex-tarifário activo en SISCOMEX antes de confirmar</strong> — si hay ex-tarifário vigente, II vuelve a 0% y el costo baja ~5% sobre CIF.</div>`:""}
 
       <!-- DV Assessment -->
       ${dv?`<div class="flag ${flagColors[dv.level]||"flag-blue"}" style="margin-bottom:14px">📊 <strong>DECLARED VALUE:</strong> ${dv.msg}</div>`:""}
@@ -2750,13 +2773,13 @@ Extract shipment details from the client email and return ONLY a raw JSON object
 
 Fields to extract:
 - product: string (product name/model, e.g. "Cisco Catalyst 9300-48T")
-- equipmentType: one of: "Switch / Router", "Server", "GPU / AI Hardware", "Storage", "Cable / Accessory", "Refurbished Hardware", "Other"
+- equipmentType: one of: "Switch / Router", "Server", "GPU / AI Hardware", "Storage", "Cable / Accessory", "Refurbished Hardware", "Laptop / Notebook", "Other" — use "Laptop / Notebook" for any laptop, notebook, netbook, ultrabook, chromebook, 2-in-1, or portable computer
 - quantity: number (default 1)
 - fobValue: number in USD total (if per-unit, multiply by qty)
 - weightLbs: number in lbs (convert kg × 2.205 if needed)
 - countryOfOrigin: string (infer from brand if not stated: Cisco/HPE/Dell = Taiwan or USA)
 - destination: one of: "brazil","mexico","argentina","colombia","chile","peru","ecuador","costarica","panama","domrep","guatemala","honduras","bolivia","paraguay","uruguay","dubai","qatar","saudiarabia","bahrain","israel","uk","spain","france","germany","netherlands","turkey","india","singapore","japan","australia","canada","usa"
-- hsCode: infer from type (switch/router=8517.62, server=8471.49, storage=8471.70, gpu=8473.30, cable=8544.42)
+- hsCode: infer from type (switch/router=8517.62, server=8471.49, storage=8471.70, gpu=8473.30, cable=8544.42, laptop/notebook/netbook/ultrabook/chromebook/2-in-1/portable computer=8471.30)
 - notes: any special instructions from the email (max 200 chars)
 - confidence: 0-100 (deduct for missing/ambiguous fields)
 - missingFields: array of field names that were guessed or missing
@@ -3228,7 +3251,7 @@ function runFromAI() {
   const lbs = d.weightLbs || 5; // use 5 lbs minimum if no weight (triggers min freight anyway)
 
   // Run quote directly
-  const r = calcQuote(ctry, fob, lbs, d.countryOfOrigin || "", 0);
+  const r = calcQuote(ctry, fob, lbs, d.countryOfOrigin || "", 0, d.product, d.hsCode, d.equipmentType);
   if (!r) return;
 
   const code = COUNTRIES.find(c => c.id === ctry).code;
@@ -3271,6 +3294,9 @@ function runFromAI() {
 
       <!-- Regulatory Flags -->
       ${flags.length ? `<div style="margin-bottom:14px">${flags.map(f => `<div class="flag ${flagColors[f.level] || "flag-blue"}">⚠ ${f.msg}</div>`).join("")}</div>` : ""}
+
+      <!-- Laptop Brazil flag -->
+      ${r.isLaptop&&ctry==="brazil"?`<div class="flag flag-yellow" style="margin-bottom:14px">⚠ <strong>LAPTOP / HS 8471.30 — GECEX 852/2026:</strong> II aplicado al 7.2% (antes 0%). IPI = 0% permanente. <strong>Verificar ex-tarifário activo en SISCOMEX antes de confirmar</strong> — si hay ex-tarifário vigente, II vuelve a 0% y el costo baja ~5% sobre CIF.</div>`:""}
 
       <!-- DV Assessment — per item -->
       ${d.dvWarnings && d.dvWarnings.length > 0 ? `
