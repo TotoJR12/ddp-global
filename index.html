@@ -1524,6 +1524,134 @@ function ausTax(cif){const v=cif*.10;return{v,t:v};}
 // Canada: 0% duties + 5% GST
 function canTax(cif){const v=cif*.05;return{v,t:v};}
 
+// ── TASAS POR HS CODE — POR PAÍS ─────────────────────────────────────────────
+// Tasas de duties diferenciadas por categoría de producto (HS code)
+// Fuente: bases operacionales DDP Global + QT_GRAL.xlsx
+const HS_RATES = {
+  // HS 8471.30 = Laptops/Notebooks
+  '8471.30': {
+    brazil:    { dutyPct:0.072, ipi:0,    vatPct:null, note:'GECEX 852/2026 — verificar ex-tarifário' },
+    mexico:    { dutyPct:0,     vatPct:0.16 },
+    argentina: { dutyPct:0.12,  vatPct:0.21 },
+    colombia:  { dutyPct:0,     vatPct:0.19, note:'Laptops exentos de arancel en Colombia' },
+    chile:     { dutyPct:0,     vatPct:0.19, note:'TLC USA-Chile — 0% duties' },
+    india:     { dutyPct:0.10,  vatPct:0.18 },
+  },
+  // HS 8471.49 = Servers
+  '8471.49': {
+    brazil:    { dutyPct:0.16,  ipi:0,    vatPct:null },
+    colombia:  { dutyPct:0,     vatPct:0.19, note:'Servers 0% duties Colombia — confirmado operaciones' },
+    chile:     { dutyPct:0,     vatPct:0.19, note:'TLC USA-Chile' },
+    mexico:    { dutyPct:0,     vatPct:0.16 },
+    argentina: { dutyPct:0.16,  vatPct:0.21 },
+  },
+  // HS 8473.30 = GPUs / partes para computing
+  '8473.30': {
+    brazil:    { dutyPct:0.16,  ipi:0.15, vatPct:null },
+    mexico:    { dutyPct:0,     vatPct:0.16 },
+    colombia:  { dutyPct:0.05,  vatPct:0.19 },
+    argentina: { dutyPct:0.16,  vatPct:0.21 },
+  },
+  // HS 8517.62 = Switches/Routers
+  '8517.62': {
+    brazil:    { dutyPct:0.16,  ipi:0.15, vatPct:null },
+    mexico:    { dutyPct:0,     vatPct:0.16 },
+    colombia:  { dutyPct:0.05,  vatPct:0.19 },
+    argentina: { dutyPct:0.16,  vatPct:0.21 },
+    chile:     { dutyPct:0.06,  vatPct:0.19 },
+  },
+  // HS 8471.70 = Storage
+  '8471.70': {
+    brazil:    { dutyPct:0.16,  ipi:0,    vatPct:null },
+    mexico:    { dutyPct:0,     vatPct:0.16 },
+    colombia:  { dutyPct:0.05,  vatPct:0.19 },
+    argentina: { dutyPct:0.16,  vatPct:0.21 },
+  },
+};
+
+// Obtener las tasas correctas para un ítem dado país + HS code
+// Retorna {dutyPct, vatPct, ipi, note} con fallback a la tasa estándar del país
+function getHSRates(ct, hsCode){
+  const hsShort = (hsCode||'').replace(/\./g,'').slice(0,6);
+  const hsKey = Object.keys(HS_RATES).find(k => k.replace(/\./g,'') === hsShort);
+  if(hsKey && HS_RATES[hsKey][ct]) return HS_RATES[hsKey][ct];
+  return null; // usar tasa estándar del país
+}
+
+// Función central: calcula taxes de un ítem con sus tasas correctas por HS
+// Para países con cascade (Brazil, Argentina): recalcula con duty correcto
+// Para países simples (duty + VAT): aplica directamente
+function calcItemTax(ct, cifItem, product, hs, type){
+  const hsRates = getHSRates(ct, hs);
+
+  if(ct === 'brazil'){
+    const lap = isLaptop(product, hs, type);
+    // Si hay override de HS rates y no es laptop detectado por keyword
+    if(hsRates && !lap){
+      const duty = cifItem * hsRates.dutyPct;
+      const ipi  = hsRates.ipi != null ? (cifItem + duty) * hsRates.ipi : 0;
+      const ps   = (cifItem + duty + ipi) * 0.021;
+      const co   = (cifItem + duty + ipi) * 0.0965;
+      const ic   = (cifItem + duty + ipi + ps + co) / (1 - 0.18) * 0.18;
+      return { t: duty + ipi + ps + co + ic, dutyPct: hsRates.dutyPct, note: hsRates.note };
+    }
+    const tx = lap ? bTaxLaptop(cifItem) : bTax(cifItem);
+    return { t: tx.t, dutyPct: lap ? 0.072 : 0.16, note: lap ? 'GECEX 852/2026' : null };
+  }
+
+  if(ct === 'mexico'){
+    const duty = hsRates ? cifItem * hsRates.dutyPct : cifItem * 0.0093;
+    const vat  = (cifItem + duty) * 0.16;
+    return { t: duty + vat, dutyPct: hsRates?.dutyPct ?? 0.0093 };
+  }
+
+  if(ct === 'argentina'){
+    const dp = hsRates?.dutyPct ?? 0.16;
+    const d=cifItem*dp, e=cifItem*0.025;
+    const v=(cifItem+d+e)*.21,g=(cifItem+d+e)*.06,i=(cifItem+d+e)*.03,a=(cifItem+d+e)*.10;
+    return { t: d+e+v+g+i+a, dutyPct: dp };
+  }
+
+  if(ct === 'colombia'){
+    const dp = hsRates?.dutyPct ?? 0.05;
+    const d=cifItem*dp, v=(cifItem+d)*.19;
+    return { t: d+v, dutyPct: dp, note: hsRates?.note };
+  }
+
+  if(ct === 'chile'){
+    const dp = hsRates?.dutyPct ?? 0.06;
+    const d=cifItem*dp, v=(cifItem+d)*.19;
+    return { t: d+v, dutyPct: dp, note: hsRates?.note };
+  }
+
+  // Todos los demás países: usar la función estándar del país
+  return null; // indica que debe usar cálculo estándar
+}
+
+// Recalcula taxes multi-item para cualquier país
+// items = [{fobValue, weightLbs, hsCode, product, equipmentType}, ...]
+// cif = CIF total ya calculado por calcQuote
+function calcMultiItemTaxes(ct, cif, totalFob, items){
+  let combinedT = 0;
+  let hasOverride = false;
+  const breakdown = [];
+
+  items.forEach(it => {
+    const ratio = totalFob > 0 ? (it.fobValue||0) / totalFob : 1/items.length;
+    const itCif = cif * ratio;
+    const itTax = calcItemTax(ct, itCif, it.product, it.hsCode, it.equipmentType);
+
+    if(itTax !== null){
+      combinedT += itTax.t;
+      hasOverride = true;
+      breakdown.push({ product: it.product||'—', hs: it.hsCode||'—', tax: itTax.t, dutyPct: itTax.dutyPct, note: itTax.note });
+    }
+  });
+
+  if(!hasOverride) return null; // usar cálculo estándar
+  return { total: combinedT, breakdown };
+}
+
 function calcQuote(ct, fob, lbs, coo, fo, product, hs, type){
   const isCN=/china/i.test(coo||"");
   if(ct==="brazil"){
@@ -2362,21 +2490,22 @@ function doQuote(){
   const r=calcQuote(currentCtry,totalFob,totalLbs,coo,fo,product,hs,type);
   if(!r) return;
 
-  // Recalcular taxes por ítem si hay múltiples con distintos HS
+  // Recalcular taxes por ítem usando función central — aplica para TODOS los países
   let taxLines=r.tx, totalTax=r.tt, hasLaptop=r.isLaptop||false;
-  if(multiItem && currentCtry==='brazil'){
-    const cif=r.cif;
-    let ct={ii:0,ip:0,ps:0,co:0,ic:0};
-    allItems.forEach(it=>{
-      const ratio=totalFob>0?(it.fobValue||0)/totalFob:1/allItems.length;
-      const itCif=cif*ratio;
-      const lap=isLaptop(it.product,it.hsCode,it.equipmentType);
-      if(lap) hasLaptop=true;
-      const tx=lap?bTaxLaptop(itCif):bTax(itCif);
-      ct.ii+=tx.ii;ct.ip+=tx.ip;ct.ps+=tx.ps;ct.co+=tx.co;ct.ic+=tx.ic;
-    });
-    totalTax=ct.ii+ct.ip+ct.ps+ct.co+ct.ic;
-    taxLines=[["II (mixto por HS)",ct.ii],["IPI (mixto por HS)",ct.ip],["PIS (2.1%)",ct.ps],["COFINS (9.65%)",ct.co],["ICMS SP (18%)",ct.ic]];
+  if(multiItem){
+    // Detectar si algún ítem es laptop
+    allItems.forEach(it=>{ if(isLaptop(it.product,it.hsCode,it.equipmentType)) hasLaptop=true; });
+    const multiResult = calcMultiItemTaxes(currentCtry, r.cif, totalFob, allItems);
+    if(multiResult){
+      totalTax = multiResult.total;
+      // Construir tax lines con detalle por ítem
+      taxLines = multiResult.breakdown.map(b => [
+        `${b.product.slice(0,25)} (HS ${b.hs} — ${(b.dutyPct*100).toFixed(1)}% duty${b.note?' · '+b.note:''})`,
+        b.tax
+      ]);
+      // Agregar línea de total si hay más de un ítem
+      if(taxLines.length > 1) taxLines.push(['TOTAL DUTIES & TAXES', totalTax]);
+    }
   }
   const serviceTotal=r.li.reduce((s,[,,v])=>s+v,0);
   const grandTotal=serviceTotal+totalTax;
@@ -3456,47 +3585,24 @@ function runFromAI() {
   const r = calcQuote(ctry, totalFob, totalLbs, d.countryOfOrigin || "", 0, d.items[0].product, d.items[0].hsCode, d.items[0].equipmentType);
   if (!r) return;
 
-  // Si hay múltiples ítems con distintos HS, recalcular taxes por separado
+  // Si hay múltiples ítems con distintos HS, recalcular taxes con función central
   let taxLines = r.tx;
   let totalTax = r.tt;
   let hasLaptop = false;
 
+  d.items.forEach(it => { if(isLaptop(it.product, it.hsCode, it.equipmentType)) hasLaptop = true; });
+  if(!hasLaptop) hasLaptop = r.isLaptop;
+
   if (multiItem) {
-    // Calcular CIF proporcional para cada ítem y aplicar sus tasas
-    const cif = r.cif;
-    const fobRatio = totalFob > 0 ? 1 : 0;
-    let combinedTaxes = {};
-
-    d.items.forEach(it => {
-      const itFobRatio = totalFob > 0 ? (it.fobValue||0) / totalFob : 1/d.items.length;
-      const itCif = cif * itFobRatio;
-      const laptop = isLaptop(it.product, it.hsCode, it.equipmentType);
-      if (laptop) hasLaptop = true;
-      const itTax = laptop ? bTaxLaptop(itCif) : bTax(itCif);
-
-      // Accumulate taxes — only works cleanly for Brazil (cascade)
-      // For other countries use standard calc
-      if (ctry === 'brazil') {
-        combinedTaxes.ii  = (combinedTaxes.ii  || 0) + itTax.ii;
-        combinedTaxes.ip  = (combinedTaxes.ip  || 0) + itTax.ip;
-        combinedTaxes.ps  = (combinedTaxes.ps  || 0) + itTax.ps;
-        combinedTaxes.co  = (combinedTaxes.co  || 0) + itTax.co;
-        combinedTaxes.ic  = (combinedTaxes.ic  || 0) + itTax.ic;
-      }
-    });
-
-    if (ctry === 'brazil' && Object.keys(combinedTaxes).length) {
-      totalTax = combinedTaxes.ii + combinedTaxes.ip + combinedTaxes.ps + combinedTaxes.co + combinedTaxes.ic;
-      taxLines = [
-        ["II (mixto por ítem)", combinedTaxes.ii],
-        ["IPI (mixto por ítem)", combinedTaxes.ip],
-        ["PIS (2.1%)", combinedTaxes.ps],
-        ["COFINS (9.65%)", combinedTaxes.co],
-        ["ICMS SP (18%)", combinedTaxes.ic]
-      ];
+    const multiResult = calcMultiItemTaxes(ctry, r.cif, totalFob, d.items);
+    if(multiResult){
+      totalTax = multiResult.total;
+      taxLines = multiResult.breakdown.map(b => [
+        `${(b.product||'—').slice(0,25)} (HS ${b.hs} — ${(b.dutyPct*100).toFixed(1)}%${b.note?' · '+b.note:''})`,
+        b.tax
+      ]);
+      if(taxLines.length > 1) taxLines.push(['TOTAL DUTIES & TAXES', totalTax]);
     }
-  } else {
-    hasLaptop = r.isLaptop;
   }
 
   // Recalcular total con taxes correctas
