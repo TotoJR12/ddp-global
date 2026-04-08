@@ -1584,49 +1584,258 @@ function getHSRates(ct, hsCode){
 function calcItemTax(ct, cifItem, product, hs, type){
   const hsRates = getHSRates(ct, hs);
 
+  // ── BRAZIL ──────────────────────────────────────────────────────
   if(ct === 'brazil'){
     const lap = isLaptop(product, hs, type);
-    // Si hay override de HS rates y no es laptop detectado por keyword
     if(hsRates && !lap){
       const duty = cifItem * hsRates.dutyPct;
       const ipi  = hsRates.ipi != null ? (cifItem + duty) * hsRates.ipi : 0;
-      const ps   = (cifItem + duty + ipi) * 0.021;
-      const co   = (cifItem + duty + ipi) * 0.0965;
-      const ic   = (cifItem + duty + ipi + ps + co) / (1 - 0.18) * 0.18;
-      return { t: duty + ipi + ps + co + ic, dutyPct: hsRates.dutyPct, note: hsRates.note };
+      const ps=(cifItem+duty+ipi)*.021, co=(cifItem+duty+ipi)*.0965;
+      const ic=(cifItem+duty+ipi+ps+co)/(1-.18)*.18;
+      return { t:duty+ipi+ps+co+ic, dutyPct:hsRates.dutyPct, note:hsRates.note,
+               label:`II ${(hsRates.dutyPct*100).toFixed(1)}% + PIS/COFINS + ICMS` };
     }
     const tx = lap ? bTaxLaptop(cifItem) : bTax(cifItem);
-    return { t: tx.t, dutyPct: lap ? 0.072 : 0.16, note: lap ? 'GECEX 852/2026' : null };
+    return { t:tx.t, dutyPct: lap?0.072:0.16,
+             note: lap?'GECEX 852/2026':null,
+             label: lap?'II 7.2% + PIS/COFINS + ICMS (Laptop)':'II 16% + IPI 15% + PIS/COFINS + ICMS' };
   }
 
+  // ── MEXICO ──────────────────────────────────────────────────────
   if(ct === 'mexico'){
-    const duty = hsRates ? cifItem * hsRates.dutyPct : cifItem * 0.0093;
-    const vat  = (cifItem + duty) * 0.16;
-    return { t: duty + vat, dutyPct: hsRates?.dutyPct ?? 0.0093 };
+    const dp = hsRates?.dutyPct ?? 0.0093;
+    const d=cifItem*dp, v=(cifItem+d)*.16;
+    return { t:d+v, dutyPct:dp, note:hsRates?.note,
+             label:`DTA ${(dp*100).toFixed(2)}% + IVA 16%` };
   }
 
+  // ── ARGENTINA ───────────────────────────────────────────────────
   if(ct === 'argentina'){
     const dp = hsRates?.dutyPct ?? 0.16;
-    const d=cifItem*dp, e=cifItem*0.025;
-    const v=(cifItem+d+e)*.21,g=(cifItem+d+e)*.06,i=(cifItem+d+e)*.03,a=(cifItem+d+e)*.10;
-    return { t: d+e+v+g+i+a, dutyPct: dp };
+    const d=cifItem*dp, e=cifItem*.025;
+    const v=(cifItem+d+e)*.21, g=(cifItem+d+e)*.06;
+    const ii=(cifItem+d+e)*.03, a=(cifItem+d+e)*.10;
+    return { t:d+e+v+g+ii+a, dutyPct:dp,
+             label:`Derechos ${(dp*100).toFixed(0)}% + Estadística + IVA 21% + Ganancias` };
   }
 
+  // ── COLOMBIA ────────────────────────────────────────────────────
   if(ct === 'colombia'){
     const dp = hsRates?.dutyPct ?? 0.05;
     const d=cifItem*dp, v=(cifItem+d)*.19;
-    return { t: d+v, dutyPct: dp, note: hsRates?.note };
+    return { t:d+v, dutyPct:dp, note:hsRates?.note,
+             label:`Arancel ${(dp*100).toFixed(0)}% + IVA 19%${dp===0?' (0% — exento)':''}` };
   }
 
+  // ── CHILE ───────────────────────────────────────────────────────
   if(ct === 'chile'){
     const dp = hsRates?.dutyPct ?? 0.06;
     const d=cifItem*dp, v=(cifItem+d)*.19;
-    return { t: d+v, dutyPct: dp, note: hsRates?.note };
+    return { t:d+v, dutyPct:dp, note:hsRates?.note,
+             label:`Duties ${(dp*100).toFixed(0)}% + IVA 19%${dp===0?' (TLC USA-Chile 0%)':''}` };
   }
 
-  // Todos los demás países: usar la función estándar del país
-  return null; // indica que debe usar cálculo estándar
+  // ── PERU ────────────────────────────────────────────────────────
+  if(ct === 'peru'){
+    const dp = hsRates?.dutyPct ?? 0.05;
+    const d=cifItem*dp, v=(cifItem+d)*.18;
+    return { t:d+v, dutyPct:dp,
+             label:`Ad Valorem ${(dp*100).toFixed(0)}% + IGV 18%` };
+  }
+
+  // ── ECUADOR ─────────────────────────────────────────────────────
+  if(ct === 'ecuador'){
+    const dp = hsRates?.dutyPct ?? 0.255;
+    const d=cifItem*dp, v=(cifItem+d)*.15;
+    return { t:d+v, dutyPct:dp,
+             label:`Arancel ${(dp*100).toFixed(1)}% + IVA 15%` };
+  }
+
+  // ── COSTA RICA ──────────────────────────────────────────────────
+  if(ct === 'costarica'){
+    const v=cifItem*.14;
+    return { t:v, dutyPct:0,
+             label:'Duties 0% + IVA 14%' };
+  }
+
+  // ── PANAMA ──────────────────────────────────────────────────────
+  if(ct === 'panama'){
+    const d=cifItem*.05, v=(cifItem+d)*.07;
+    return { t:d+v, dutyPct:0.05,
+             label:'Duties 5% + ITBMS 7%' };
+  }
+
+  // ── DOM REP ─────────────────────────────────────────────────────
+  if(ct === 'domrep'){
+    const v=cifItem*.18;
+    return { t:v, dutyPct:0,
+             label:'Duties 0% + ITBIS 18%' };
+  }
+
+  // ── GUATEMALA ───────────────────────────────────────────────────
+  if(ct === 'guatemala'){
+    const v=cifItem*.12;
+    return { t:v, dutyPct:0,
+             label:'Duties 0% + IVA 12%' };
+  }
+
+  // ── HONDURAS ────────────────────────────────────────────────────
+  if(ct === 'honduras'){
+    const v=cifItem*.15;
+    return { t:v, dutyPct:0,
+             label:'Duties 0% + ISV 15%' };
+  }
+
+  // ── BOLIVIA ─────────────────────────────────────────────────────
+  if(ct === 'bolivia'){
+    const d=cifItem*.10, v=(cifItem+d)*.15;
+    return { t:d+v, dutyPct:0.10,
+             label:'GA 10% + IVA 15%' };
+  }
+
+  // ── PARAGUAY ────────────────────────────────────────────────────
+  if(ct === 'paraguay'){
+    const d=cifItem*.05, v=(cifItem+d)*.10;
+    return { t:d+v, dutyPct:0.05,
+             label:'Arancel 5% + IVA 10%' };
+  }
+
+  // ── URUGUAY ─────────────────────────────────────────────────────
+  if(ct === 'uruguay'){
+    const d=cifItem*.14, v=(cifItem+d)*.22;
+    return { t:d+v, dutyPct:0.14,
+             label:'Duties 14% + IVA 22%' };
+  }
+
+  // ── UAE / DUBAI ─────────────────────────────────────────────────
+  if(ct === 'dubai' || ct === 'abudhabi'){
+    const v=cifItem*.05;
+    return { t:v, dutyPct:0,
+             label:'Customs 0% + VAT 5%' };
+  }
+
+  // ── QATAR ───────────────────────────────────────────────────────
+  if(ct === 'qatar'){
+    const d=cifItem*.06, v=(cifItem+d)*.05;
+    return { t:d+v, dutyPct:0.06,
+             label:'Customs 6% + VAT 5%' };
+  }
+
+  // ── SAUDI ARABIA ────────────────────────────────────────────────
+  if(ct === 'saudiarabia'){
+    const d=cifItem*.05, v=(cifItem+d)*.15;
+    return { t:d+v, dutyPct:0.05,
+             label:'Customs 5% + VAT 15%' };
+  }
+
+  // ── BAHRAIN ─────────────────────────────────────────────────────
+  if(ct === 'bahrain'){
+    const d=cifItem*.05, v=(cifItem+d)*.10;
+    return { t:d+v, dutyPct:0.05,
+             label:'Customs 5% + VAT 10%' };
+  }
+
+  // ── ISRAEL ──────────────────────────────────────────────────────
+  if(ct === 'israel'){
+    const v=cifItem*.18;
+    return { t:v, dutyPct:0,
+             label:'Duties 0% + VAT 18%' };
+  }
+
+  // ── UK ──────────────────────────────────────────────────────────
+  if(ct === 'uk'){
+    const v=cifItem*.20;
+    return { t:v, dutyPct:0,
+             label:'Duties 0% + VAT 20%' };
+  }
+
+  // ── EU COUNTRIES ────────────────────────────────────────────────
+  if(ct === 'spain'){
+    const v=cifItem*.21;
+    return { t:v, dutyPct:0, label:'Duties 0% + IVA 21%' };
+  }
+  if(ct === 'france'){
+    const v=cifItem*.20;
+    return { t:v, dutyPct:0, label:'Duties 0% + TVA 20%' };
+  }
+  if(ct === 'germany'){
+    const v=cifItem*.19;
+    return { t:v, dutyPct:0, label:'Duties 0% + MwSt 19%' };
+  }
+  if(ct === 'netherlands'){
+    const v=cifItem*.21;
+    return { t:v, dutyPct:0, label:'Duties 0% + BTW 21%' };
+  }
+  if(ct === 'italy'){
+    const v=cifItem*.22;
+    return { t:v, dutyPct:0, label:'Duties 0% + IVA 22%' };
+  }
+  if(ct === 'belgium'){
+    const v=cifItem*.21;
+    return { t:v, dutyPct:0, label:'Duties 0% + TVA 21%' };
+  }
+  if(ct === 'austria'){
+    const v=cifItem*.20;
+    return { t:v, dutyPct:0, label:'Duties 0% + MwSt 20%' };
+  }
+  if(ct === 'portugal'){
+    const v=cifItem*.23;
+    return { t:v, dutyPct:0, label:'Duties 0% + IVA 23%' };
+  }
+  if(ct === 'poland'){
+    const v=cifItem*.23;
+    return { t:v, dutyPct:0, label:'Duties 0% + VAT 23%' };
+  }
+  if(ct === 'turkey'){
+    const v=cifItem*.20;
+    return { t:v, dutyPct:0, label:'Duties 0% + KDV 20%' };
+  }
+
+  // ── INDIA ───────────────────────────────────────────────────────
+  if(ct === 'india'){
+    const dp = hsRates?.dutyPct ?? 0.20;
+    const d=cifItem*dp, v=(cifItem+d)*.18;
+    return { t:d+v, dutyPct:dp,
+             label:`BCD ${(dp*100).toFixed(0)}% + IGST 18%` };
+  }
+
+  // ── SINGAPORE ───────────────────────────────────────────────────
+  if(ct === 'singapore'){
+    const v=cifItem*.09;
+    return { t:v, dutyPct:0, label:'Duties 0% + GST 9%' };
+  }
+
+  // ── JAPAN ───────────────────────────────────────────────────────
+  if(ct === 'japan'){
+    const d=cifItem*.05, v=(cifItem+d)*.10;
+    return { t:d+v, dutyPct:0.05,
+             label:'Customs 5% + Consumption Tax 10%' };
+  }
+
+  // ── AUSTRALIA ───────────────────────────────────────────────────
+  if(ct === 'australia'){
+    const v=cifItem*.10;
+    return { t:v, dutyPct:0, label:'Duties 0% + GST 10%' };
+  }
+
+  // ── CANADA ──────────────────────────────────────────────────────
+  if(ct === 'canada'){
+    const v=cifItem*.05;
+    return { t:v, dutyPct:0, label:'Duties 0% + GST 5%' };
+  }
+
+  // ── USA IOR ─────────────────────────────────────────────────────
+  if(ct === 'usa'){
+    // China tariffs handled separately in calcQuote
+    return { t:0, dutyPct:0, label:'See IOR fee structure' };
+  }
+
+  // ── FALLBACK ────────────────────────────────────────────────────
+  // Para países sin bloque específico, estimar con 10% duties + 15% VAT
+  const d=cifItem*.10, v=(cifItem+d)*.15;
+  return { t:d+v, dutyPct:0.10, label:'Est. Duties 10% + VAT 15% (verificar)' };
 }
+
 
 // Recalcula taxes multi-item para cualquier país
 // items = [{fobValue, weightLbs, hsCode, product, equipmentType}, ...]
@@ -1644,7 +1853,7 @@ function calcMultiItemTaxes(ct, cif, totalFob, items){
     if(itTax !== null){
       combinedT += itTax.t;
       hasOverride = true;
-      breakdown.push({ product: it.product||'—', hs: it.hsCode||'—', tax: itTax.t, dutyPct: itTax.dutyPct, note: itTax.note });
+      breakdown.push({ product: it.product||'—', hs: it.hsCode||'—', tax: itTax.t, dutyPct: itTax.dutyPct, note: itTax.note, label: itTax.label });
     }
   });
 
@@ -2500,7 +2709,7 @@ function doQuote(){
       totalTax = multiResult.total;
       // Construir tax lines con detalle por ítem
       taxLines = multiResult.breakdown.map(b => [
-        `${b.product.slice(0,25)} (HS ${b.hs} — ${(b.dutyPct*100).toFixed(1)}% duty${b.note?' · '+b.note:''})`,
+        `${(b.product||'—').slice(0,28)} — ${b.label||'HS '+b.hs}`,
         b.tax
       ]);
       // Agregar línea de total si hay más de un ítem
@@ -3598,7 +3807,7 @@ function runFromAI() {
     if(multiResult){
       totalTax = multiResult.total;
       taxLines = multiResult.breakdown.map(b => [
-        `${(b.product||'—').slice(0,25)} (HS ${b.hs} — ${(b.dutyPct*100).toFixed(1)}%${b.note?' · '+b.note:''})`,
+        `${(b.product||'—').slice(0,28)} — ${b.label||'HS '+b.hs}`,
         b.tax
       ]);
       if(taxLines.length > 1) taxLines.push(['TOTAL DUTIES & TAXES', totalTax]);
