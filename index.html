@@ -927,7 +927,7 @@ function kvSyncToCloud(key, value) {
   }).catch(() => {}); // silencioso si falla
 }
 
-// Lee desde KV y actualiza localStorage si hay datos más nuevos
+// Lee desde KV — NUNCA sobrescribe localStorage si KV está vacío
 async function kvSyncFromCloud(key) {
   try {
     const r = await fetch(KV_PROXY, {
@@ -937,8 +937,20 @@ async function kvSyncFromCloud(key) {
     });
     const data = await r.json();
     if (data.value !== null && data.value !== undefined) {
+      let parsed;
+      try { parsed = JSON.parse(data.value); } catch(e) { parsed = data.value; }
+      // Si KV tiene array vacío y localStorage tiene datos, NO sobrescribir — subir localStorage a KV
+      if (Array.isArray(parsed) && parsed.length === 0) {
+        const local = localStorage.getItem(key);
+        if (local) { kvSyncToCloud(key, local); return false; }
+      }
       localStorage.setItem(key, typeof data.value === 'string' ? data.value : JSON.stringify(data.value));
       return true;
+    } else {
+      // KV vacío — subir localStorage a KV si existe
+      const local = localStorage.getItem(key);
+      if (local) kvSyncToCloud(key, local);
+      return false;
     }
   } catch(e) {}
   return false;
