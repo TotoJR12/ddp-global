@@ -778,11 +778,15 @@ Please advise on DDP cost and transit time. Thanks"></textarea>
     <div style="display:flex;gap:10px;align-items:center">
       <select id="shipments-filter-status" onchange="renderShipments()" style="flex:1;background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:10px 14px;font-size:12px;font-family:'DM Mono',monospace">
         <option value="">Activos (sin archivados)</option>
-        <option value="confirmed">Confirmado</option>
-        <option value="transit">En tránsito</option>
-        <option value="customs">En aduana</option>
-        <option value="delivered">Entregado</option>
-        <option value="issue">Problema</option>
+        <option value="confirmed">✅ Confirmed</option>
+        <option value="pickup">📦 Picked Up</option>
+        <option value="transit_air">✈️ In Transit (Air)</option>
+        <option value="transit_gnd">🚛 In Transit (Ground)</option>
+        <option value="customs">🛃 Customs Clearance</option>
+        <option value="clearance">🔓 Released</option>
+        <option value="out_delivery">🚚 Out for Delivery</option>
+        <option value="delivered">✅ Delivered</option>
+        <option value="issue">⚠️ Issue</option>
       </select>
       <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--tx4);white-space:nowrap;cursor:pointer">
         <input type="checkbox" id="shipments-show-archived" onchange="renderShipments()" style="cursor:pointer"/>
@@ -793,29 +797,83 @@ Please advise on DDP cost and transit time. Thanks"></textarea>
 
   <!-- New shipment form (hidden) -->
   <div id="new-shipment-form" style="display:none;background:var(--bg2);border:1px solid var(--bd);padding:20px;margin-bottom:16px">
-    <div class="card-title">NUEVO SHIPMENT MANUAL</div>
-    <div class="grid3" style="gap:10px;margin-bottom:10px">
-      <div class="field"><div class="field-label">DDP Reference</div><input id="sf-ref" type="text" placeholder="MCG-MX-001"/></div>
-      <div class="field"><div class="field-label">Cliente</div><input id="sf-client" type="text" placeholder="MCGlobe"/></div>
-      <div class="field"><div class="field-label">Tracking #</div><input id="sf-tracking" type="text" placeholder="CTA211715"/></div>
+    
+    <!-- AI PARSER TAB -->
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <button id="sf-tab-ai" onclick="sfTab('ai')" class="btn btn-primary btn-sm">✦ AI — Pegar Email</button>
+      <button id="sf-tab-manual" onclick="sfTab('manual')" class="btn btn-ghost btn-sm">✎ Manual</button>
     </div>
-    <div class="grid3" style="gap:10px;margin-bottom:10px">
-      <div class="field"><div class="field-label">Origen</div><input id="sf-origin" type="text" placeholder="US / UK / Netherlands"/></div>
-      <div class="field"><div class="field-label">Destino</div><input id="sf-dest" type="text" placeholder="Brazil / Mexico"/></div>
-      <div class="field"><div class="field-label">FOB Value (USD)</div><input id="sf-fob" type="number" placeholder="0"/></div>
+
+    <!-- AI SECTION -->
+    <div id="sf-ai-section">
+      <div class="card-title" style="color:var(--teal)">✦ CREAR SHIPMENT CON AI</div>
+      <div style="font-size:11px;color:var(--tx4);margin-bottom:10px">Pegá el email del cliente. La AI extrae todos los datos automáticamente.</div>
+      <div class="field" style="margin-bottom:10px">
+        <textarea id="sf-ai-email" style="min-height:120px;font-size:11px;line-height:1.7;background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:10px;width:100%" placeholder="Pegá acá el email del cliente con los datos del envío y del destinatario..."></textarea>
+      </div>
+      <button class="btn btn-primary" onclick="sfParseWithAI()" id="sf-ai-btn">✦ EXTRAER CON AI →</button>
+      <div id="sf-ai-status" style="display:none;margin-top:10px" class="flag flag-blue">
+        <div class="ai-thinking"><div class="dot-pulse"><span></span><span></span><span></span></div><span>Analizando email...</span></div>
+      </div>
     </div>
-    <div class="grid3" style="gap:10px;margin-bottom:10px">
-      <div class="field"><div class="field-label">Peso (kg)</div><input id="sf-kg" type="number" placeholder="0"/></div>
-      <div class="field"><div class="field-label">Dimensiones</div><input id="sf-dims" type="text" placeholder="120x80x160cm / 1 pallet"/></div>
-      <div class="field"><div class="field-label">DDP Cotizado (USD)</div><input id="sf-ddp" type="number" placeholder="0"/></div>
+
+    <!-- MANUAL SECTION -->
+    <div id="sf-manual-section" style="display:none">
+      <div class="card-title">DATOS DEL SHIPMENT</div>
     </div>
-    <div class="grid2" style="gap:10px;margin-bottom:14px">
-      <div class="field"><div class="field-label">D&T Facturado por separado (USD)</div><input id="sf-dt" type="number" placeholder="0"/></div>
-      <div class="field"><div class="field-label">Notas</div><input id="sf-notes" type="text" placeholder="Observaciones..."/></div>
-    </div>
-    <div style="display:flex;gap:8px">
-      <button class="btn btn-primary" onclick="saveManualShipment()">CREAR SHIPMENT</button>
-      <button class="btn btn-ghost" onclick="toggleNewShipmentForm()">CANCELAR</button>
+
+    <!-- SHARED FIELDS (shown after AI extraction or in manual mode) -->
+    <div id="sf-fields" style="display:none;margin-top:16px">
+      <div style="background:var(--bg3);border:1px solid var(--bd);padding:14px;margin-bottom:12px">
+        <div style="font-size:9px;color:var(--teal);letter-spacing:3px;font-family:Barlow,sans-serif;font-weight:700;margin-bottom:12px">📋 DATOS DEL ENVÍO</div>
+        <div class="grid3" style="gap:10px;margin-bottom:10px">
+          <div class="field"><div class="field-label">DDP Reference</div><input id="sf-ref" type="text" placeholder="MCG-MX-001"/></div>
+          <div class="field"><div class="field-label">Cliente (empresa)</div><input id="sf-client" type="text" placeholder="MCGlobe"/></div>
+          <div class="field"><div class="field-label">Tracking Público</div><input id="sf-tracking" type="text" placeholder="Auto-generado"/></div>
+        </div>
+        <div class="grid3" style="gap:10px;margin-bottom:10px">
+          <div class="field"><div class="field-label">Origen</div><input id="sf-origin" type="text" placeholder="Miami, USA"/></div>
+          <div class="field"><div class="field-label">Destino</div><input id="sf-dest" type="text" placeholder="São Paulo, Brazil"/></div>
+          <div class="field"><div class="field-label">Producto / Carga</div><input id="sf-product" type="text" placeholder="Cisco Catalyst 9300..."/></div>
+        </div>
+        <div class="grid3" style="gap:10px;margin-bottom:10px">
+          <div class="field"><div class="field-label">FOB Value (USD)</div><input id="sf-fob" type="number" placeholder="0"/></div>
+          <div class="field"><div class="field-label">Peso (kg)</div><input id="sf-kg" type="number" placeholder="0"/></div>
+          <div class="field"><div class="field-label">Dimensiones</div><input id="sf-dims" type="text" placeholder="120x80x160cm / 1 pallet"/></div>
+        </div>
+        <div class="grid2" style="gap:10px">
+          <div class="field"><div class="field-label">DDP Cotizado (USD)</div><input id="sf-ddp" type="number" placeholder="0"/></div>
+          <div class="field"><div class="field-label">D&T Facturado por separado (USD)</div><input id="sf-dt" type="number" placeholder="0"/></div>
+        </div>
+      </div>
+
+      <div style="background:var(--bg3);border:1px solid var(--bd);padding:14px;margin-bottom:12px">
+        <div style="font-size:9px;color:var(--yellow);letter-spacing:3px;font-family:Barlow,sans-serif;font-weight:700;margin-bottom:12px">📍 DESTINATARIO (CLIENTE FINAL)</div>
+        <div class="grid3" style="gap:10px;margin-bottom:10px">
+          <div class="field"><div class="field-label">Nombre completo</div><input id="sf-rcpt-name" type="text" placeholder="Juan García"/></div>
+          <div class="field"><div class="field-label">Empresa</div><input id="sf-rcpt-company" type="text" placeholder="Empresa S.A."/></div>
+          <div class="field"><div class="field-label">Email</div><input id="sf-rcpt-email" type="email" placeholder="juan@empresa.com"/></div>
+        </div>
+        <div class="grid3" style="gap:10px;margin-bottom:10px">
+          <div class="field"><div class="field-label">Teléfono</div><input id="sf-rcpt-phone" type="text" placeholder="+55 11 9999-0000"/></div>
+          <div class="field"><div class="field-label">País</div><input id="sf-rcpt-country" type="text" placeholder="Brazil"/></div>
+          <div class="field"><div class="field-label">Ciudad</div><input id="sf-rcpt-city" type="text" placeholder="São Paulo"/></div>
+        </div>
+        <div class="field">
+          <div class="field-label">Dirección completa</div>
+          <input id="sf-rcpt-address" type="text" placeholder="Rua das Flores 123, Pinheiros, São Paulo - SP, 01234-567"/>
+        </div>
+      </div>
+
+      <div class="field" style="margin-bottom:14px">
+        <div class="field-label">Notas internas</div>
+        <input id="sf-notes" type="text" placeholder="Observaciones..."/>
+      </div>
+
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-primary" onclick="saveManualShipment()">CREAR SHIPMENT</button>
+        <button class="btn btn-ghost" onclick="toggleNewShipmentForm()">CANCELAR</button>
+      </div>
     </div>
   </div>
 
@@ -2713,12 +2771,25 @@ let quoterChatContext = '';
 const STATUS_LABELS={quote:'📤 Enviada',won:'✅ Ganada',lost:'❌ Perdida',pending:'⏳ En proceso',delivered:'🚚 Entregada'};
 const STATUS_COLORS={quote:'var(--teal)',won:'var(--green)',lost:'var(--red)',pending:'var(--yellow)',delivered:'#22c55e'};
 const SHIP_STATUS = {
-  confirmed: {label:'✅ Confirmado',    color:'var(--teal)'},
-  transit:   {label:'✈ En tránsito',   color:'var(--yellow)'},
-  customs:   {label:'🛃 En aduana',     color:'#f97316'},
-  delivered: {label:'📦 Entregado',     color:'var(--green)'},
-  issue:     {label:'⚠ Problema',       color:'var(--red)'},
+  confirmed:   {label:'✅ Confirmed',          color:'var(--teal)',   step:0},
+  pickup:      {label:'📦 Picked Up',          color:'#7c3aed',       step:1},
+  transit_air: {label:'✈️ In Transit (Air)',   color:'var(--yellow)', step:2},
+  transit_gnd: {label:'🚛 In Transit (Ground)',color:'#f59e0b',       step:2},
+  customs:     {label:'🛃 Customs Clearance',  color:'#f97316',       step:3},
+  clearance:   {label:'🔓 Released',           color:'#fb923c',       step:3},
+  out_delivery:{label:'🚚 Out for Delivery',   color:'#a78bfa',       step:4},
+  delivered:   {label:'✅ Delivered',          color:'var(--green)',   step:5},
+  issue:       {label:'⚠️ Issue',              color:'var(--red)',     step:-1},
 };
+
+const SHIP_STATUS_STEPS = [
+  {key:'confirmed',    label:'Confirmed',   icon:'✅'},
+  {key:'pickup',       label:'Picked Up',   icon:'📦'},
+  {key:'transit_air',  label:'In Transit',  icon:'✈️'},
+  {key:'customs',      label:'Customs',     icon:'🛃'},
+  {key:'out_delivery', label:'Out for Delivery', icon:'🚚'},
+  {key:'delivered',    label:'Delivered',   icon:'✅'},
+];
 function init(){
   initTabs();
   loadApiKey();
@@ -3792,22 +3863,31 @@ function createShipmentFromLog(logEntry){
   // Clean dest — remove emoji flags
   const destClean = (logEntry.dest||'').replace(/[^\x00-\x7F]/g,'').trim();
   
+  // Auto-generate public tracking ID
+  const trkId = 'DDP-' + new Date().toISOString().slice(2,10).replace(/-/g,'') + '-' + String(Math.floor(Math.random()*900)+100);
+  
+  const now = new Date().toISOString();
   const shipment = {
     id: Date.now(),
     ref: logEntry.qn || 'SHP-'+Date.now(),
     client: logEntry.client || '—',
-    tracking: '',
+    tracking: trkId,
     origin: snap?.origin || 'Miami, USA',
     dest: destClean || snap?.dest || '',
+    product: snap?.product || logEntry.product || '',
     fob: parseFloat(logEntry.fob)||0,
     kg: snap ? Math.round((snap.lbs||0)/2.205) : 0,
     dims: '',
     ddpQuoted: parseFloat(logEntry.total)||0,
     dtSeparate: 0,
     status: 'confirmed',
+    statusHistory: [{status:'confirmed', label:'✅ Confirmed', date: now, note:'Shipment created from quote '+( logEntry.qn||'')}],
     dateCreated: new Date().toISOString().slice(0,10),
     eta: '', deliveryDate: '', pod: '',
     notes: logEntry.notes || '',
+    // Destinatario — vacío, a completar
+    rcptName:'', rcptCompany:'', rcptEmail:'', rcptPhone:'', rcptCountry: destClean||'', rcptCity:'', rcptAddress:'',
+    // Costos
     originProv: '', originPickup: 0, originFreight: 0, originOther: 0, originInvoice: '', originPaid: false,
     destProv: '', destLiberation: 0, destDelivery: 0, destOther: 0, destInvoice: '', destPaid: false,
     clientInvoice: '', clientInvoiceDate: '', clientPaid: false, clientPaidDate: '',
@@ -3823,24 +3903,121 @@ function toggleNewShipmentForm(){
   f.style.display = f.style.display === 'none' ? 'block' : 'none';
 }
 
+// ── SF TAB SWITCHER ──
+function sfTab(tab){
+  document.getElementById('sf-ai-section').style.display = tab==='ai' ? 'block':'none';
+  document.getElementById('sf-manual-section').style.display = tab==='manual' ? 'block':'none';
+  document.getElementById('sf-tab-ai').className = tab==='ai'?'btn btn-primary btn-sm':'btn btn-ghost btn-sm';
+  document.getElementById('sf-tab-manual').className = tab==='manual'?'btn btn-primary btn-sm':'btn btn-ghost btn-sm';
+  if(tab==='manual') document.getElementById('sf-fields').style.display='block';
+}
+
+// ── SF AI PARSER ──
+async function sfParseWithAI(){
+  const email = document.getElementById('sf-ai-email').value.trim();
+  if(!email){alert('Pegá un email primero.');return;}
+  document.getElementById('sf-ai-status').style.display='block';
+  document.getElementById('sf-ai-btn').disabled=true;
+  try {
+    const r = await fetch('https://ddp-proxy.nicolasjuarezroldan.workers.dev',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514', max_tokens:1500,
+        system:`Sos un extractor de datos logísticos para DDP Global LLC. Extraé los datos del email y devolvé SOLO JSON sin markdown.
+Campos a extraer:
+- ref: string (referencia si la hay, sino "")
+- client: string (empresa del cliente que paga)
+- origin: string (ciudad/país de origen)
+- dest: string (ciudad/país de destino)
+- product: string (descripción de la carga)
+- fob: number (valor FOB en USD)
+- kg: number (peso en kg)
+- dims: string (dimensiones si las hay)
+- rcptName: string (nombre del destinatario final)
+- rcptCompany: string (empresa del destinatario)
+- rcptEmail: string (email del destinatario)
+- rcptPhone: string (teléfono del destinatario)
+- rcptCountry: string (país del destinatario)
+- rcptCity: string (ciudad del destinatario)
+- rcptAddress: string (dirección completa del destinatario)
+- notes: string (notas relevantes)
+- confidence: number 0-100`,
+        messages:[{role:'user',content:'Extraé los datos de este email:\n\n'+email}]
+      })
+    });
+    const data = await r.json();
+    const text = data.content?.[0]?.text||'{}';
+    const d = JSON.parse(text.replace(/```json|```/g,'').trim());
+    // Auto-generate tracking ID
+    const trkId = 'DDP-' + new Date().toISOString().slice(2,10).replace(/-/g,'') + '-' + String(Math.floor(Math.random()*900)+100);
+    // Fill fields
+    document.getElementById('sf-fields').style.display='block';
+    const set = (id,val) => { const el=document.getElementById(id); if(el&&val) el.value=val; };
+    set('sf-ref', d.ref||'');
+    set('sf-client', d.client||'');
+    set('sf-tracking', trkId);
+    set('sf-origin', d.origin||'');
+    set('sf-dest', d.dest||'');
+    set('sf-product', d.product||'');
+    set('sf-fob', d.fob||'');
+    set('sf-kg', d.kg||'');
+    set('sf-dims', d.dims||'');
+    set('sf-rcpt-name', d.rcptName||'');
+    set('sf-rcpt-company', d.rcptCompany||'');
+    set('sf-rcpt-email', d.rcptEmail||'');
+    set('sf-rcpt-phone', d.rcptPhone||'');
+    set('sf-rcpt-country', d.rcptCountry||'');
+    set('sf-rcpt-city', d.rcptCity||'');
+    set('sf-rcpt-address', d.rcptAddress||'');
+    set('sf-notes', d.notes||'');
+    document.getElementById('sf-ai-status').style.display='none';
+    // Show confidence
+    const conf = d.confidence||0;
+    const confColor = conf>=85?'var(--green)':conf>=65?'var(--yellow)':'var(--red)';
+    document.getElementById('sf-ai-status').style.display='block';
+    document.getElementById('sf-ai-status').innerHTML = `<span style="color:${confColor}">✓ Extracción completada — confianza ${conf}% — Revisá y completá los campos faltantes</span>`;
+    document.getElementById('sf-ai-status').className='flag flag-green';
+  } catch(err){
+    document.getElementById('sf-ai-status').innerHTML='⚠ Error: '+err.message;
+    document.getElementById('sf-ai-status').className='flag flag-yellow';
+  } finally {
+    document.getElementById('sf-ai-btn').disabled=false;
+  }
+}
+
 function saveManualShipment(){
   const ref = document.getElementById('sf-ref').value.trim();
   if(!ref){alert('Ingresá la referencia DDP.');return;}
+  // Auto-generate tracking if empty
+  let tracking = document.getElementById('sf-tracking').value.trim();
+  if(!tracking) tracking = 'DDP-' + new Date().toISOString().slice(2,10).replace(/-/g,'') + '-' + String(Math.floor(Math.random()*900)+100);
+  const now = new Date().toISOString();
   const shipment = {
     id: Date.now(),
     ref,
     client: document.getElementById('sf-client').value,
-    tracking: document.getElementById('sf-tracking').value,
+    tracking,
     origin: document.getElementById('sf-origin').value,
     dest: document.getElementById('sf-dest').value,
+    product: document.getElementById('sf-product')?.value||'',
     fob: parseFloat(document.getElementById('sf-fob').value)||0,
     kg: parseFloat(document.getElementById('sf-kg').value)||0,
     dims: document.getElementById('sf-dims').value,
     ddpQuoted: parseFloat(document.getElementById('sf-ddp').value)||0,
     dtSeparate: parseFloat(document.getElementById('sf-dt').value)||0,
     status: 'confirmed',
+    statusHistory: [{status:'confirmed', label:'✅ Confirmado', date: now, note:'Shipment creado'}],
     dateCreated: new Date().toISOString().slice(0,10),
     eta:'', deliveryDate:'', pod:'', notes: document.getElementById('sf-notes').value,
+    // Destinatario
+    rcptName: document.getElementById('sf-rcpt-name')?.value||'',
+    rcptCompany: document.getElementById('sf-rcpt-company')?.value||'',
+    rcptEmail: document.getElementById('sf-rcpt-email')?.value||'',
+    rcptPhone: document.getElementById('sf-rcpt-phone')?.value||'',
+    rcptCountry: document.getElementById('sf-rcpt-country')?.value||'',
+    rcptCity: document.getElementById('sf-rcpt-city')?.value||'',
+    rcptAddress: document.getElementById('sf-rcpt-address')?.value||'',
+    // Costos
     originProv:'', originPickup:0, originFreight:0, originOther:0, originInvoice:'', originPaid:false,
     destProv:'', destLiberation:0, destDelivery:0, destOther:0, destInvoice:'', destPaid:false,
     clientInvoice:'', clientInvoiceDate:'', clientPaid:false, clientPaidDate:'',
@@ -3850,12 +4027,160 @@ function saveManualShipment(){
   saveShipments(arr);
   toggleNewShipmentForm();
   // Clear form
-  ['sf-ref','sf-client','sf-tracking','sf-origin','sf-dest','sf-fob','sf-kg','sf-dims','sf-ddp','sf-dt','sf-notes'].forEach(id=>{
+  ['sf-ref','sf-client','sf-tracking','sf-origin','sf-dest','sf-product','sf-fob','sf-kg','sf-dims','sf-ddp','sf-dt','sf-notes',
+   'sf-rcpt-name','sf-rcpt-company','sf-rcpt-email','sf-rcpt-phone','sf-rcpt-country','sf-rcpt-city','sf-rcpt-address','sf-ai-email'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.value='';
   });
+  document.getElementById('sf-fields').style.display='none';
+  document.getElementById('sf-ai-section').style.display='block';
+  document.getElementById('sf-manual-section').style.display='none';
   renderShipments();
   renderShipmentsStats();
-  alert('✓ Shipment creado');
+  alert('✓ Shipment creado — Tracking: '+tracking);
+}
+
+// ── TIMELINE DE ESTADOS ──
+function renderStatusTimeline(s){
+  const steps = SHIP_STATUS_STEPS;
+  const currentStep = (SHIP_STATUS[s.status]||{}).step||0;
+  const isIssue = s.status === 'issue';
+  
+  let timelineHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin:16px 0;position:relative">
+      <div style="position:absolute;top:20px;left:0;right:0;height:2px;background:var(--bd);z-index:0"></div>
+      <div style="position:absolute;top:20px;left:0;width:${isIssue?'0':Math.min(currentStep/5*100,100)}%;height:2px;background:var(--teal);z-index:1;transition:width .4s"></div>
+      ${steps.map((step,i) => {
+        const done = !isIssue && i <= currentStep;
+        const active = !isIssue && i === currentStep;
+        const histEntry = (s.statusHistory||[]).find(h=>SHIP_STATUS[h.status]&&SHIP_STATUS[h.status].step===i);
+        return `<div style="display:flex;flex-direction:column;align-items:center;z-index:2;flex:1">
+          <div style="width:40px;height:40px;border-radius:50%;background:${done?'var(--teal)':'var(--bg3)'};border:2px solid ${done?'var(--teal)':'var(--bd)'};display:flex;align-items:center;justify-content:center;font-size:16px;${active?'box-shadow:0 0 0 4px rgba(0,181,200,.2)':''}">
+            ${done?step.icon:'<span style="color:var(--tx5);font-size:11px">'+(i+1)+'</span>'}
+          </div>
+          <div style="font-size:9px;color:${done?'var(--teal)':'var(--tx5)'};margin-top:6px;text-align:center;font-family:Barlow,sans-serif;font-weight:${active?'700':'400'}">${step.label}</div>
+          ${histEntry?`<div style="font-size:8px;color:var(--tx5);margin-top:2px">${histEntry.date.slice(0,10)}</div>`:''}
+        </div>`;
+      }).join('')}
+    </div>
+    ${isIssue?`<div class="flag flag-red" style="margin-bottom:10px">⚠️ <strong>PROBLEMA REPORTADO</strong>${s.issueNote?' — '+s.issueNote:''}</div>`:''}
+  `;
+  
+  // Historia de estados
+  // Guard para shipments viejos sin statusHistory
+  if(!s.statusHistory || !Array.isArray(s.statusHistory)) s.statusHistory = [];
+  const hist = s.statusHistory;
+  if(hist.length > 0){
+    timelineHTML += `
+      <div style="margin-top:12px">
+        <div style="font-size:9px;color:var(--tx5);letter-spacing:2px;font-family:Barlow,sans-serif;margin-bottom:8px">HISTORIAL DE ESTADOS</div>
+        ${hist.slice().reverse().map(h=>`
+          <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--bd2)">
+            <div style="width:8px;height:8px;border-radius:50%;background:${(SHIP_STATUS[h.status]||{}).color||'var(--teal)'};flex-shrink:0"></div>
+            <div style="flex:1">
+              <div style="font-size:11px;color:var(--tx2)">${(SHIP_STATUS[h.status]||{}).label||h.status}</div>
+              ${h.note?`<div style="font-size:10px;color:var(--tx5)">${h.note}</div>`:''}
+            </div>
+            <div style="font-size:10px;color:var(--tx5)">${h.date.slice(0,16).replace('T',' ')}</div>
+          </div>
+        `).join('')}
+      </div>`;
+  }
+  
+  return timelineHTML;
+}
+
+// ── MODAL AI FILLER ──
+function toggleModalAI(id){
+  const el = document.getElementById('modal-ai-'+id);
+  if(el) el.style.display = el.style.display==='none' ? 'block' : 'none';
+}
+
+async function modalFillWithAI(id){
+  const email = document.getElementById('modal-ai-email-'+id)?.value.trim();
+  if(!email){alert('Paste an email first.');return;}
+  const statusEl = document.getElementById('modal-ai-status-'+id);
+  statusEl.style.display='block';
+  statusEl.textContent='Extracting data...';
+  try {
+    const r = await fetch('https://ddp-proxy.nicolasjuarezroldan.workers.dev',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514', max_tokens:1000,
+        system:`Extract shipment data from this email and return ONLY raw JSON (no markdown, no explanation).
+Fields to extract:
+- rcptName: full name of the final recipient/consignee
+- rcptCompany: company name of the recipient
+- rcptEmail: recipient email
+- rcptPhone: recipient phone
+- rcptCountry: destination country
+- rcptCity: destination city
+- rcptAddress: full delivery address
+- product: cargo description WITHOUT values/prices — include quantity, brand, model, type (e.g. "2x Dell PowerEdge R750 Server, 1x Cisco Catalyst 9300-48T Switch")
+- kg: weight in kg as number (convert lbs to kg if needed: 1lb = 0.453kg)
+- dims: packaging description (e.g. "2 boxes, 120x80x60cm each" or "1 pallet")
+If a field is not found, use empty string or 0 for numbers.`,
+        messages:[{role:'user',content:'Extract recipient data from:\n\n'+email}]
+      })
+    });
+    const data = await r.json();
+    const text = data.content?.[0]?.text||'{}';
+    const d = JSON.parse(text.replace(/```json|```/g,'').trim());
+    // Fill fields
+    const set = (id2,val) => { const el=document.getElementById(id2); if(el&&val) el.value=val; };
+    set('modal-rcpt-name-'+id,    d.rcptName||'');
+    set('modal-rcpt-company-'+id, d.rcptCompany||'');
+    set('modal-rcpt-email-'+id,   d.rcptEmail||'');
+    set('modal-rcpt-phone-'+id,   d.rcptPhone||'');
+    set('modal-rcpt-country-'+id, d.rcptCountry||'');
+    set('modal-rcpt-city-'+id,    d.rcptCity||'');
+    set('modal-rcpt-address-'+id, d.rcptAddress||'');
+    set('modal-product-'+id,      d.product||'');
+    set('modal-dims-'+id,         d.dims||'');
+    if(d.kg) { const kgEl=document.getElementById('modal-kg-'+id); if(kgEl) kgEl.value=d.kg; }
+    // Save all fields
+    const arr = getShipments();
+    const s = arr.find(x=>x.id===id);
+    if(s){
+      if(d.rcptName)    s.rcptName    = d.rcptName;
+      if(d.rcptCompany) s.rcptCompany = d.rcptCompany;
+      if(d.rcptEmail)   s.rcptEmail   = d.rcptEmail;
+      if(d.rcptPhone)   s.rcptPhone   = d.rcptPhone;
+      if(d.rcptCountry) s.rcptCountry = d.rcptCountry;
+      if(d.rcptCity)    s.rcptCity    = d.rcptCity;
+      if(d.rcptAddress) s.rcptAddress = d.rcptAddress;
+      if(d.product)     s.product     = d.product;
+      if(d.dims)        s.dims        = d.dims;
+      if(d.kg)          s.kg          = parseFloat(d.kg)||0;
+      saveShipments(arr);
+    }
+    statusEl.textContent='✓ Done — review and save';
+    statusEl.style.color='var(--green)';
+    // Hide AI panel
+    setTimeout(()=>{ toggleModalAI(id); statusEl.style.display='none'; }, 1500);
+  } catch(err){
+    statusEl.textContent='Error: '+err.message;
+    statusEl.style.color='var(--red)';
+  }
+}
+
+function updateShipmentStatus(id, newStatus, note=''){
+  const arr = getShipments();
+  const s = arr.find(x=>x.id===id);
+  if(!s) return;
+  s.status = newStatus;
+  if(!s.statusHistory) s.statusHistory = [];
+  s.statusHistory.push({
+    status: newStatus,
+    label: (SHIP_STATUS[newStatus]||{}).label||newStatus,
+    date: new Date().toISOString(),
+    note: note
+  });
+  if(newStatus==='delivered') s.deliveryDate = new Date().toISOString().slice(0,10);
+  saveShipments(arr);
+  renderShipments();
+  renderShipmentsStats();
+  // Refresh modal
+  openShipmentModal(id);
 }
 
 function updateShipmentField(id, field, value){
@@ -3991,15 +4316,7 @@ function openShipmentModal(id){
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <span id="shipment-save-indicator" style="font-size:11px;font-family:Barlow,sans-serif;font-weight:700;min-width:80px"></span>
-        <select onchange="updateShipmentField(${id},'status',this.value);renderShipments();renderShipmentsStats();" 
-          style="background:var(--bg3);border:1px solid var(--bd);color:var(--tx);padding:6px 10px;font-size:11px;font-family:'DM Mono',monospace">
-          ${Object.entries(SHIP_STATUS).map(([v,d])=>`<option value="${v}"${v===s.status?' selected':''}>${d.label}</option>`).join('')}
-        </select>
-        <input type="text" placeholder="Estado personalizado..." 
-          style="background:var(--bg3);border:1px solid var(--bd);color:var(--tx);padding:6px 10px;font-size:11px;font-family:'DM Mono',monospace;width:180px"
-          onblur="if(this.value.trim()){updateShipmentField(${id},'customStatus',this.value.trim());renderShipments();renderShipmentsStats();}"
-          value="${s.customStatus||''}"
-          title="Escribí un estado libre — ej: En retorno, Bloqueado en aduana, etc."/>
+        <span style="font-size:11px;color:${st.color};font-weight:700">${st.label}</span>
       </div>
     </div>
 
@@ -4010,6 +4327,61 @@ function openShipmentModal(id){
       <div style="font-size:10px;color:var(--tx4);text-align:right">Revenue: $${fmt(revenue)}<br/>Costos: $${fmt(costsOrigin+costsDest)}</div>
     </div>
 
+    <!-- TRACKING TIMELINE -->
+    <div style="background:var(--bg3);border:1px solid var(--bd);padding:16px;margin-bottom:16px">
+      <div style="font-size:9px;color:var(--teal);letter-spacing:3px;font-family:Barlow,sans-serif;font-weight:700;margin-bottom:4px">📍 TRACKING TIMELINE</div>
+      <div style="font-size:10px;color:var(--tx5);margin-bottom:12px">Tracking ID público: <strong style="color:var(--teal)">${s.tracking||'—'}</strong></div>
+      ${renderStatusTimeline(s)}
+      <div style="margin-top:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <select id="modal-status-select-${id}" 
+          style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px 12px;font-size:12px;font-family:'DM Mono',monospace;flex:1">
+          ${Object.entries(SHIP_STATUS).map(([v,d])=>`<option value="${v}"${v===s.status?' selected':''}>${d.label}</option>`).join('')}
+        </select>
+        <input id="modal-status-note-${id}" type="text" placeholder="Nota del estado (opcional)..."
+          style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px 12px;font-size:11px;font-family:'DM Mono',monospace;flex:2"/>
+        <button class="btn btn-primary btn-sm" onclick="updateShipmentStatus(${id}, document.getElementById('modal-status-select-${id}').value, document.getElementById('modal-status-note-${id}').value);renderShipments();renderShipmentsStats()">
+          ACTUALIZAR ESTADO
+        </button>
+      </div>
+    </div>
+
+    <!-- DESTINATARIO -->
+    <div style="background:#071e3d;border:1px solid var(--teal);border-left:4px solid var(--yellow);padding:10px 16px;margin-bottom:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <span style="font-size:16px">📍</span>
+      <span style="font-family:Barlow,sans-serif;font-weight:800;font-size:11px;color:var(--yellow);letter-spacing:3px">CONSIGNEE / RECIPIENT</span>
+      <button onclick="toggleModalAI(${id})" style="margin-left:auto;background:var(--teal);border:none;color:var(--bg);padding:5px 12px;font-family:Barlow,sans-serif;font-weight:700;font-size:10px;letter-spacing:1px;cursor:pointer">✦ FILL WITH AI</button>
+    </div>
+
+    <!-- AI FILLER para destinatario dentro del modal -->
+    <div id="modal-ai-${id}" style="display:none;background:#071428;border:1px solid var(--teal);padding:14px;margin-bottom:12px">
+      <div style="font-size:10px;color:var(--teal);margin-bottom:8px;font-family:Barlow,sans-serif;font-weight:700">✦ PASTE CLIENT EMAIL — AI WILL EXTRACT RECIPIENT DATA</div>
+      <textarea id="modal-ai-email-${id}" style="width:100%;min-height:100px;background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:10px;font-size:11px;font-family:'DM Mono',monospace;resize:vertical" placeholder="Paste the client email here..."></textarea>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button onclick="modalFillWithAI(${id})" class="btn btn-primary btn-sm">✦ EXTRACT & FILL →</button>
+        <button onclick="toggleModalAI(${id})" class="btn btn-ghost btn-sm">CANCEL</button>
+      </div>
+      <div id="modal-ai-status-${id}" style="display:none;margin-top:8px;font-size:11px;color:var(--teal)"></div>
+    </div>
+
+    <div style="background:#1a1400;border:1px solid #3d2c00;padding:14px;margin-bottom:16px">
+      <div class="grid3" style="gap:8px;margin-bottom:8px">
+        <div class="field"><div class="field-label">Full Name</div>
+          <input id="modal-rcpt-name-${id}" value="${s.rcptName||''}" onchange="updateShipmentField(${id},'rcptName',this.value)" style="background:var(--bg);border:1px solid #3d2c00;color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+        <div class="field"><div class="field-label">Company</div>
+          <input id="modal-rcpt-company-${id}" value="${s.rcptCompany||''}" onchange="updateShipmentField(${id},'rcptCompany',this.value)" style="background:var(--bg);border:1px solid #3d2c00;color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+        <div class="field"><div class="field-label">Email</div>
+          <input id="modal-rcpt-email-${id}" value="${s.rcptEmail||''}" onchange="updateShipmentField(${id},'rcptEmail',this.value)" style="background:var(--bg);border:1px solid #3d2c00;color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+        <div class="field"><div class="field-label">Phone</div>
+          <input id="modal-rcpt-phone-${id}" value="${s.rcptPhone||''}" onchange="updateShipmentField(${id},'rcptPhone',this.value)" style="background:var(--bg);border:1px solid #3d2c00;color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+        <div class="field"><div class="field-label">Country</div>
+          <input id="modal-rcpt-country-${id}" value="${s.rcptCountry||''}" onchange="updateShipmentField(${id},'rcptCountry',this.value)" style="background:var(--bg);border:1px solid #3d2c00;color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+        <div class="field"><div class="field-label">City</div>
+          <input id="modal-rcpt-city-${id}" value="${s.rcptCity||''}" onchange="updateShipmentField(${id},'rcptCity',this.value)" style="background:var(--bg);border:1px solid #3d2c00;color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+      </div>
+      <div class="field"><div class="field-label">Full Address</div>
+        <input id="modal-rcpt-address-${id}" value="${s.rcptAddress||''}" onchange="updateShipmentField(${id},'rcptAddress',this.value)" style="background:var(--bg);border:1px solid #3d2c00;color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+    </div>
+
     <!-- INFO GENERAL -->
     <div style="background:#071e3d;border:1px solid var(--teal);border-left:4px solid var(--teal);padding:10px 16px;margin-bottom:12px;display:flex;align-items:center;gap:10px">
       <span style="font-size:16px">📋</span>
@@ -4018,19 +4390,23 @@ function openShipmentModal(id){
     <div style="background:#071e3d;border:1px solid #0f3460;padding:14px;margin-bottom:8px">
     <div class="grid3" style="gap:8px;margin-bottom:10px">
       <div class="field"><div class="field-label">Tracking #</div>
-        <input value="${s.tracking||''}" onchange="updateShipmentField(${id},'tracking',this.value)" style="background:var(--bg);border:1px solid #0f3460;color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+        <input id="modal-tracking-${id}" value="${s.tracking||''}" onchange="updateShipmentField(${id},'tracking',this.value)" style="background:var(--bg);border:1px solid #0f3460;color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
       <div class="field"><div class="field-label">ETA</div>
         <input type="date" value="${s.eta||''}" onchange="updateShipmentField(${id},'eta',this.value)" style="background:var(--bg);border:1px solid #0f3460;color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
       <div class="field"><div class="field-label">Delivery Date</div>
         <input type="date" value="${s.deliveryDate||''}" onchange="updateShipmentField(${id},'deliveryDate',this.value)" style="background:var(--bg);border:1px solid #0f3460;color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+    </div>
+    <div class="field" style="margin-bottom:10px"><div class="field-label">Cargo Description (for tracking)</div>
+      <input id="modal-product-${id}" value="${s.product||''}" onchange="updateShipmentField(${id},'product',this.value)" placeholder="e.g. 2x Dell PowerEdge R750 Server, 3x Cisco Catalyst 9300-48T Switch" style="background:var(--bg);border:1px solid #0f3460;color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+    <div class="grid3" style="gap:8px;margin-bottom:10px">
+      <div class="field"><div class="field-label">Weight (kg)</div>
+        <input id="modal-kg-${id}" type="number" value="${s.kg||''}" onchange="updateShipmentField(${id},'kg',this.value)" style="background:var(--bg);border:1px solid #0f3460;color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
+      <div class="field"><div class="field-label">Dimensions / Packages</div>
+        <input id="modal-dims-${id}" value="${s.dims||''}" onchange="updateShipmentField(${id},'dims',this.value)" placeholder="e.g. 2 boxes, 120x80x60cm each" style="background:var(--bg);border:1px solid #0f3460;color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
       <div class="field"><div class="field-label">POD</div>
         <input value="${s.pod||''}" onchange="updateShipmentField(${id},'pod',this.value)" style="background:var(--bg);border:1px solid #0f3460;color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
-      <div class="field"><div class="field-label">Peso (kg)</div>
-        <input type="number" value="${s.kg||''}" onchange="updateShipmentField(${id},'kg',this.value)" style="background:var(--bg);border:1px solid #0f3460;color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
-      <div class="field"><div class="field-label">Dimensiones</div>
-        <input value="${s.dims||''}" onchange="updateShipmentField(${id},'dims',this.value)" style="background:var(--bg);border:1px solid #0f3460;color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
     </div>
-    <div class="field"><div class="field-label">Notas</div>
+    <div class="field"><div class="field-label">Internal Notes</div>
       <input value="${s.notes||''}" onchange="updateShipmentField(${id},'notes',this.value)" style="background:var(--bg);border:1px solid #0f3460;color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
     </div>
 
