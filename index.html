@@ -4189,23 +4189,25 @@ If a field is not found, use empty string or 0 for numbers.`,
   }
 }
 
-function updateShipmentStatus(id, newStatus, note=''){
+function updateShipmentStatus(id, newStatus, note='', customDate=''){
+  if(!newStatus||newStatus==='custom') return;
   const arr = getShipments();
   const s = arr.find(x=>x.id===id);
   if(!s) return;
   s.status = newStatus;
   if(!s.statusHistory) s.statusHistory = [];
+  const dateStr = customDate || new Date().toISOString().slice(0,10);
+  const dateISO = new Date(dateStr+'T12:00:00').toISOString();
   s.statusHistory.push({
     status: newStatus,
     label: (SHIP_STATUS[newStatus]||{}).label||newStatus,
-    date: new Date().toISOString(),
+    date: dateISO,
     note: note
   });
-  if(newStatus==='delivered') s.deliveryDate = new Date().toISOString().slice(0,10);
+  if(newStatus==='delivered') s.deliveryDate = dateStr;
   saveShipments(arr);
   renderShipments();
   renderShipmentsStats();
-  // Refresh modal
   openShipmentModal(id);
 }
 
@@ -4358,16 +4360,36 @@ function openShipmentModal(id){
       <div style="font-size:9px;color:var(--teal);letter-spacing:3px;font-family:Barlow,sans-serif;font-weight:700;margin-bottom:4px">📍 TRACKING TIMELINE</div>
       <div style="font-size:10px;color:var(--tx5);margin-bottom:12px">Tracking ID público: <strong style="color:var(--teal)">${s.tracking||'—'}</strong></div>
       ${renderStatusTimeline(s)}
-      <div style="margin-top:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <select id="modal-status-select-${id}" 
-          style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px 12px;font-size:12px;font-family:'DM Mono',monospace;flex:1">
-          ${Object.entries(SHIP_STATUS).map(([v,d])=>`<option value="${v}"${v===s.status?' selected':''}>${d.label}</option>`).join('')}
-        </select>
-        <input id="modal-status-note-${id}" type="text" placeholder="Nota del estado (opcional)..."
-          style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px 12px;font-size:11px;font-family:'DM Mono',monospace;flex:2"/>
-        <button class="btn btn-primary btn-sm" onclick="updateShipmentStatus(${id}, document.getElementById('modal-status-select-${id}').value, document.getElementById('modal-status-note-${id}').value);renderShipments();renderShipmentsStats()">
-          ACTUALIZAR ESTADO
-        </button>
+      <div style="margin-top:14px;display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap">
+        <div style="display:flex;flex-direction:column;gap:6px;flex:1;min-width:160px">
+          <div style="font-size:9px;color:var(--tx5);letter-spacing:2px">ESTADO</div>
+          <select id="modal-status-select-${id}"
+            style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px 12px;font-size:12px;font-family:'DM Mono',monospace;width:100%"
+            onchange="document.getElementById('modal-custom-wrap-${id}').style.display=this.value==='custom'?'block':'none'">
+            ${Object.entries(SHIP_STATUS).map(([v,d])=>`<option value="${v}"${v===s.status?' selected':''}>${d.label}</option>`).join('')}
+            <option value="custom">✏️ Custom...</option>
+          </select>
+          <div id="modal-custom-wrap-${id}" style="display:none">
+            <input id="modal-custom-status-${id}" type="text" placeholder="Ej: Retornando, En warehouse, Preparando re-envio..."
+              style="background:var(--bg);border:1px solid var(--teal);color:var(--tx);padding:8px 12px;font-size:11px;font-family:'DM Mono',monospace;width:100%"/>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;flex:1;min-width:140px">
+          <div style="font-size:9px;color:var(--tx5);letter-spacing:2px">NOTA</div>
+          <input id="modal-status-note-${id}" type="text" placeholder="Nota opcional..."
+            style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px 12px;font-size:11px;font-family:'DM Mono',monospace;width:100%"/>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;min-width:140px">
+          <div style="font-size:9px;color:var(--tx5);letter-spacing:2px">FECHA</div>
+          <input id="modal-status-date-${id}" type="date" value="${new Date().toISOString().slice(0,10)}"
+            style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px 12px;font-size:11px;font-family:'DM Mono',monospace;width:100%"/>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;justify-content:flex-end">
+          <div style="font-size:9px;color:transparent">.</div>
+          <button class="btn btn-primary btn-sm" style="white-space:nowrap" onclick="updateShipmentStatus(${id}, document.getElementById('modal-status-select-${id}').value==='custom'?document.getElementById('modal-custom-status-${id}').value:document.getElementById('modal-status-select-${id}').value, document.getElementById('modal-status-note-${id}').value, document.getElementById('modal-status-date-${id}').value);renderShipments();renderShipmentsStats()">
+            ACTUALIZAR →
+          </button>
+        </div>
       </div>
     </div>
 
