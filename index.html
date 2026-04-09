@@ -2774,7 +2774,7 @@ function doQuote(){
       ${multiItem?`<div style="background:var(--bg3);border:1px solid var(--teal);border-left:4px solid var(--teal);padding:14px 16px;margin-bottom:14px">
         <div style="font-family:Barlow,sans-serif;font-weight:800;font-size:10px;color:var(--teal);letter-spacing:2px;margin-bottom:10px">📦 BREAKDOWN POR ÍTEM — ${allItems.length} PRODUCTOS</div>
         <div style="display:grid;grid-template-columns:2fr 60px 90px 70px 90px;gap:6px;padding:4px 0;font-size:9px;color:var(--tx5);letter-spacing:1px;border-bottom:1px solid var(--bd);margin-bottom:4px"><div>PRODUCTO / HS</div><div>QTY</div><div>FOB</div><div>PESO</div><div>IMPUESTO</div></div>
-        ${allItems.map(it=>{const lap=isLaptop(it.product,it.hsCode,it.equipmentType);return`<div style="display:grid;grid-template-columns:2fr 60px 90px 70px 90px;gap:6px;padding:7px 0;border-bottom:1px solid var(--bd2);font-size:11px;align-items:center"><div><span style="color:var(--tx5);font-size:9px">HS ${it.hsCode||'—'}</span><br/><span style="color:var(--tx)">${it.product||'—'}</span></div><div style="color:var(--tx4)">×${it.quantity||1}</div><div style="color:var(--tx2)">$${fmt(it.fobValue||0)}</div><div style="color:var(--tx3)">${it.weightLbs||0} lbs</div><div style="color:${lap?'var(--teal)':'var(--tx4)'};font-size:10px">${lap?'II 16% IPI 0%':'II Std'}</div></div>`;}).join('')}
+        ${allItems.map(it=>{const lap=isLaptop(it.product,it.hsCode,it.equipmentType);return`<div style="display:grid;grid-template-columns:2fr 60px 90px 70px 90px;gap:6px;padding:7px 0;border-bottom:1px solid var(--bd2);font-size:11px;align-items:center"><div><span style="color:var(--tx5);font-size:9px">HS ${it.hsCode||'—'}</span><br/><span style="color:var(--tx)">${it.product||'—'}</span></div><div style="color:var(--tx4)">×${it.quantity||1}</div><div style="color:var(--tx2)">$${fmt(it.fobValue||0)}</div><div style="color:var(--tx3)">${it.weightLbs||0} lbs</div><div style="color:${lap?'var(--teal)':'var(--tx4)'};font-size:10px">${(()=>{const tx=calcItemTax(currentCtry,1,it.product,it.hsCode,it.equipmentType);return tx?tx.label.split('+')[0].trim().slice(0,18):'Estándar';})()}</div></div>`;}).join('')}
         <div style="display:grid;grid-template-columns:2fr 60px 90px 70px 90px;gap:6px;padding:8px 0;font-size:11px;font-weight:700"><div style="color:var(--tx4);font-family:Barlow,sans-serif">TOTAL</div><div></div><div style="color:var(--teal)">$${fmt(totalFob)}</div><div style="color:var(--teal)">${totalLbs} lbs</div><div></div></div>
       </div>`:""}
 
@@ -3846,7 +3846,7 @@ function runFromAI() {
       </div>
       ${d.items.map((it,i) => {
         const laptop = isLaptop(it.product, it.hsCode, it.equipmentType);
-        const taxType = laptop ? 'II 16% IPI 0%' : ctry==='brazil' ? 'II 16% (Std)' : 'Estándar';
+        const itTxShort=calcItemTax(ctry,1,it.product,it.hsCode,it.equipmentType);const taxType=itTxShort?itTxShort.label.split('+')[0].trim().slice(0,18):'Estándar';
         const taxColor = laptop ? 'var(--teal)' : 'var(--tx4)';
         return `<div style="display:grid;grid-template-columns:2fr 60px 90px 70px 90px;gap:6px;padding:7px 0;border-bottom:1px solid var(--bd2);font-size:11px;align-items:center">
           <div><span style="color:var(--tx5);font-size:9px">HS ${it.hsCode||'—'}</span><br/><span style="color:var(--tx)">${it.product||'—'}</span></div>
