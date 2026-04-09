@@ -1159,6 +1159,42 @@ const HW_DB = [
     countries:{brazil:{accepted:true,notes:"ANATEL required for Rahi switches/routers. Confirm model before shipping."}},
     anatel:true, exportControl:false,
     notes:"Rahi Systems — frequently in DDP Global shipments to Brazil. ANATEL applies to networking equipment. Racks/cabinets are HS 9403 and don't require ANATEL. Confirm equipment type for correct HS." },
+
+  // LAPTOPS / NOTEBOOKS — HS 8471.30
+  { id:"HW014", model:"HP EliteBook", mfr:"HP", type:"Laptop / Notebook",
+    hsCode:"8471.30.00", newLow:600, newHigh:2500, refLow:200, refHigh:900,
+    typicalDeclared:"$600–$2,500 new / $200–$900 refurb",
+    countries:{brazil:{accepted:true,notes:"No ANATEL. HS 8471.30. II 16%, IPI 0%."},colombia:{accepted:true,notes:"0% duties."}},
+    anatel:false, exportControl:false,
+    notes:"HP EliteBook — business laptop line. Wide range depending on config (i5/i7, RAM, SSD). Base models $600–$900, high-end with i7/32GB/1TB up to $2,500." },
+
+  { id:"HW015", model:"Dell Latitude", mfr:"Dell", type:"Laptop / Notebook",
+    hsCode:"8471.30.00", newLow:600, newHigh:2200, refLow:150, refHigh:800,
+    typicalDeclared:"$600–$2,200 new",
+    countries:{brazil:{accepted:true,notes:"No ANATEL. HS 8471.30."},colombia:{accepted:true,notes:"0% duties."}},
+    anatel:false, exportControl:false,
+    notes:"Dell Latitude — enterprise laptop. Entry 5000 series $600–$900, premium 9000 series $1,500–$2,200." },
+
+  { id:"HW016", model:"Lenovo ThinkPad", mfr:"Lenovo", type:"Laptop / Notebook",
+    hsCode:"8471.30.00", newLow:700, newHigh:2800, refLow:200, refHigh:900,
+    typicalDeclared:"$700–$2,800 new",
+    countries:{brazil:{accepted:true,notes:"No ANATEL. HS 8471.30."},colombia:{accepted:true,notes:"0% duties."}},
+    anatel:false, exportControl:false,
+    notes:"ThinkPad — business workhorse. T-series $700–$1,200, X1 Carbon up to $2,800." },
+
+  { id:"HW017", model:"Apple MacBook", mfr:"Apple", type:"Laptop / Notebook",
+    hsCode:"8471.30.00", newLow:1000, newHigh:3500, refLow:600, refHigh:2000,
+    typicalDeclared:"$1,000–$3,500 new",
+    countries:{brazil:{accepted:true,notes:"No ANATEL. High brand recognition — customs knows Apple pricing."},colombia:{accepted:true,notes:"0% duties."}},
+    anatel:false, exportControl:false,
+    notes:"MacBook Air/Pro — Apple pricing well known to customs globally. Declare accurately." },
+
+  { id:"HW018", model:"Laptop", mfr:"Generic", type:"Laptop / Notebook",
+    hsCode:"8471.30.00", newLow:300, newHigh:3500, refLow:100, refHigh:1200,
+    typicalDeclared:"$300–$3,500 depending on brand/config",
+    countries:{brazil:{accepted:true,notes:"No ANATEL. HS 8471.30. II 16%, IPI 0%."},colombia:{accepted:true,notes:"0% duties."}},
+    anatel:false, exportControl:false,
+    notes:"Generic laptop entry. Range covers consumer ($300–$800) to enterprise ($800–$3,500). Always specify brand and model on commercial invoice." },
 ];
 
 // ── REGULATORY DATABASE ────────────────────────────────
@@ -2273,12 +2309,30 @@ function getRegFlags(product, type, coo, ct){
 // ── Declared value check inline ────────────────────────
 function getDVCheck(product, fob, type, qty){
   if(!product||!fob) return null;
-  const match = HW_DB.find(h=>{
-    return product.toLowerCase().includes(h.model.toLowerCase().split(" ")[0].toLowerCase())||
-           h.model.toLowerCase().includes(product.toLowerCase().split(" ")[0].toLowerCase());
-  });
-  if(!match) return null;
   const isRefurb=/refurb/i.test(type||"");
+  const prodLower = product.toLowerCase();
+
+  // Buscar match — primero exacto por tipo si es laptop
+  let match = null;
+  const isLap = isLaptop(product, '', type);
+
+  if(isLap){
+    // Para laptops, buscar primero por marca específica
+    match = HW_DB.find(h => h.type==="Laptop / Notebook" && (
+      prodLower.includes(h.model.toLowerCase().split(" ")[0].toLowerCase()) ||
+      h.model.toLowerCase().split(" ").some(w => w.length>3 && prodLower.includes(w.toLowerCase()))
+    ));
+    // Si no matchea marca, usar el genérico de laptops
+    if(!match) match = HW_DB.find(h => h.id==="HW018");
+  } else {
+    // Para otros equipos: match por modelo
+    match = HW_DB.find(h => h.type!=="Laptop / Notebook" && (
+      prodLower.includes(h.model.toLowerCase().split(" ")[0].toLowerCase())||
+      h.model.toLowerCase().includes(prodLower.split(" ")[0].toLowerCase())
+    ));
+  }
+
+  if(!match) return {level:"unknown", noRecord:true, msg:''};
   const lo = isRefurb ? match.refLow : match.newLow;
   const hi = isRefurb ? match.refHigh : match.newHigh;
   // Comparar siempre precio unitario
@@ -2291,9 +2345,97 @@ function getDVCheck(product, fob, type, qty){
   return {level:"medium",score:75,lo,hi,msg:`<strong>NOTE — ABOVE TYPICAL RANGE</strong><br/>$${fmt(fobUnit)}/unit${unitLabel} above typical $${fmt(lo)}–$${fmt(hi)}. High value — ensure documentation complete.`};
 }
 
-// ════════════════════════════════════════════════════════
-// UI FUNCTIONS
-// ════════════════════════════════════════════════════════
+// ── WEB PRICE CHECK ───────────────────────────────────────
+// Busca el precio de mercado del producto en la web cuando no está en HW_DB
+async function webCheckPrice(product, fob, qty, containerId){
+  const el = document.getElementById(containerId);
+  if(!el) return;
+  const units = Math.max(1, parseInt(qty)||1);
+  const fobUnit = fob / units;
+
+  el.innerHTML = `<div style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--teal);padding:10px 0">
+    <div class="dot-pulse"><span></span><span></span><span></span></div>
+    Buscando precio de mercado para "${product}"...
+  </div>`;
+
+  try {
+    const prompt = `You are a hardware pricing expert for customs compliance at DDP Global LLC.
+
+Search the web for the current market price of: "${product}"
+
+Look at sources like Amazon, B&H Photo, CDW, Newegg, Insight, SHI, or manufacturer websites.
+
+Return ONLY a JSON object, no explanation:
+{
+  "found": true,
+  "productName": "exact product name found",
+  "newLow": 800,
+  "newHigh": 1500,
+  "currency": "USD",
+  "sources": ["Amazon", "CDW"],
+  "note": "Brief note about pricing (max 100 chars)"
+}
+
+If you cannot find reliable pricing, return:
+{"found": false, "note": "Could not find reliable market pricing for this product"}
+
+IMPORTANT: Never invent prices. Only return data you actually found in web search results.`;
+
+    const res = await fetch('https://ddp-proxy.nicolasjuarezroldan.workers.dev', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:500,
+        tools:[{"type":"web_search_20250305","name":"web_search"}],
+        messages:[{role:'user',content:prompt}]
+      })
+    });
+    const data = await res.json();
+    const text = data.content?.filter(b=>b.type==='text').map(b=>b.text).join('') || '';
+    const clean = text.replace(/```json|```/g,'').trim();
+
+    let result;
+    try { result = JSON.parse(clean); } catch(e) { throw new Error('Respuesta inválida de la AI'); }
+
+    if(!result.found){
+      el.innerHTML = `<div style="background:var(--bg3);border:1px solid var(--bd);border-left:3px solid var(--tx5);padding:10px 14px;font-size:11px;color:var(--tx4)">
+        ⚠ <strong>Sin registros:</strong> ${result.note||'No se encontró precio de mercado confiable para este producto. Verificar manualmente.'}
+      </div>`;
+      return;
+    }
+
+    const lo = result.newLow, hi = result.newHigh;
+    const unitLabel = units > 1 ? ` (${units} units × $${fmt(fobUnit)}/unit)` : '';
+    let level, msg;
+    if(fobUnit < lo*0.5){
+      level='critical'; msg=`<strong>CRITICAL — VALOR MUY BAJO</strong><br/>$${fmt(fobUnit)}/unit${unitLabel} vs mercado $${fmt(lo)}–$${fmt(hi)}. Riesgo Canal Cinza/inspección: ALTO.`;
+    } else if(fobUnit < lo*0.8){
+      level='high'; msg=`<strong>RIESGO — BAJO RANGO DE MERCADO</strong><br/>$${fmt(fobUnit)}/unit${unitLabel} vs mercado $${fmt(lo)}–$${fmt(hi)}. Preparar documentación de soporte.`;
+    } else if(fobUnit <= hi*1.1){
+      level='green'; msg=`<strong>VALOR ACEPTABLE</strong><br/>$${fmt(fobUnit)}/unit${unitLabel} dentro del rango $${fmt(lo)}–$${fmt(hi)}.`;
+    } else {
+      level='medium'; msg=`<strong>NOTA — ENCIMA DEL RANGO TÍPICO</strong><br/>$${fmt(fobUnit)}/unit${unitLabel} sobre el típico $${fmt(lo)}–$${fmt(hi)}. Asegurar documentación completa.`;
+    }
+
+    const colors={critical:"var(--red)",high:"#f97316",green:"var(--green)",medium:"var(--yellow)"};
+    const bgs={critical:"var(--redbg)",high:"var(--orangebg)",green:"var(--greenbg)",medium:"var(--yellowbg)"};
+    el.innerHTML = `
+      <div style="background:${bgs[level]};border-left:3px solid ${colors[level]};padding:10px 14px;font-size:11px;color:${colors[level]};line-height:1.7">
+        📊 ${msg}
+      </div>
+      <div style="font-size:9px;color:var(--tx5);margin-top:5px;padding:0 2px">
+        Fuentes: ${(result.sources||[]).join(', ')||'Web search'} · ${result.note||''} · <em>Verificar antes de cotizar</em>
+      </div>`;
+
+  } catch(err){
+    el.innerHTML = `<div style="background:var(--bg3);border:1px solid var(--bd);border-left:3px solid var(--tx5);padding:10px 14px;font-size:11px;color:var(--tx4)">
+      ⚠ <strong>Sin registros:</strong> No se pudo verificar el precio. Verificar manualmente en Amazon, CDW o B&H.
+    </div>`;
+  }
+}
+
+
 
 function showPage(id){
   document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
@@ -2421,7 +2563,7 @@ function updateInlineChecks(){
   const dvEl=document.getElementById("dv-check-inline");
   if(product&&fob){
     const dv=getDVCheck(product,fob,type,parseInt(document.getElementById("q-qty")?.value)||1);
-    if(dv){
+    if(dv && !dv.noRecord){
       const colors={critical:"var(--red)",high:"#f97316",green:"var(--green)",medium:"var(--yellow)"};
       const bgs={critical:"var(--redbg)",high:"var(--orangebg)",green:"var(--greenbg)",medium:"var(--yellowbg)"};
       const scoreColor=dv.score<40?"var(--red)":dv.score<70?"var(--yellow)":"var(--green)";
@@ -2433,7 +2575,16 @@ function updateInlineChecks(){
         </div>
         <div style="font-size:9px;color:var(--tx5);margin-top:4px">Customs acceptance score — ${dv.score}% = ${dv.score>80?"LOW RISK":dv.score>60?"MEDIUM RISK":"HIGH RISK"}</div>`;
     } else {
-      dvEl.innerHTML=`<div style="font-size:11px;color:var(--tx5)">Product not in database.<br/>Manual review required.</div>`;
+      const prod=document.getElementById("q-product").value;
+      const fobVal=parseFloat(document.getElementById("q-fob").value)||0;
+      const qtyVal=parseInt(document.getElementById("q-qty")?.value)||1;
+      dvEl.innerHTML=`
+        <div style="font-size:11px;color:var(--tx5);margin-bottom:8px">⚠ Sin registros en base interna para este producto.</div>
+        <div id="web-price-result-inline"></div>
+        <button onclick="webCheckPrice('${prod.replace(/'/g,"\\'")}',${fobVal},${qtyVal},'web-price-result-inline')"
+          style="background:var(--bg);border:1px solid var(--teal);color:var(--teal);padding:7px 14px;font-size:10px;font-family:Barlow,sans-serif;font-weight:700;letter-spacing:1px;cursor:pointer;width:100%;margin-top:4px">
+          🔍 VERIFICAR PRECIO EN WEB
+        </button>`;
     }
     // KB historical insight
     if(kbInsight && kbInsight.count > 0){
@@ -2771,7 +2922,7 @@ function doQuote(){
       ${hasLaptop&&currentCtry==="brazil"?`<div class="flag flag-yellow" style="margin-bottom:14px">⚠ <strong>LAPTOP / HS 8471.30:</strong> II 16% vigente. IPI = 0% permanente (NT). Carga efectiva total ~55% CIF.</div>`:""}
 
       <!-- DV Assessment -->
-      ${dv?`<div class="flag ${flagColors[dv.level]||"flag-blue"}" style="margin-bottom:14px">📊 <strong>DECLARED VALUE:</strong> ${dv.msg}</div>`:""}
+      ${dv&&!dv.noRecord?`<div class="flag ${flagColors[dv.level]||"flag-blue"}" style="margin-bottom:14px">📊 <strong>DECLARED VALUE:</strong> ${dv.msg}</div>`:dv?.noRecord?`<div class="flag flag-blue" style="margin-bottom:14px" id="dvweb-q">⚠ <strong>SIN REGISTROS EN BASE INTERNA</strong> — Sin datos de precio para este producto. <button onclick="webCheckPrice("${(product||'').replace(/"/g,'')}",${totalFob||fob},${(allItems||[{quantity:1}])[0]?.quantity||1},'dvweb-q')" style="background:none;border:1px solid var(--teal);color:var(--teal);padding:3px 10px;font-size:10px;font-family:Barlow,sans-serif;font-weight:700;cursor:pointer;margin-left:8px">🔍 VERIFICAR EN WEB</button></div>`:""}
 
       <!-- Items breakdown si multi-item -->
       ${multiItem?`<div style="background:var(--bg3);border:1px solid var(--teal);border-left:4px solid var(--teal);padding:14px 16px;margin-bottom:14px">
@@ -3908,7 +4059,7 @@ function runFromAI() {
       ${hasLaptop&&ctry==="brazil"?`<div class="flag flag-yellow" style="margin-bottom:14px">⚠ <strong>LAPTOP / HS 8471.30:</strong> II 16% vigente. IPI = 0% permanente (NT). Carga efectiva total ~55% CIF.</div>`:""}
 
       <!-- DV Assessment -->
-      ${dv?`<div class="flag ${flagColors[dv.level]||"flag-blue"}" style="margin-bottom:14px">📊 <strong>DECLARED VALUE:</strong> ${dv.msg}</div>`:""}
+      ${dv&&!dv.noRecord?`<div class="flag ${flagColors[dv.level]||"flag-blue"}" style="margin-bottom:14px">📊 <strong>DECLARED VALUE:</strong> ${dv.msg}</div>`:dv?.noRecord?`<div class="flag flag-blue" style="margin-bottom:14px" id="dvweb-ai">⚠ <strong>SIN REGISTROS EN BASE INTERNA</strong> — Sin datos de precio para este producto. <button onclick="webCheckPrice("${(d.items[0].product||'').replace(/"/g,'')}",${totalFob},${d.items[0].quantity||1},'dvweb-ai')" style="background:none;border:1px solid var(--teal);color:var(--teal);padding:3px 10px;font-size:10px;font-family:Barlow,sans-serif;font-weight:700;cursor:pointer;margin-left:8px">🔍 VERIFICAR EN WEB</button></div>`:""}
 
       <!-- Service Lines -->
       <div class="table-wrap">
