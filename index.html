@@ -2271,7 +2271,7 @@ function getRegFlags(product, type, coo, ct){
 }
 
 // ── Declared value check inline ────────────────────────
-function getDVCheck(product, fob, type){
+function getDVCheck(product, fob, type, qty){
   if(!product||!fob) return null;
   const match = HW_DB.find(h=>{
     return product.toLowerCase().includes(h.model.toLowerCase().split(" ")[0].toLowerCase())||
@@ -2281,11 +2281,14 @@ function getDVCheck(product, fob, type){
   const isRefurb=/refurb/i.test(type||"");
   const lo = isRefurb ? match.refLow : match.newLow;
   const hi = isRefurb ? match.refHigh : match.newHigh;
-  const pct = (fob - lo) / (hi - lo);
-  if(fob < lo*0.5) return {level:"critical",score:10,lo,hi,msg:`<strong>CRITICAL — DECLARED VALUE EXTREMELY LOW</strong><br/>$${fmt(fob)} vs market range $${fmt(lo)}–$${fmt(hi)}. ${Math.round((1-fob/lo)*100)}% below low end. Canal Cinza/audit risk: VERY HIGH.`};
-  if(fob < lo*0.8) return {level:"high",score:35,lo,hi,msg:`<strong>HIGH RISK — BELOW MARKET RANGE</strong><br/>$${fmt(fob)} vs market range $${fmt(lo)}–$${fmt(hi)}. Prepare supporting documentation (LOE, purchase history).`};
-  if(fob <= hi*1.1) return {level:"green",score:90,lo,hi,msg:`<strong>VALUE ACCEPTABLE</strong><br/>$${fmt(fob)} within market range $${fmt(lo)}–$${fmt(hi)}. Low customs scrutiny risk.`};
-  return {level:"medium",score:75,lo,hi,msg:`<strong>NOTE — ABOVE TYPICAL RANGE</strong><br/>$${fmt(fob)} above typical $${fmt(lo)}–$${fmt(hi)}. High value — ensure documentation complete.`};
+  // Comparar siempre precio unitario
+  const units = Math.max(1, parseInt(qty)||1);
+  const fobUnit = fob / units;
+  const unitLabel = units > 1 ? ` (${units} units × $${fmt(fobUnit)}/unit)` : '';
+  if(fobUnit < lo*0.5) return {level:"critical",score:10,lo,hi,msg:`<strong>CRITICAL — DECLARED VALUE EXTREMELY LOW</strong><br/>$${fmt(fobUnit)}/unit${unitLabel} vs market range $${fmt(lo)}–$${fmt(hi)}. ${Math.round((1-fobUnit/lo)*100)}% below low end. Canal Cinza/audit risk: VERY HIGH.`};
+  if(fobUnit < lo*0.8) return {level:"high",score:35,lo,hi,msg:`<strong>HIGH RISK — BELOW MARKET RANGE</strong><br/>$${fmt(fobUnit)}/unit${unitLabel} vs market range $${fmt(lo)}–$${fmt(hi)}. Prepare supporting documentation (LOE, purchase history).`};
+  if(fobUnit <= hi*1.1) return {level:"green",score:90,lo,hi,msg:`<strong>VALUE ACCEPTABLE</strong><br/>$${fmt(fobUnit)}/unit${unitLabel} within market range $${fmt(lo)}–$${fmt(hi)}. Low customs scrutiny risk.`};
+  return {level:"medium",score:75,lo,hi,msg:`<strong>NOTE — ABOVE TYPICAL RANGE</strong><br/>$${fmt(fobUnit)}/unit${unitLabel} above typical $${fmt(lo)}–$${fmt(hi)}. High value — ensure documentation complete.`};
 }
 
 // ════════════════════════════════════════════════════════
@@ -2417,7 +2420,7 @@ function updateInlineChecks(){
   // DV Check
   const dvEl=document.getElementById("dv-check-inline");
   if(product&&fob){
-    const dv=getDVCheck(product,fob,type);
+    const dv=getDVCheck(product,fob,type,parseInt(document.getElementById("q-qty")?.value)||1);
     if(dv){
       const colors={critical:"var(--red)",high:"#f97316",green:"var(--green)",medium:"var(--yellow)"};
       const bgs={critical:"var(--redbg)",high:"var(--orangebg)",green:"var(--greenbg)",medium:"var(--yellowbg)"};
@@ -2732,7 +2735,7 @@ function doQuote(){
   const qn=nextQN(code);
   const dest=COUNTRIES.find(c=>c.id===currentCtry).lb;
   const flags=getRegFlags(product,type,coo,currentCtry);
-  const dv=getDVCheck(product,fob,type);
+  const dv=getDVCheck(product,fob,type,allItems[0]?.quantity||parseInt(document.getElementById("q-qty")?.value)||1);
 
   // Find related cases
   const _cm={brazil:'brazil',mexico:'mexico',argentina:'argentina',colombia:'colombia',chile:'chile',peru:'peru',usa:'usa'};
@@ -3831,7 +3834,7 @@ function runFromAI() {
   const qn = nextQN(code);
   const dest = COUNTRIES.find(c => c.id === ctry).lb;
   const flags = getRegFlags(d.items[0].product, d.items[0].equipmentType, d.countryOfOrigin, ctry);
-  const dv = getDVCheck(d.items[0].product, totalFob, d.items[0].equipmentType);
+  const dv = getDVCheck(d.items[0].product, totalFob, d.items[0].equipmentType, d.items[0].quantity||1);
 
   const _cm2 = {brazil:'brazil',mexico:'mexico',argentina:'argentina',colombia:'colombia',chile:'chile',peru:'peru',usa:'usa'};
   const relCases = CASE_DB.filter(c => (_cm2[c.country.toLowerCase()]||c.country.toLowerCase()) === ctry).slice(0,2);
