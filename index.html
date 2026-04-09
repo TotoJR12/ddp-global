@@ -1455,12 +1455,12 @@ function bTax(cif){
   return{ii,ip,ps,co,ic,t:ii+ip+ps+co+ic};
 }
 // LAPTOPS / HS 8471.30 — GECEX 852/2026 (vigente desde 01-Mar-2026)
-// II: 7.2% (antes 0% bajo exencion BIT GECEX 323/2022)
+// II: 16% (tasa vigente — exencion GECEX eliminada Feb 2026)
 // IPI: 0% permanente (NT — Nao Tributado, Decreto TIPI 11.158/2022)
 // PIS: 2.1% | COFINS: 9.65% | ICMS SP: 18% por dentro
 // VERIFICAR ex-tarifario activo en SISCOMEX antes de cotizar (si activo -> II=0%)
 function bTaxLaptop(cif){
-  const ii=cif*.072,ip=0,ps=(cif+ii)*.021,co=(cif+ii)*.0965;
+  const ii=cif*.16,ip=0,ps=(cif+ii)*.021,co=(cif+ii)*.0965;
   const ic=(cif+ii+ip+ps+co)/(1-.18)*.18;
   return{ii,ip,ps,co,ic,t:ii+ip+ps+co+ic};
 }
@@ -1530,9 +1530,9 @@ function canTax(cif){const v=cif*.05;return{v,t:v};}
 const HS_RATES = {
   // HS 8471.30 = Laptops/Notebooks
   '8471.30': {
-    brazil:    { dutyPct:0.072, ipi:0,    vatPct:null, note:'GECEX 852/2026 — verificar ex-tarifário' },
+    brazil:    { dutyPct:0.16,  ipi:0,    vatPct:null, note:'IPI=0% (NT). II 16% vigente' },
     mexico:    { dutyPct:0,     vatPct:0.16 },
-    argentina: { dutyPct:0.12,  vatPct:0.21 },
+    argentina: { dutyPct:0.08,  vatPct:0.105, note:'Laptops ARG: Derechos 8% + Est 3% + IVA 10.5% + Ganancias 6% + IIBB 2.5%' },
     colombia:  { dutyPct:0,     vatPct:0.19, note:'Laptops exentos de arancel en Colombia' },
     chile:     { dutyPct:0,     vatPct:0.19, note:'TLC USA-Chile — 0% duties' },
     india:     { dutyPct:0.10,  vatPct:0.18 },
@@ -1597,8 +1597,8 @@ function calcItemTax(ct, cifItem, product, hs, type){
     }
     const tx = lap ? bTaxLaptop(cifItem) : bTax(cifItem);
     return { t:tx.t, dutyPct: lap?0.072:0.16,
-             note: lap?'GECEX 852/2026':null,
-             label: lap?'II 7.2% + PIS/COFINS + ICMS (Laptop)':'II 16% + IPI 15% + PIS/COFINS + ICMS' };
+             note: lap?'IPI=0% (NT Laptops)':null,
+             label: lap?'II 16% + IPI 0% + PIS/COFINS + ICMS (Laptop)':'II 16% + IPI 15% + PIS/COFINS + ICMS' };
   }
 
   // ── MEXICO ──────────────────────────────────────────────────────
@@ -1611,12 +1611,21 @@ function calcItemTax(ct, cifItem, product, hs, type){
 
   // ── ARGENTINA ───────────────────────────────────────────────────
   if(ct === 'argentina'){
+    const lap = isLaptop(product, hs, type);
+    if(lap){
+      // Laptops HS 8471.30 — tasas diferenciadas Argentina
+      const d=cifItem*.08, e=cifItem*.03;
+      const v=(cifItem+d+e)*.105, g=(cifItem+d+e)*.06, ii=(cifItem+d+e)*.025;
+      return { t:d+e+v+g+ii, dutyPct:0.08,
+               label:'Derechos 8% + Est. 3% + IVA 10.5% + Ganancias 6% + IIBB 2.5% (Laptop)' };
+    }
+    // Estándar: Derechos 16% + Estadística 2.5% + IVA 21% + Ganancias 6% + IIBB 3% + IVA Ad 10%
     const dp = hsRates?.dutyPct ?? 0.16;
     const d=cifItem*dp, e=cifItem*.025;
     const v=(cifItem+d+e)*.21, g=(cifItem+d+e)*.06;
     const ii=(cifItem+d+e)*.03, a=(cifItem+d+e)*.10;
     return { t:d+e+v+g+ii+a, dutyPct:dp,
-             label:`Derechos ${(dp*100).toFixed(0)}% + Estadística + IVA 21% + Ganancias` };
+             label:`Derechos ${(dp*100).toFixed(0)}% + Est. 2.5% + IVA 21% + Ganancias 6% + IIBB 3% + IVA Ad 10%` };
   }
 
   // ── COLOMBIA ────────────────────────────────────────────────────
@@ -1869,7 +1878,7 @@ function calcQuote(ct, fob, lbs, coo, fo, product, hs, type){
     const laptop=isLaptop(product,hs,type);
     const tx=laptop?bTaxLaptop(cif):bTax(cif);
     const txLines=laptop
-      ?[["II (7.2%) — GECEX 852/2026",tx.ii],["IPI (0% — NT Laptops)",tx.ip],["PIS (2.1%)",tx.ps],["COFINS (9.65%)",tx.co],["ICMS SP (18%)",tx.ic]]
+      ?[["II (16%)",tx.ii],["IPI (0% — NT Laptops)",tx.ip],["PIS (2.1%)",tx.ps],["COFINS (9.65%)",tx.co],["ICMS SP (18%)",tx.ic]]
       :[["II (16%)",tx.ii],["IPI (15%)",tx.ip],["PIS (2.1%)",tx.ps],["COFINS (9.65%)",tx.co],["ICMS (18%)",tx.ic]];
     return{li:[["FOB Charges","1% / min $270",fc],["Freight (Air Miami→GRU)","$3.76/lb / min $350",fr],["Insurance","1% CIF / min $80",ins],["Destination Services","2% CIF / min $400",ds],["Import License (IOR)","2% CIF / min $860",ior]],
       tx:txLines,tt:tx.t,tot:fc+fr+ins+ds+ior+tx.t,cif,tr:"21 Days",isLaptop:laptop};
@@ -2756,7 +2765,7 @@ function doQuote(){
       ${flags.length?`<div style="margin-bottom:14px">${flags.map(f=>`<div class="flag ${flagColors[f.level]||"flag-blue"}">⚠ ${f.msg}</div>`).join("")}</div>`:""}
 
       <!-- Laptop Brazil flag -->
-      ${hasLaptop&&currentCtry==="brazil"?`<div class="flag flag-yellow" style="margin-bottom:14px">⚠ <strong>LAPTOP / HS 8471.30 — GECEX 852/2026:</strong> II aplicado al 7.2% (antes 0%). IPI = 0% permanente. <strong>Verificar ex-tarifário activo en SISCOMEX antes de confirmar</strong> — si hay ex-tarifário vigente, II vuelve a 0% y el costo baja ~5% sobre CIF.</div>`:""}
+      ${hasLaptop&&currentCtry==="brazil"?`<div class="flag flag-yellow" style="margin-bottom:14px">⚠ <strong>LAPTOP / HS 8471.30:</strong> II 16% vigente. IPI = 0% permanente (NT). Carga efectiva total ~55% CIF.</div>`:""}
 
       <!-- DV Assessment -->
       ${dv?`<div class="flag ${flagColors[dv.level]||"flag-blue"}" style="margin-bottom:14px">📊 <strong>DECLARED VALUE:</strong> ${dv.msg}</div>`:""}
@@ -2765,7 +2774,7 @@ function doQuote(){
       ${multiItem?`<div style="background:var(--bg3);border:1px solid var(--teal);border-left:4px solid var(--teal);padding:14px 16px;margin-bottom:14px">
         <div style="font-family:Barlow,sans-serif;font-weight:800;font-size:10px;color:var(--teal);letter-spacing:2px;margin-bottom:10px">📦 BREAKDOWN POR ÍTEM — ${allItems.length} PRODUCTOS</div>
         <div style="display:grid;grid-template-columns:2fr 60px 90px 70px 90px;gap:6px;padding:4px 0;font-size:9px;color:var(--tx5);letter-spacing:1px;border-bottom:1px solid var(--bd);margin-bottom:4px"><div>PRODUCTO / HS</div><div>QTY</div><div>FOB</div><div>PESO</div><div>IMPUESTO</div></div>
-        ${allItems.map(it=>{const lap=isLaptop(it.product,it.hsCode,it.equipmentType);return`<div style="display:grid;grid-template-columns:2fr 60px 90px 70px 90px;gap:6px;padding:7px 0;border-bottom:1px solid var(--bd2);font-size:11px;align-items:center"><div><span style="color:var(--tx5);font-size:9px">HS ${it.hsCode||'—'}</span><br/><span style="color:var(--tx)">${it.product||'—'}</span></div><div style="color:var(--tx4)">×${it.quantity||1}</div><div style="color:var(--tx2)">$${fmt(it.fobValue||0)}</div><div style="color:var(--tx3)">${it.weightLbs||0} lbs</div><div style="color:${lap?'var(--teal)':'var(--tx4)'};font-size:10px">${lap?'II 7.2%':'II Std'}</div></div>`;}).join('')}
+        ${allItems.map(it=>{const lap=isLaptop(it.product,it.hsCode,it.equipmentType);return`<div style="display:grid;grid-template-columns:2fr 60px 90px 70px 90px;gap:6px;padding:7px 0;border-bottom:1px solid var(--bd2);font-size:11px;align-items:center"><div><span style="color:var(--tx5);font-size:9px">HS ${it.hsCode||'—'}</span><br/><span style="color:var(--tx)">${it.product||'—'}</span></div><div style="color:var(--tx4)">×${it.quantity||1}</div><div style="color:var(--tx2)">$${fmt(it.fobValue||0)}</div><div style="color:var(--tx3)">${it.weightLbs||0} lbs</div><div style="color:${lap?'var(--teal)':'var(--tx4)'};font-size:10px">${lap?'II 16% IPI 0%':'II Std'}</div></div>`;}).join('')}
         <div style="display:grid;grid-template-columns:2fr 60px 90px 70px 90px;gap:6px;padding:8px 0;font-size:11px;font-weight:700"><div style="color:var(--tx4);font-family:Barlow,sans-serif">TOTAL</div><div></div><div style="color:var(--teal)">$${fmt(totalFob)}</div><div style="color:var(--teal)">${totalLbs} lbs</div><div></div></div>
       </div>`:""}
 
@@ -3837,7 +3846,7 @@ function runFromAI() {
       </div>
       ${d.items.map((it,i) => {
         const laptop = isLaptop(it.product, it.hsCode, it.equipmentType);
-        const taxType = laptop ? 'II 7.2% (Laptop)' : ctry==='brazil' ? 'II 16% (Std)' : 'Estándar';
+        const taxType = laptop ? 'II 16% IPI 0%' : ctry==='brazil' ? 'II 16% (Std)' : 'Estándar';
         const taxColor = laptop ? 'var(--teal)' : 'var(--tx4)';
         return `<div style="display:grid;grid-template-columns:2fr 60px 90px 70px 90px;gap:6px;padding:7px 0;border-bottom:1px solid var(--bd2);font-size:11px;align-items:center">
           <div><span style="color:var(--tx5);font-size:9px">HS ${it.hsCode||'—'}</span><br/><span style="color:var(--tx)">${it.product||'—'}</span></div>
@@ -3893,7 +3902,7 @@ function runFromAI() {
       ${flags.length ? `<div style="margin-bottom:14px">${flags.map(f => `<div class="flag ${flagColors[f.level]||"flag-blue"}">⚠ ${f.msg}</div>`).join("")}</div>` : ""}
 
       <!-- Laptop Brazil flag -->
-      ${hasLaptop&&ctry==="brazil"?`<div class="flag flag-yellow" style="margin-bottom:14px">⚠ <strong>LAPTOP / HS 8471.30 — GECEX 852/2026:</strong> II aplicado al 7.2% (antes 0%). IPI = 0% permanente. <strong>Verificar ex-tarifário activo en SISCOMEX antes de confirmar.</strong></div>`:""}
+      ${hasLaptop&&ctry==="brazil"?`<div class="flag flag-yellow" style="margin-bottom:14px">⚠ <strong>LAPTOP / HS 8471.30:</strong> II 16% vigente. IPI = 0% permanente (NT). Carga efectiva total ~55% CIF.</div>`:""}
 
       <!-- DV Assessment -->
       ${dv?`<div class="flag ${flagColors[dv.level]||"flag-blue"}" style="margin-bottom:14px">📊 <strong>DECLARED VALUE:</strong> ${dv.msg}</div>`:""}
