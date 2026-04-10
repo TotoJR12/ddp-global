@@ -3054,7 +3054,7 @@ function doQuote(){
 
       <!-- Panel de ajuste -->
       <div id="qadjust-${qn}" style="display:none"
-        data-fob="${fob}" data-lbs="${lbs}"
+        data-fob="${fob}" data-lbs="${lbs}" data-ctry="${currentCtry}"
         data-fobpct="${currentCtry==='brazil'?.01:.015}" data-fobmin="270"
         data-frtrate="${currentCtry==='brazil'?3.76:currentCtry==='mexico'?1.57:currentCtry==='argentina'?1.99:currentCtry==='colombia'?1.84:currentCtry==='chile'?1.92:currentCtry==='usa'?9.73:1.84}"
         data-frtmin="350" data-inspct="0.01" data-insmin="80"
@@ -3064,6 +3064,7 @@ function doQuote(){
         data-iormin="${currentCtry==='brazil'?860:currentCtry==='argentina'?750:currentCtry==='colombia'?650:860}"
         data-taxtotal="${taxLines.reduce((s,[,v])=>s+v,0)}"
         data-svccount="${r.li.length}" data-taxcount="${taxLines.length}"
+        data-taxlines='${JSON.stringify(taxLines.map(([l,v])=>({l,v})))}'
       ></div>
 
       <!-- Related Cases -->
@@ -4208,7 +4209,7 @@ function runFromAI() {
 
       <!-- Panel de ajuste -->
       <div id="qadjust-${qn}" style="display:none"
-        data-fob="${totalFob}" data-lbs="${totalLbs}"
+        data-fob="${totalFob}" data-lbs="${totalLbs}" data-ctry="${ctry}"
         data-fobpct="${ctry==='brazil'?.01:.015}" data-fobmin="270"
         data-frtrate="${ctry==='brazil'?3.76:ctry==='mexico'?1.57:ctry==='argentina'?1.99:ctry==='colombia'?1.84:ctry==='chile'?1.92:ctry==='usa'?9.73:1.84}"
         data-frtmin="350" data-inspct="0.01" data-insmin="80"
@@ -4218,6 +4219,7 @@ function runFromAI() {
         data-iormin="${ctry==='brazil'?860:ctry==='argentina'?750:ctry==='colombia'?650:860}"
         data-taxtotal="${taxLines.reduce((s,[,v])=>s+v,0)}"
         data-svccount="${r.li.length}" data-taxcount="${taxLines.length}"
+        data-taxlines='${JSON.stringify(taxLines.map(([l,v])=>({l,v})))}'
       ></div>
 
       <!-- Related Cases -->
@@ -5299,11 +5301,12 @@ function showAdjustPanel(qn){
   if(!el){ console.warn('No element qadjust-'+qn); return; }
   if(el.style.display !== 'none'){ el.style.display='none'; return; }
 
-  // Leer parámetros desde data-attributes (siempre disponibles)
   const d = el.dataset;
+  const ctry = d.ctry||'brazil';
   const p = {
     fob:      parseFloat(d.fob)||0,
     lbs:      parseFloat(d.lbs)||0,
+    ctry:     ctry,
     fobPct:   parseFloat(d.fobpct)||0.01,
     fobMin:   parseFloat(d.fobmin)||270,
     frtRate:  parseFloat(d.frtrate)||3.76,
@@ -5316,9 +5319,8 @@ function showAdjustPanel(qn){
     iorMin:   parseFloat(d.iormin)||860,
     taxTotal: parseFloat(d.taxtotal)||0,
     svcCount: parseInt(d.svccount)||5,
-    taxCount: parseInt(d.taxcount)||0,
+    taxLines: JSON.parse(d.taxlines||'[]'),
   };
-  // Guardar en _qparams para usar en apply/reset
   window._qparams = window._qparams||{};
   window._qparams[qn] = p;
 
@@ -5328,10 +5330,45 @@ function showAdjustPanel(qn){
   const field = (label, id, val, step) =>
     '<div class="field"><div class="field-label">'+label+'</div>'+inp(id,val,step)+'</div>';
 
+  // Impuestos por país — campos editables
+  let taxFields = '';
+  if(ctry==='brazil'){
+    taxFields =
+      field('II %',     'tax-ii',   '16',   '0.01')+
+      field('IPI %',    'tax-ipi',  '15',   '0.01')+
+      field('PIS %',    'tax-pis',  '2.1',  '0.01')+
+      field('COFINS %', 'tax-cof',  '9.65', '0.01')+
+      field('ICMS %',   'tax-icms', '18',   '0.01');
+  } else if(ctry==='mexico'){
+    taxFields =
+      field('DTA %',  'tax-dta', '0.93', '0.01')+
+      field('IVA %',  'tax-iva', '16',   '0.01');
+  } else if(ctry==='argentina'){
+    taxFields =
+      field('Derechos %',  'tax-der',  '16',  '0.01')+
+      field('Estadística %','tax-est', '2.5', '0.01')+
+      field('IVA %',       'tax-iva',  '21',  '0.01')+
+      field('Ganancias %', 'tax-gan',  '6',   '0.01')+
+      field('IIBB %',      'tax-iibb', '3',   '0.01')+
+      field('IVA Ad %',    'tax-ivad', '10',  '0.01');
+  } else if(ctry==='colombia'){
+    taxFields =
+      field('Duties %', 'tax-dut', '5',  '0.01')+
+      field('VAT %',    'tax-vat', '19', '0.01');
+  } else if(ctry==='chile'){
+    taxFields =
+      field('Duties %', 'tax-dut', '0',  '0.01')+
+      field('IVA %',    'tax-iva', '19', '0.01');
+  } else {
+    taxFields = field('Duties %', 'tax-dut', '10', '0.01')+field('VAT %', 'tax-vat', '15', '0.01');
+  }
+
   el.innerHTML =
     '<div style="background:var(--bg3);border:1px solid var(--teal);padding:16px;margin-bottom:8px">'+
     '<div style="font-size:9px;color:var(--teal);letter-spacing:3px;font-family:Barlow,sans-serif;font-weight:700;margin-bottom:12px">⚙ AJUSTE DE PARÁMETROS — SOLO ESTA COTIZACIÓN</div>'+
-    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px">'+
+
+    '<div style="font-size:9px;color:var(--tx5);letter-spacing:2px;margin-bottom:8px;font-family:Barlow,sans-serif;font-weight:700">FEES DE SERVICIO</div>'+
+    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">'+
     field('FOB Fee %',        'fobpct',  (p.fobPct*100).toFixed(2),  '0.01')+
     field('FOB Fee Mín $',    'fobmin',  p.fobMin,                    '1')+
     field('Freight $/lb',     'frtrate', p.frtRate,                   '0.01')+
@@ -5343,6 +5380,12 @@ function showAdjustPanel(qn){
     field('IOR Fee %',        'iorpct',  (p.iorPct*100).toFixed(2),   '0.01')+
     field('IOR Fee Mín $',    'iormin',  p.iorMin,                    '1')+
     '</div>'+
+
+    '<div style="font-size:9px;color:var(--tx5);letter-spacing:2px;margin-bottom:8px;font-family:Barlow,sans-serif;font-weight:700">IMPUESTOS / DUTIES & TAXES</div>'+
+    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">'+
+    taxFields+
+    '</div>'+
+
     '<button onclick="applyAdjustment(\''+qn+'\')" class="btn btn-primary" style="padding:10px 24px">🔄 RECALCULAR</button>'+
     '<button onclick="resetAdjustment(\''+qn+'\')" class="btn btn-ghost" style="padding:10px 16px;margin-left:8px">RESTABLECER</button>'+
     '<span style="font-size:10px;color:var(--tx5);margin-left:12px">Solo afecta esta cotización en pantalla</span>'+
@@ -5355,6 +5398,7 @@ function applyAdjustment(qn){
   const p = window._qparams[qn];
   if(!p) return;
   const get = id => parseFloat(document.getElementById('qp-'+id+'-'+qn)?.value)||0;
+  const getTax = id => { const el = document.getElementById('qp-'+id+'-'+qn); return el ? parseFloat(el.value)||0 : null; };
 
   const fobPct  = get('fobpct')/100;
   const fobMin  = get('fobmin');
@@ -5367,7 +5411,7 @@ function applyAdjustment(qn){
   const iorPct  = get('iorpct')/100;
   const iorMin  = get('iormin');
 
-  const fob = p.fob, lbs = p.lbs;
+  const fob = p.fob, lbs = p.lbs, ctry = p.ctry;
   const fc  = Math.max(fob*fobPct, fobMin);
   const fr  = Math.max(lbs*frtRate, frtMin);
   const ins = Math.max((fob+fr)*insPct, insMin);
@@ -5375,15 +5419,66 @@ function applyAdjustment(qn){
   const ds  = Math.max(cif*dsPct, dsMin);
   const ior = Math.max(cif*iorPct, iorMin);
 
-  const svcVals = [fc, fr, ins, ds, ior];
-  let svcTotal = 0;
-  svcVals.forEach((v,i)=>{
-    svcTotal += v;
+  // Actualizar líneas de servicio
+  [fc, fr, ins, ds, ior].forEach((v,i)=>{
     const el = document.getElementById('qdisp-svc-'+qn+'-'+i);
     if(el) el.textContent = '$'+fmt(v);
   });
 
-  const grandTotal = svcTotal + p.taxTotal;
+  // Recalcular impuestos en cascada según país
+  let newTaxLines = [], taxTotal = 0;
+  if(ctry==='brazil'){
+    const ii   = getTax('tax-ii')??16;
+    const ipi  = getTax('tax-ipi')??15;
+    const pis  = getTax('tax-pis')??2.1;
+    const cof  = getTax('tax-cof')??9.65;
+    const icms = getTax('tax-icms')??18;
+    const vii  = cif*(ii/100);
+    const vipi = (cif+vii)*(ipi/100);
+    const vpis = (cif+vii+vipi)*(pis/100);
+    const vcof = (cif+vii+vipi)*(cof/100);
+    const base_icms = cif+vii+vipi+vpis+vcof;
+    const vicms = base_icms/(1-(icms/100))*(icms/100);
+    newTaxLines=[['II ('+ii+'%)',vii],['IPI ('+ipi+'%)',vipi],['PIS ('+pis+'%)',vpis],['COFINS ('+cof+'%)',vcof],['ICMS ('+icms+'%)',vicms]];
+    taxTotal=vii+vipi+vpis+vcof+vicms;
+  } else if(ctry==='mexico'){
+    const dta = getTax('tax-dta')??0.93;
+    const iva = getTax('tax-iva')??16;
+    const vdta = cif*(dta/100);
+    const viva = (cif+vdta)*(iva/100);
+    newTaxLines=[['DTA ('+dta+'%)',vdta],['IVA ('+iva+'%)',viva]];
+    taxTotal=vdta+viva;
+  } else if(ctry==='argentina'){
+    const der  = getTax('tax-der')??16;
+    const est  = getTax('tax-est')??2.5;
+    const iva  = getTax('tax-iva')??21;
+    const gan  = getTax('tax-gan')??6;
+    const iibb = getTax('tax-iibb')??3;
+    const ivad = getTax('tax-ivad')??10;
+    const vder=cif*(der/100),vest=cif*(est/100),base=cif+vder+vest;
+    const viva=base*(iva/100),vgan=base*(gan/100),viibb=base*(iibb/100),vivad=base*(ivad/100);
+    newTaxLines=[['Derechos ('+der+'%)',vder],['Estadística ('+est+'%)',vest],['IVA ('+iva+'%)',viva],['Ganancias ('+gan+'%)',vgan],['IIBB ('+iibb+'%)',viibb],['IVA Ad ('+ivad+'%)',vivad]];
+    taxTotal=vder+vest+viva+vgan+viibb+vivad;
+  } else if(ctry==='colombia'||ctry==='chile'){
+    const dut = getTax('tax-dut')??5;
+    const vat = getTax('tax-vat')??19;
+    const vdut=cif*(dut/100), vvat=(cif+vdut)*(vat/100);
+    newTaxLines=[['Duties ('+dut+'%)',vdut],['VAT ('+vat+'%)',vvat]];
+    taxTotal=vdut+vvat;
+  } else {
+    // Usar taxlines originales sin cambio
+    taxTotal = p.taxTotal;
+    newTaxLines = (p.taxLines||[]).map(t=>[t.l, t.v]);
+  }
+
+  // Actualizar displays de impuestos
+  newTaxLines.forEach(([l,v],i)=>{
+    const el = document.getElementById('qdisp-tax-'+qn+'-'+i);
+    if(el) el.textContent = '$'+fmt(v);
+  });
+
+  // Actualizar total
+  const grandTotal = fc+fr+ins+ds+ior + taxTotal;
   const tel = document.getElementById('qtotal-'+qn);
   if(tel) tel.textContent = '$'+fmt(grandTotal);
 }
