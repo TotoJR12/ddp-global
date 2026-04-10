@@ -3021,29 +3021,21 @@ function doQuote(){
 
       <!-- Service Lines -->
       <div class="table-wrap">
-        <div class="table-head" style="grid-template-columns:1fr 160px 90px 32px"><span>SERVICE</span><span>BASIS</span><span style="text-align:right">USD</span><span style="text-align:right;font-size:8px;color:var(--teal)">EDIT</span></div>
-        ${r.li.map(([l,b,v],i)=>`<div class="table-row" style="grid-template-columns:1fr 160px 90px 32px;align-items:center">
+        <div class="table-head" style="grid-template-columns:1fr 160px 100px"><span>SERVICE</span><span>BASIS</span><span style="text-align:right">USD</span></div>
+        ${r.li.map(([l,b,v],i)=>`<div class="table-row" style="grid-template-columns:1fr 160px 100px;align-items:center">
           <div style="font-size:12px;color:var(--tx2)">${l}</div>
           <div style="font-size:10px;color:var(--tx5)">${b}</div>
-          <div style="text-align:right"><input type="number" step="0.01" value="${v.toFixed(2)}" id="qline-svc-${qn}-${i}"
-            onchange="recalcQuoteTotal('${qn}')"
-            style="background:transparent;border:none;border-bottom:1px solid var(--bd2);color:var(--tx);font-size:12px;text-align:right;width:90px;font-family:'DM Mono',monospace;padding:2px 4px"/>
-          </div>
-          <div></div>
+          <div id="qdisp-svc-${qn}-${i}" style="font-size:12px;text-align:right;color:var(--tx)">$${fmt(v)}</div>
         </div>`).join("")}
       </div>
 
       <!-- Tax Lines -->
       ${taxLines.length?`
       <div class="table-wrap" style="margin-top:2px">
-        <div class="table-head" style="grid-template-columns:1fr 90px 32px"><span>DUTIES & TAXES (PASS-THROUGH)${multiItem?' — POR HS/ÍTEM':''}</span><span style="text-align:right">USD</span><span style="text-align:right;font-size:8px;color:var(--teal)">EDIT</span></div>
-        ${taxLines.map(([l,v],i)=>`<div class="table-row" style="grid-template-columns:1fr 90px 32px;align-items:center">
+        <div class="table-head" style="grid-template-columns:1fr 100px"><span>DUTIES & TAXES (PASS-THROUGH)${multiItem?' — POR HS/ÍTEM':''}</span><span style="text-align:right">USD</span></div>
+        ${taxLines.map(([l,v],i)=>`<div class="table-row" style="grid-template-columns:1fr 100px;align-items:center">
           <div style="font-size:12px;color:var(--tx3)">${l}</div>
-          <div style="text-align:right"><input type="number" step="0.01" value="${v.toFixed(2)}" id="qline-tax-${qn}-${i}"
-            onchange="recalcQuoteTotal('${qn}')"
-            style="background:transparent;border:none;border-bottom:1px solid var(--bd2);color:var(--tx3);font-size:12px;text-align:right;width:90px;font-family:'DM Mono',monospace;padding:2px 4px"/>
-          </div>
-          <div></div>
+          <div id="qdisp-tax-${qn}-${i}" style="font-size:12px;color:var(--tx3);text-align:right">$${fmt(v)}</div>
         </div>`).join("")}
       </div>
       `:""}
@@ -4193,29 +4185,21 @@ function runFromAI() {
 
       <!-- Service Lines -->
       <div class="table-wrap">
-        <div class="table-head" style="grid-template-columns:1fr 160px 90px 32px"><span>SERVICE</span><span>BASIS</span><span style="text-align:right">USD</span><span style="text-align:right;font-size:8px;color:var(--teal)">EDIT</span></div>
-        ${r.li.map(([l,b,v],i)=>`<div class="table-row" style="grid-template-columns:1fr 160px 90px 32px;align-items:center">
+        <div class="table-head" style="grid-template-columns:1fr 160px 100px"><span>SERVICE</span><span>BASIS</span><span style="text-align:right">USD</span></div>
+        ${r.li.map(([l,b,v],i)=>`<div class="table-row" style="grid-template-columns:1fr 160px 100px;align-items:center">
           <div style="font-size:12px;color:var(--tx2)">${l}</div>
           <div style="font-size:10px;color:var(--tx5)">${b}</div>
-          <div style="text-align:right"><input type="number" step="0.01" value="${v.toFixed(2)}" id="qline-svc-${qn}-${i}"
-            onchange="recalcQuoteTotal('${qn}')"
-            style="background:transparent;border:none;border-bottom:1px solid var(--bd2);color:var(--tx);font-size:12px;text-align:right;width:90px;font-family:'DM Mono',monospace;padding:2px 4px"/>
-          </div>
-          <div></div>
+          <div id="qdisp-svc-${qn}-${i}" style="font-size:12px;text-align:right;color:var(--tx)">$${fmt(v)}</div>
         </div>`).join("")}
       </div>
 
       <!-- Tax Lines -->
       ${taxLines.length ? `
       <div class="table-wrap" style="margin-top:2px">
-        <div class="table-head" style="grid-template-columns:1fr 90px 32px"><span>DUTIES & TAXES (PASS-THROUGH)${multiItem?' — CALCULADAS POR HS/ÍTEM':''}</span><span style="text-align:right">USD</span><span style="text-align:right;font-size:8px;color:var(--teal)">EDIT</span></div>
-        ${taxLines.map(([l,v],i)=>`<div class="table-row" style="grid-template-columns:1fr 90px 32px;align-items:center">
+        <div class="table-head" style="grid-template-columns:1fr 100px"><span>DUTIES & TAXES (PASS-THROUGH)${multiItem?' — CALCULADAS POR HS/ÍTEM':''}</span><span style="text-align:right">USD</span></div>
+        ${taxLines.map(([l,v],i)=>`<div class="table-row" style="grid-template-columns:1fr 100px;align-items:center">
           <div style="font-size:12px;color:var(--tx3)">${l}</div>
-          <div style="text-align:right"><input type="number" step="0.01" value="${v.toFixed(2)}" id="qline-tax-${qn}-${i}"
-            onchange="recalcQuoteTotal('${qn}')"
-            style="background:transparent;border:none;border-bottom:1px solid var(--bd2);color:var(--tx3);font-size:12px;text-align:right;width:90px;font-family:'DM Mono',monospace;padding:2px 4px"/>
-          </div>
-          <div></div>
+          <div id="qdisp-tax-${qn}-${i}" style="font-size:12px;color:var(--tx3);text-align:right">$${fmt(v)}</div>
         </div>`).join("")}
       </div>` : ""}
 
@@ -5327,104 +5311,75 @@ function renderTaxRulesList(){
 window._qparams = window._qparams || {};
 
 function showAdjustPanel(qn){
-  const p = window._qparams[qn];
-  if(!p) return;
+  const p = window._qparams && window._qparams[qn];
+  if(!p){ console.warn('No params for qn='+qn); return; }
   const el = document.getElementById('qadjust-'+qn);
-  if(!el) return;
-  if(el.style.display !== 'none'){el.style.display='none';return;}
+  if(!el){ console.warn('No element qadjust-'+qn); return; }
+  if(el.style.display !== 'none'){ el.style.display='none'; return; }
 
-  el.innerHTML = `
-    <div style="background:var(--bg3);border:1px solid var(--teal);padding:16px;margin-bottom:8px">
-      <div style="font-size:9px;color:var(--teal);letter-spacing:3px;font-family:Barlow,sans-serif;font-weight:700;margin-bottom:12px">⚙ AJUSTE DE PARÁMETROS — SOLO ESTA COTIZACIÓN</div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px">
-        <div class="field">
-          <div class="field-label">FOB Fee %</div>
-          <input id="qp-fobpct-${qn}" type="number" step="0.1" value="${(p.fobPct*100).toFixed(2)}"
-            style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:7px 8px;font-size:12px;width:100%;font-family:'DM Mono',monospace"/>
-        </div>
-        <div class="field">
-          <div class="field-label">FOB Fee Mín $</div>
-          <input id="qp-fobmin-${qn}" type="number" step="1" value="${p.fobMin}"
-            style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:7px 8px;font-size:12px;width:100%;font-family:'DM Mono',monospace"/>
-        </div>
-        <div class="field">
-          <div class="field-label">Freight $/lb</div>
-          <input id="qp-frtrate-${qn}" type="number" step="0.01" value="${p.frtRate}"
-            style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:7px 8px;font-size:12px;width:100%;font-family:'DM Mono',monospace"/>
-        </div>
-        <div class="field">
-          <div class="field-label">Freight Mín $</div>
-          <input id="qp-frtmin-${qn}" type="number" step="1" value="${p.frtMin}"
-            style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:7px 8px;font-size:12px;width:100%;font-family:'DM Mono',monospace"/>
-        </div>
-        <div class="field">
-          <div class="field-label">Dest. Services %</div>
-          <input id="qp-dspct-${qn}" type="number" step="0.1" value="${(p.dsPct*100).toFixed(2)}"
-            style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:7px 8px;font-size:12px;width:100%;font-family:'DM Mono',monospace"/>
-        </div>
-        <div class="field">
-          <div class="field-label">Dest. Services Mín $</div>
-          <input id="qp-dsmin-${qn}" type="number" step="1" value="${p.dsMin}"
-            style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:7px 8px;font-size:12px;width:100%;font-family:'DM Mono',monospace"/>
-        </div>
-        <div class="field">
-          <div class="field-label">IOR Fee %</div>
-          <input id="qp-iorpct-${qn}" type="number" step="0.1" value="${(p.iorPct*100).toFixed(2)}"
-            style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:7px 8px;font-size:12px;width:100%;font-family:'DM Mono',monospace"/>
-        </div>
-        <div class="field">
-          <div class="field-label">IOR Fee Mín $</div>
-          <input id="qp-iormin-${qn}" type="number" step="1" value="${p.iorMin}"
-            style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:7px 8px;font-size:12px;width:100%;font-family:'DM Mono',monospace"/>
-        </div>
-        <div class="field">
-          <div class="field-label">Insurance %</div>
-          <input id="qp-inspct-${qn}" type="number" step="0.1" value="${(p.insPct*100).toFixed(2)}"
-            style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:7px 8px;font-size:12px;width:100%;font-family:'DM Mono',monospace"/>
-        </div>
-      </div>
-      <button onclick="applyAdjustment('${qn}')" class="btn btn-primary" style="padding:10px 24px">🔄 RECALCULAR</button>
-      <button onclick="resetAdjustment('${qn}')" class="btn btn-ghost" style="padding:10px 16px;margin-left:8px">RESTABLECER</button>
-      <span style="font-size:10px;color:var(--tx5);margin-left:12px">Solo afecta esta cotización en pantalla</span>
-    </div>`;
+  const inp = (id, val, step) =>
+    '<input id="'+id+'" type="number" step="'+(step||'1')+'" value="'+val+'" '+
+    'style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:7px 8px;font-size:12px;width:100%;font-family:\'DM Mono\',monospace"/>';
+
+  const field = (label, id, val, step) =>
+    '<div class="field"><div class="field-label">'+label+'</div>'+inp(id,val,step)+'</div>';
+
+  el.innerHTML =
+    '<div style="background:var(--bg3);border:1px solid var(--teal);padding:16px;margin-bottom:8px">'+
+    '<div style="font-size:9px;color:var(--teal);letter-spacing:3px;font-family:Barlow,sans-serif;font-weight:700;margin-bottom:12px">⚙ AJUSTE DE PARÁMETROS — SOLO ESTA COTIZACIÓN</div>'+
+    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px">'+
+    field('FOB Fee %',       'qp-fobpct-'+qn, (p.fobPct*100).toFixed(2), '0.01')+
+    field('FOB Fee Mín $',   'qp-fobmin-'+qn, p.fobMin, '1')+
+    field('Freight $/lb',    'qp-frtrate-'+qn, p.frtRate, '0.01')+
+    field('Freight Mín $',   'qp-frtmin-'+qn, p.frtMin, '1')+
+    field('Insurance %',     'qp-inspct-'+qn, (p.insPct*100).toFixed(2), '0.01')+
+    field('Insurance Mín $', 'qp-insmin-'+qn, p.insMin||80, '1')+
+    field('Dest. Services %','qp-dspct-'+qn,  (p.dsPct*100).toFixed(2), '0.01')+
+    field('Dest. Srv Mín $', 'qp-dsmin-'+qn,  p.dsMin, '1')+
+    field('IOR Fee %',       'qp-iorpct-'+qn, (p.iorPct*100).toFixed(2), '0.01')+
+    field('IOR Fee Mín $',   'qp-iormin-'+qn, p.iorMin, '1')+
+    '</div>'+
+    '<button onclick="applyAdjustment(\''+qn+'\')" class="btn btn-primary" style="padding:10px 24px">🔄 RECALCULAR</button>'+
+    '<button onclick="resetAdjustment(\''+qn+'\')" class="btn btn-ghost" style="padding:10px 16px;margin-left:8px">RESTABLECER</button>'+
+    '<span style="font-size:10px;color:var(--tx5);margin-left:12px">Solo afecta esta cotización en pantalla</span>'+
+    '</div>';
+
   el.style.display = 'block';
 }
 
 function applyAdjustment(qn){
   const p = window._qparams[qn];
   if(!p) return;
-  const get = id => parseFloat(document.getElementById(id)?.value)||0;
+  const get = id => parseFloat(document.getElementById('qp-'+id+'-'+qn)?.value)||0;
 
-  const fobPct = get('qp-fobpct-'+qn)/100;
-  const fobMin = get('qp-fobmin-'+qn);
-  const frtRate = get('qp-frtrate-'+qn);
-  const frtMin = get('qp-frtmin-'+qn);
-  const dsPct = get('qp-dspct-'+qn)/100;
-  const dsMin = get('qp-dsmin-'+qn);
-  const iorPct = get('qp-iorpct-'+qn)/100;
-  const iorMin = get('qp-iormin-'+qn);
-  const insPct = get('qp-inspct-'+qn)/100;
+  const fobPct  = get('fobpct')/100;
+  const fobMin  = get('fobmin');
+  const frtRate = get('frtrate');
+  const frtMin  = get('frtmin');
+  const insPct  = get('inspct')/100;
+  const insMin  = get('insmin')||80;
+  const dsPct   = get('dspct')/100;
+  const dsMin   = get('dsmin');
+  const iorPct  = get('iorpct')/100;
+  const iorMin  = get('iormin');
 
   const fob = p.fob, lbs = p.lbs;
-  const fc = Math.max(fob*fobPct, fobMin);
-  const fr = Math.max(lbs*frtRate, frtMin);
-  const ins = Math.max((fob+fr)*insPct, p.insMin||80);
+  const fc  = Math.max(fob*fobPct, fobMin);
+  const fr  = Math.max(lbs*frtRate, frtMin);
+  const ins = Math.max((fob+fr)*insPct, insMin);
   const cif = fob+fr+ins;
-  const ds = Math.max(cif*dsPct, dsMin);
+  const ds  = Math.max(cif*dsPct, dsMin);
   const ior = Math.max(cif*iorPct, iorMin);
-  const svcTotal = fc+fr+ins+ds+ior;
-  const grandTotal = svcTotal + p.taxTotal;
 
-  // Actualizar líneas de servicio
-  const svcVals = [fc,fr,ins,ds,ior];
+  const svcVals = [fc, fr, ins, ds, ior];
+  let svcTotal = 0;
   svcVals.forEach((v,i)=>{
-    const el = document.getElementById('qline-svc-'+qn+'-'+i);
-    if(el) el.value = v.toFixed(2);
-    const dl = document.getElementById('qdisp-svc-'+qn+'-'+i);
-    if(dl) dl.textContent = '$'+fmt(v);
+    svcTotal += v;
+    const el = document.getElementById('qdisp-svc-'+qn+'-'+i);
+    if(el) el.textContent = '$'+fmt(v);
   });
 
-  // Actualizar total
+  const grandTotal = svcTotal + p.taxTotal;
   const tel = document.getElementById('qtotal-'+qn);
   if(tel) tel.textContent = '$'+fmt(grandTotal);
 }
@@ -5432,15 +5387,17 @@ function applyAdjustment(qn){
 function resetAdjustment(qn){
   const p = window._qparams[qn];
   if(!p) return;
-  document.getElementById('qp-fobpct-'+qn).value = (p.fobPct*100).toFixed(2);
-  document.getElementById('qp-fobmin-'+qn).value = p.fobMin;
-  document.getElementById('qp-frtrate-'+qn).value = p.frtRate;
-  document.getElementById('qp-frtmin-'+qn).value = p.frtMin;
-  document.getElementById('qp-dspct-'+qn).value = (p.dsPct*100).toFixed(2);
-  document.getElementById('qp-dsmin-'+qn).value = p.dsMin;
-  document.getElementById('qp-iorpct-'+qn).value = (p.iorPct*100).toFixed(2);
-  document.getElementById('qp-iormin-'+qn).value = p.iorMin;
-  document.getElementById('qp-inspct-'+qn).value = (p.insPct*100).toFixed(2);
+  const set = (id, val) => { const el = document.getElementById('qp-'+id+'-'+qn); if(el) el.value = val; };
+  set('fobpct',  (p.fobPct*100).toFixed(2));
+  set('fobmin',  p.fobMin);
+  set('frtrate', p.frtRate);
+  set('frtmin',  p.frtMin);
+  set('inspct',  (p.insPct*100).toFixed(2));
+  set('insmin',  p.insMin||80);
+  set('dspct',   (p.dsPct*100).toFixed(2));
+  set('dsmin',   p.dsMin);
+  set('iorpct',  (p.iorPct*100).toFixed(2));
+  set('iormin',  p.iorMin);
   applyAdjustment(qn);
 }
 
