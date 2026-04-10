@@ -3053,26 +3053,18 @@ function doQuote(){
       </div>
 
       <!-- Panel de ajuste -->
-      <div id="qadjust-${qn}" style="display:none"></div>
-
-      <script>
-        (function(){
-          window._qdata = window._qdata||{};
-          window._qdata['${qn}'] = {svc:${r.li.length}, tax:${taxLines.length}};
-          window._qparams = window._qparams||{};
-          window._qparams['${qn}'] = {
-            fob:${fob}, lbs:${lbs},
-            fobPct:${currentCtry==='brazil'?.01:.015}, fobMin:270,
-            frtRate:${currentCtry==='brazil'?3.76:currentCtry==='mexico'?1.57:currentCtry==='argentina'?1.99:currentCtry==='colombia'?1.84:currentCtry==='chile'?1.92:currentCtry==='usa'?9.73:1.84},
-            frtMin:350,
-            insPct:.01, insMin:80,
-            dsPct:${currentCtry==='brazil'?.02:currentCtry==='usa'?0:.025}, dsMin:${currentCtry==='brazil'?400:700},
-            iorPct:${currentCtry==='brazil'?.02:currentCtry==='colombia'?.03:currentCtry==='usa'?.03:.03},
-            iorMin:${currentCtry==='brazil'?860:currentCtry==='argentina'?750:currentCtry==='colombia'?650:860},
-            taxTotal:${taxLines.reduce((s,[,v])=>s+v,0)}
-          };
-        })();
-      <\/script>
+      <div id="qadjust-${qn}" style="display:none"
+        data-fob="${fob}" data-lbs="${lbs}"
+        data-fobpct="${currentCtry==='brazil'?.01:.015}" data-fobmin="270"
+        data-frtrate="${currentCtry==='brazil'?3.76:currentCtry==='mexico'?1.57:currentCtry==='argentina'?1.99:currentCtry==='colombia'?1.84:currentCtry==='chile'?1.92:currentCtry==='usa'?9.73:1.84}"
+        data-frtmin="350" data-inspct="0.01" data-insmin="80"
+        data-dspct="${currentCtry==='brazil'?.02:currentCtry==='usa'?0:.025}"
+        data-dsmin="${currentCtry==='brazil'?400:700}"
+        data-iorpct="${currentCtry==='brazil'?.02:currentCtry==='colombia'?.03:currentCtry==='usa'?.03:.03}"
+        data-iormin="${currentCtry==='brazil'?860:currentCtry==='argentina'?750:currentCtry==='colombia'?650:860}"
+        data-taxtotal="${taxLines.reduce((s,[,v])=>s+v,0)}"
+        data-svccount="${r.li.length}" data-taxcount="${taxLines.length}"
+      ></div>
 
       <!-- Related Cases -->
       ${relCases.length?`
@@ -4215,26 +4207,18 @@ function runFromAI() {
       </div>
 
       <!-- Panel de ajuste -->
-      <div id="qadjust-${qn}" style="display:none"></div>
-
-      <script>
-        (function(){
-          window._qdata = window._qdata||{};
-          window._qdata['${qn}'] = {svc:${r.li.length}, tax:${taxLines.length}};
-          window._qparams = window._qparams||{};
-          window._qparams['${qn}'] = {
-            fob:${totalFob}, lbs:${totalLbs},
-            fobPct:${ctry==='brazil'?.01:.015}, fobMin:270,
-            frtRate:${ctry==='brazil'?3.76:ctry==='mexico'?1.57:ctry==='argentina'?1.99:ctry==='colombia'?1.84:ctry==='chile'?1.92:ctry==='usa'?9.73:1.84},
-            frtMin:350,
-            insPct:.01, insMin:80,
-            dsPct:${ctry==='brazil'?.02:ctry==='usa'?0:.025}, dsMin:${ctry==='brazil'?400:700},
-            iorPct:${ctry==='brazil'?.02:ctry==='colombia'?.03:ctry==='usa'?.03:.03},
-            iorMin:${ctry==='brazil'?860:ctry==='argentina'?750:ctry==='colombia'?650:860},
-            taxTotal:${taxLines.reduce((s,[,v])=>s+v,0)}
-          };
-        })();
-      <\/script>
+      <div id="qadjust-${qn}" style="display:none"
+        data-fob="${totalFob}" data-lbs="${totalLbs}"
+        data-fobpct="${ctry==='brazil'?.01:.015}" data-fobmin="270"
+        data-frtrate="${ctry==='brazil'?3.76:ctry==='mexico'?1.57:ctry==='argentina'?1.99:ctry==='colombia'?1.84:ctry==='chile'?1.92:ctry==='usa'?9.73:1.84}"
+        data-frtmin="350" data-inspct="0.01" data-insmin="80"
+        data-dspct="${ctry==='brazil'?.02:ctry==='usa'?0:.025}"
+        data-dsmin="${ctry==='brazil'?400:700}"
+        data-iorpct="${ctry==='brazil'?.02:ctry==='colombia'?.03:ctry==='usa'?.03:.03}"
+        data-iormin="${ctry==='brazil'?860:ctry==='argentina'?750:ctry==='colombia'?650:860}"
+        data-taxtotal="${taxLines.reduce((s,[,v])=>s+v,0)}"
+        data-svccount="${r.li.length}" data-taxcount="${taxLines.length}"
+      ></div>
 
       <!-- Related Cases -->
       ${relCases.length ? `
@@ -5311,16 +5295,36 @@ function renderTaxRulesList(){
 window._qparams = window._qparams || {};
 
 function showAdjustPanel(qn){
-  const p = window._qparams && window._qparams[qn];
-  if(!p){ console.warn('No params for qn='+qn); return; }
   const el = document.getElementById('qadjust-'+qn);
   if(!el){ console.warn('No element qadjust-'+qn); return; }
   if(el.style.display !== 'none'){ el.style.display='none'; return; }
 
-  const inp = (id, val, step) =>
-    '<input id="'+id+'" type="number" step="'+(step||'1')+'" value="'+val+'" '+
-    'style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:7px 8px;font-size:12px;width:100%;font-family:\'DM Mono\',monospace"/>';
+  // Leer parámetros desde data-attributes (siempre disponibles)
+  const d = el.dataset;
+  const p = {
+    fob:      parseFloat(d.fob)||0,
+    lbs:      parseFloat(d.lbs)||0,
+    fobPct:   parseFloat(d.fobpct)||0.01,
+    fobMin:   parseFloat(d.fobmin)||270,
+    frtRate:  parseFloat(d.frtrate)||3.76,
+    frtMin:   parseFloat(d.frtmin)||350,
+    insPct:   parseFloat(d.inspct)||0.01,
+    insMin:   parseFloat(d.insmin)||80,
+    dsPct:    parseFloat(d.dspct)||0.02,
+    dsMin:    parseFloat(d.dsmin)||400,
+    iorPct:   parseFloat(d.iorpct)||0.02,
+    iorMin:   parseFloat(d.iormin)||860,
+    taxTotal: parseFloat(d.taxtotal)||0,
+    svcCount: parseInt(d.svccount)||5,
+    taxCount: parseInt(d.taxcount)||0,
+  };
+  // Guardar en _qparams para usar en apply/reset
+  window._qparams = window._qparams||{};
+  window._qparams[qn] = p;
 
+  const inp = (id, val, step) =>
+    '<input id="qp-'+id+'-'+qn+'" type="number" step="'+(step||'1')+'" value="'+val+'" '+
+    'style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:7px 8px;font-size:12px;width:100%;font-family:\'DM Mono\',monospace"/>';
   const field = (label, id, val, step) =>
     '<div class="field"><div class="field-label">'+label+'</div>'+inp(id,val,step)+'</div>';
 
@@ -5328,16 +5332,16 @@ function showAdjustPanel(qn){
     '<div style="background:var(--bg3);border:1px solid var(--teal);padding:16px;margin-bottom:8px">'+
     '<div style="font-size:9px;color:var(--teal);letter-spacing:3px;font-family:Barlow,sans-serif;font-weight:700;margin-bottom:12px">⚙ AJUSTE DE PARÁMETROS — SOLO ESTA COTIZACIÓN</div>'+
     '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px">'+
-    field('FOB Fee %',       'qp-fobpct-'+qn, (p.fobPct*100).toFixed(2), '0.01')+
-    field('FOB Fee Mín $',   'qp-fobmin-'+qn, p.fobMin, '1')+
-    field('Freight $/lb',    'qp-frtrate-'+qn, p.frtRate, '0.01')+
-    field('Freight Mín $',   'qp-frtmin-'+qn, p.frtMin, '1')+
-    field('Insurance %',     'qp-inspct-'+qn, (p.insPct*100).toFixed(2), '0.01')+
-    field('Insurance Mín $', 'qp-insmin-'+qn, p.insMin||80, '1')+
-    field('Dest. Services %','qp-dspct-'+qn,  (p.dsPct*100).toFixed(2), '0.01')+
-    field('Dest. Srv Mín $', 'qp-dsmin-'+qn,  p.dsMin, '1')+
-    field('IOR Fee %',       'qp-iorpct-'+qn, (p.iorPct*100).toFixed(2), '0.01')+
-    field('IOR Fee Mín $',   'qp-iormin-'+qn, p.iorMin, '1')+
+    field('FOB Fee %',        'fobpct',  (p.fobPct*100).toFixed(2),  '0.01')+
+    field('FOB Fee Mín $',    'fobmin',  p.fobMin,                    '1')+
+    field('Freight $/lb',     'frtrate', p.frtRate,                   '0.01')+
+    field('Freight Mín $',    'frtmin',  p.frtMin,                    '1')+
+    field('Insurance %',      'inspct',  (p.insPct*100).toFixed(2),   '0.01')+
+    field('Insurance Mín $',  'insmin',  p.insMin,                    '1')+
+    field('Dest. Services %', 'dspct',   (p.dsPct*100).toFixed(2),    '0.01')+
+    field('Dest. Srv Mín $',  'dsmin',   p.dsMin,                     '1')+
+    field('IOR Fee %',        'iorpct',  (p.iorPct*100).toFixed(2),   '0.01')+
+    field('IOR Fee Mín $',    'iormin',  p.iorMin,                    '1')+
     '</div>'+
     '<button onclick="applyAdjustment(\''+qn+'\')" class="btn btn-primary" style="padding:10px 24px">🔄 RECALCULAR</button>'+
     '<button onclick="resetAdjustment(\''+qn+'\')" class="btn btn-ghost" style="padding:10px 16px;margin-left:8px">RESTABLECER</button>'+
