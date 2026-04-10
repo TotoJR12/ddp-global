@@ -173,6 +173,7 @@ a{color:var(--teal);text-decoration:none}
     <button class="nav-btn" onclick="showPage('shipments')" style="color:#f59e0b">✈️ SHIPMENTS</button>
     <button class="nav-btn" onclick="showPage('freechat')" style="color:var(--teal)">💬 CHAT IA</button>
     <button class="nav-btn" onclick="showPage('eor')" style="color:#f97316">🛡 EOR</button>
+    <button class="nav-btn" onclick="showPage('taxrules')">⚙ TAX RULES</button>
   </nav>
   <div class="version" style="display:flex;flex-direction:column;align-items:center;line-height:1.4;padding:3px 10px"><span style="font-size:9px;font-weight:700;letter-spacing:2px">v2.2</span><span style="font-size:7px;opacity:.75">2026-03-29</span></div>
 </div>
@@ -982,6 +983,79 @@ Please advise on DDP cost and transit time. Thanks"></textarea>
   </div>
 </div>
 
+
+<!-- ════════════════════════════════════════════════ -->
+<!-- PAGE: TAX RULES MANAGER                          -->
+<!-- ════════════════════════════════════════════════ -->
+<div class="page" id="page-taxrules">
+  <div class="page-title">⚙ TAX RULES MANAGER</div>
+  <div class="page-sub">Cuando encontrás las tasas reales de un producto en un país, las cargás acá. El sistema las usa automáticamente en cotizaciones futuras.</div>
+
+  <div class="card" id="taxrule-form-wrap">
+    <div class="card-title" id="taxrule-form-title">AGREGAR NUEVA REGLA</div>
+    <input type="hidden" id="taxrule-edit-id" value=""/>
+    <div class="grid2" style="margin-bottom:16px">
+      <div class="field">
+        <div class="field-label">HS Code</div>
+        <input id="tr-hs" type="text" placeholder="ej: 8471.30" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:9px 10px;font-size:14px;width:100%;font-family:'DM Mono',monospace;letter-spacing:1px"/>
+      </div>
+      <div class="field">
+        <div class="field-label">Descripción del Producto</div>
+        <input id="tr-desc" type="text" placeholder="ej: Laptops / Notebooks" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:9px 10px;font-size:12px;width:100%;font-family:'DM Mono',monospace"/>
+      </div>
+    </div>
+
+    <div class="card-title" style="margin-bottom:8px">TASAS POR PAÍS</div>
+    <div id="tr-country-rows" style="margin-bottom:12px"></div>
+
+    <div style="display:flex;gap:8px;margin-bottom:16px;align-items:flex-end">
+      <div class="field" style="flex:1">
+        <div class="field-label">Agregar País</div>
+        <select id="tr-add-country" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:9px 10px;font-size:12px;width:100%;font-family:'DM Mono',monospace">
+          <option value="">Seleccioná un país...</option>
+          <option value="brazil">🇧🇷 Brazil</option>
+          <option value="mexico">🇲🇽 Mexico</option>
+          <option value="argentina">🇦🇷 Argentina</option>
+          <option value="colombia">🇨🇴 Colombia</option>
+          <option value="chile">🇨🇱 Chile</option>
+          <option value="peru">🇵🇪 Peru</option>
+          <option value="ecuador">🇪🇨 Ecuador</option>
+          <option value="panama">🇵🇦 Panama</option>
+          <option value="usa">🇺🇸 USA</option>
+          <option value="canada">🇨🇦 Canada</option>
+          <option value="dubai">🇦🇪 UAE/Dubai</option>
+          <option value="saudiarabia">🇸🇦 Saudi Arabia</option>
+          <option value="qatar">🇶🇦 Qatar</option>
+          <option value="israel">🇮🇱 Israel</option>
+          <option value="india">🇮🇳 India</option>
+          <option value="uk">🇬🇧 UK</option>
+          <option value="germany">🇩🇪 Germany</option>
+          <option value="france">🇫🇷 France</option>
+          <option value="netherlands">🇳🇱 Netherlands</option>
+          <option value="spain">🇪🇸 Spain</option>
+          <option value="singapore">🇸🇬 Singapore</option>
+          <option value="australia">🇦🇺 Australia</option>
+          <option value="japan">🇯🇵 Japan</option>
+        </select>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="addTRCountryRow()" style="padding:9px 16px;white-space:nowrap">+ AGREGAR PAÍS</button>
+    </div>
+
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-primary" onclick="saveTaxRule()" style="padding:11px 28px">💾 GUARDAR REGLA</button>
+      <button class="btn btn-ghost" onclick="clearTaxRuleForm()" style="padding:11px 20px">CANCELAR</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div class="card-title" style="margin-bottom:0">REGLAS GUARDADAS</div>
+      <div style="font-size:10px;color:var(--tx5)">Tienen prioridad sobre las tasas estándar del sistema</div>
+    </div>
+    <div id="taxrules-list"></div>
+  </div>
+</div>
+
 </div><!-- end .app -->
 
 <script>
@@ -1614,12 +1688,16 @@ const HS_RATES = {
 };
 
 // Obtener las tasas correctas para un ítem dado país + HS code
-// Retorna {dutyPct, vatPct, ipi, note} con fallback a la tasa estándar del país
+// Primero busca en reglas custom (Tax Rules Manager), luego en HS_RATES hardcodeado
 function getHSRates(ct, hsCode){
+  // 1. Buscar en reglas custom del usuario
+  const custom = getCustomHSRate(ct, hsCode);
+  if(custom) return custom;
+  // 2. Fallback a HS_RATES hardcodeado
   const hsShort = (hsCode||'').replace(/\./g,'').slice(0,6);
   const hsKey = Object.keys(HS_RATES).find(k => k.replace(/\./g,'') === hsShort);
   if(hsKey && HS_RATES[hsKey][ct]) return HS_RATES[hsKey][ct];
-  return null; // usar tasa estándar del país
+  return null;
 }
 
 // Función central: calcula taxes de un ítem con sus tasas correctas por HS
@@ -2455,6 +2533,7 @@ function showPage(id){
       if(id==="ai"){b.style.color="var(--teal)";b.style.borderBottomColor="var(--teal)";}
     }
   });
+  if(id==="taxrules") initTaxRulesPage();
 }
 
 // ── Render country tabs ────────────────────────────────
@@ -2942,23 +3021,48 @@ function doQuote(){
 
       <!-- Service Lines -->
       <div class="table-wrap">
-        <div class="table-head" style="grid-template-columns:1fr 160px 90px"><span>SERVICE</span><span>BASIS</span><span style="text-align:right">USD</span></div>
-        ${r.li.map(([l,b,v])=>`<div class="table-row" style="grid-template-columns:1fr 160px 90px"><div style="font-size:12px;color:var(--tx2)">${l}</div><div style="font-size:10px;color:var(--tx5)">${b}</div><div style="font-size:12px;text-align:right">$${fmt(v)}</div></div>`).join("")}
+        <div class="table-head" style="grid-template-columns:1fr 160px 90px 32px"><span>SERVICE</span><span>BASIS</span><span style="text-align:right">USD</span><span style="text-align:right;font-size:8px;color:var(--teal)">EDIT</span></div>
+        ${r.li.map(([l,b,v],i)=>`<div class="table-row" style="grid-template-columns:1fr 160px 90px 32px;align-items:center">
+          <div style="font-size:12px;color:var(--tx2)">${l}</div>
+          <div style="font-size:10px;color:var(--tx5)">${b}</div>
+          <div style="text-align:right"><input type="number" step="0.01" value="${v.toFixed(2)}" id="qline-svc-${qn}-${i}"
+            onchange="recalcQuoteTotal('${qn}')"
+            style="background:transparent;border:none;border-bottom:1px solid var(--bd2);color:var(--tx);font-size:12px;text-align:right;width:90px;font-family:'DM Mono',monospace;padding:2px 4px"/>
+          </div>
+          <div></div>
+        </div>`).join("")}
       </div>
 
       <!-- Tax Lines -->
       ${taxLines.length?`
       <div class="table-wrap" style="margin-top:2px">
-        <div class="table-head" style="grid-template-columns:1fr 90px"><span>DUTIES & TAXES (PASS-THROUGH)${multiItem?' — POR HS/ÍTEM':''}</span><span style="text-align:right">USD</span></div>
-        ${taxLines.map(([l,v])=>`<div class="table-row" style="grid-template-columns:1fr 90px"><div style="font-size:12px;color:var(--tx3)">${l}</div><div style="font-size:12px;color:var(--tx3);text-align:right">$${fmt(v)}</div></div>`).join("")}
+        <div class="table-head" style="grid-template-columns:1fr 90px 32px"><span>DUTIES & TAXES (PASS-THROUGH)${multiItem?' — POR HS/ÍTEM':''}</span><span style="text-align:right">USD</span><span style="text-align:right;font-size:8px;color:var(--teal)">EDIT</span></div>
+        ${taxLines.map(([l,v],i)=>`<div class="table-row" style="grid-template-columns:1fr 90px 32px;align-items:center">
+          <div style="font-size:12px;color:var(--tx3)">${l}</div>
+          <div style="text-align:right"><input type="number" step="0.01" value="${v.toFixed(2)}" id="qline-tax-${qn}-${i}"
+            onchange="recalcQuoteTotal('${qn}')"
+            style="background:transparent;border:none;border-bottom:1px solid var(--bd2);color:var(--tx3);font-size:12px;text-align:right;width:90px;font-family:'DM Mono',monospace;padding:2px 4px"/>
+          </div>
+          <div></div>
+        </div>`).join("")}
       </div>
       `:""}
 
       <!-- Total -->
       <div class="total-bar" style="margin-top:2px">
-        <div class="total-lbl">TOTAL DDP</div>
-        <div class="total-val">$${fmt(grandTotal)}</div>
+        <div>
+          <div class="total-lbl">TOTAL DDP</div>
+          <div style="font-size:9px;color:rgba(255,255,255,.4);margin-top:2px">Editá los valores para ajustar · Solo esta cotización</div>
+        </div>
+        <div id="qtotal-${qn}" class="total-val">$${fmt(grandTotal)}</div>
       </div>
+      <script>
+        (function(){
+          var svcCount=${r.li.length}, taxCount=${taxLines.length}, qn='${qn}';
+          window._qdata = window._qdata||{};
+          window._qdata[qn] = {svc:${r.li.length}, tax:${taxLines.length}};
+        })();
+      <\/script>
 
       <!-- Related Cases -->
       ${relCases.length?`
@@ -4955,6 +5059,223 @@ function updateShipmentField(id, field, value){
   const destEl = document.getElementById('modal-costs-dest-'+id);
   if(origEl) origEl.textContent = '$'+fmt(costsOrigin);
   if(destEl) destEl.textContent = '$'+fmt(costsDest);
+}
+
+// ════════════════════════════════════════════════════════
+// TAX RULES MANAGER
+// ════════════════════════════════════════════════════════
+
+const TR_COUNTRIES = [
+  {id:'brazil',lb:'🇧🇷 Brazil'},
+  {id:'mexico',lb:'🇲🇽 Mexico'},
+  {id:'argentina',lb:'🇦🇷 Argentina'},
+  {id:'colombia',lb:'🇨🇴 Colombia'},
+  {id:'chile',lb:'🇨🇱 Chile'},
+  {id:'peru',lb:'🇵🇪 Peru'},
+  {id:'usa',lb:'🇺🇸 USA'},
+  {id:'dubai',lb:'🇦🇪 UAE/Dubai'},
+  {id:'saudiarabia',lb:'🇸🇦 Saudi Arabia'},
+  {id:'india',lb:'🇮🇳 India'},
+  {id:'uk',lb:'🇬🇧 UK'},
+  {id:'germany',lb:'🇩🇪 Germany'},
+  {id:'canada',lb:'🇨🇦 Canada'},
+  {id:'australia',lb:'🇦🇺 Australia'},
+  {id:'singapore',lb:'🇸🇬 Singapore'},
+];
+
+function getTaxRules(){
+  try{ return JSON.parse(localStorage.getItem('ddp_taxrules')||'[]'); }catch(e){ return []; }
+}
+function saveTaxRulesStorage(arr){
+  localStorage.setItem('ddp_taxrules',JSON.stringify(arr));
+  kvSyncToCloud('ddp_taxrules', arr);
+}
+
+// Obtener tasa para un HS code + país — primero busca en reglas custom, luego en HS_RATES hardcodeado
+function getCustomHSRate(ct, hsCode){
+  const rules = getTaxRules();
+  const hsShort = (hsCode||'').replace(/\./g,'').slice(0,6);
+  const rule = rules.find(r => r.hs.replace(/\./g,'').slice(0,6) === hsShort);
+  if(rule && rule.countries && rule.countries[ct]){
+    return rule.countries[ct];
+  }
+  return null; // usar getHSRates hardcodeado
+}
+
+function initTaxRulesPage(){
+  document.getElementById('tr-country-rows').innerHTML = '';
+  renderTaxRulesList();
+}
+
+// Etiquetas de países para el formulario
+const TR_COUNTRY_LABELS = {
+  brazil:'🇧🇷 Brazil', mexico:'🇲🇽 Mexico', argentina:'🇦🇷 Argentina',
+  colombia:'🇨🇴 Colombia', chile:'🇨🇱 Chile', peru:'🇵🇪 Peru',
+  ecuador:'🇪🇨 Ecuador', panama:'🇵🇦 Panama', usa:'🇺🇸 USA',
+  canada:'🇨🇦 Canada', dubai:'🇦🇪 UAE/Dubai', saudiarabia:'🇸🇦 Saudi Arabia',
+  qatar:'🇶🇦 Qatar', israel:'🇮🇱 Israel', india:'🇮🇳 India',
+  uk:'🇬🇧 UK', germany:'🇩🇪 Germany', france:'🇫🇷 France',
+  netherlands:'🇳🇱 Netherlands', spain:'🇪🇸 Spain',
+  singapore:'🇸🇬 Singapore', australia:'🇦🇺 Australia', japan:'🇯🇵 Japan'
+};
+
+function addTRCountryRow(){
+  const sel = document.getElementById('tr-add-country');
+  const ct = sel.value;
+  if(!ct) return;
+  if(document.getElementById('tr-row-'+ct)){
+    alert('Ese país ya está agregado.'); return;
+  }
+  const lb = TR_COUNTRY_LABELS[ct] || ct;
+  const row = document.createElement('div');
+  row.id = 'tr-row-'+ct;
+  row.style.cssText = 'display:grid;grid-template-columns:160px 100px 100px 1fr 32px;gap:10px;align-items:center;padding:10px 12px;background:var(--bg);border:1px solid var(--bd);margin-bottom:6px';
+  row.innerHTML =
+    `<div style="font-size:11px;color:var(--tx2);font-weight:600">${lb}</div>` +
+    `<div class="field"><div class="field-label">Duties %</div><input id="tr-duty-${ct}" type="number" step="0.01" placeholder="ej: 16" style="background:var(--bg2);border:1px solid var(--bd);color:var(--tx);padding:7px 8px;font-size:12px;width:100%;font-family:'DM Mono',monospace"/></div>` +
+    `<div class="field"><div class="field-label">VAT %</div><input id="tr-vat-${ct}" type="number" step="0.01" placeholder="ej: 19" style="background:var(--bg2);border:1px solid var(--bd);color:var(--tx);padding:7px 8px;font-size:12px;width:100%;font-family:'DM Mono',monospace"/></div>` +
+    `<div class="field"><div class="field-label">Nota (opcional)</div><input id="tr-note-${ct}" type="text" placeholder="ej: IPI 0% permanente" style="background:var(--bg2);border:1px solid var(--bd);color:var(--tx3);padding:7px 8px;font-size:11px;width:100%;font-family:'DM Mono',monospace"/></div>` +
+    `<button onclick="document.getElementById('tr-row-${ct}').remove()" style="background:var(--redbg);border:1px solid var(--red);color:var(--red);padding:6px 8px;cursor:pointer;font-size:12px;align-self:end">✕</button>`;
+  document.getElementById('tr-country-rows').appendChild(row);
+  sel.value = '';
+}
+
+function saveTaxRule(){
+  const hs = document.getElementById('tr-hs').value.trim();
+  const desc = document.getElementById('tr-desc').value.trim();
+  const editId = document.getElementById('taxrule-edit-id').value;
+
+  if(!hs){ alert('Ingresá el HS Code'); return; }
+  if(!desc){ alert('Ingresá la descripción del producto'); return; }
+
+  // Recopilar países del formulario
+  const countries = {};
+  Object.keys(TR_COUNTRY_LABELS).forEach(ct => {
+    const dutyEl = document.getElementById('tr-duty-'+ct);
+    const vatEl  = document.getElementById('tr-vat-'+ct);
+    const noteEl = document.getElementById('tr-note-'+ct);
+    if(!dutyEl) return; // país no agregado en el formulario
+    const duty = parseFloat(dutyEl.value);
+    const vat  = parseFloat(vatEl.value);
+    const note = noteEl.value.trim();
+    if(!isNaN(duty) || !isNaN(vat) || note){
+      countries[ct] = {};
+      if(!isNaN(duty)) countries[ct].dutyPct = duty/100;
+      if(!isNaN(vat))  countries[ct].vatPct  = vat/100;
+      if(note)         countries[ct].note     = note;
+    }
+  });
+
+  if(!Object.keys(countries).length){ alert('Agregá al menos un país con tasas.'); return; }
+
+  const rules = getTaxRules();
+  if(editId){
+    const idx = rules.findIndex(r=>r.id===editId);
+    if(idx>=0) rules[idx] = {id:editId, hs, desc, countries, updated: new Date().toISOString().slice(0,10)};
+  } else {
+    rules.unshift({id: Date.now().toString(), hs, desc, countries, created: new Date().toISOString().slice(0,10)});
+  }
+
+  saveTaxRulesStorage(rules);
+  clearTaxRuleForm();
+  renderTaxRulesList();
+  alert(`✓ Regla guardada para HS ${hs} — se aplicará automáticamente en cotizaciones.`);
+}
+
+function clearTaxRuleForm(){
+  document.getElementById('tr-hs').value = '';
+  document.getElementById('tr-desc').value = '';
+  document.getElementById('taxrule-edit-id').value = '';
+  document.getElementById('taxrule-form-title').textContent = 'AGREGAR NUEVA REGLA';
+  document.getElementById('tr-country-rows').innerHTML = '';
+  document.getElementById('tr-add-country').value = '';
+}
+
+function editTaxRule(id){
+  const rule = getTaxRules().find(r=>r.id===id);
+  if(!rule) return;
+  clearTaxRuleForm();
+  document.getElementById('tr-hs').value = rule.hs;
+  document.getElementById('tr-desc').value = rule.desc;
+  document.getElementById('taxrule-edit-id').value = rule.id;
+  document.getElementById('taxrule-form-title').textContent = `EDITAR REGLA — HS ${rule.hs}`;
+  // Cargar los países que tiene la regla
+  Object.entries(rule.countries||{}).forEach(([ct, d]) => {
+    document.getElementById('tr-add-country').value = ct;
+    addTRCountryRow();
+    if(d.dutyPct!=null) document.getElementById('tr-duty-'+ct).value = (d.dutyPct*100).toFixed(2);
+    if(d.vatPct!=null)  document.getElementById('tr-vat-'+ct).value  = (d.vatPct*100).toFixed(2);
+    if(d.note)          document.getElementById('tr-note-'+ct).value  = d.note;
+  });
+  document.getElementById('taxrule-form-wrap').scrollIntoView({behavior:'smooth'});
+}
+
+function deleteTaxRule(id){
+  if(!confirm('¿Eliminar esta regla?')) return;
+  const rules = getTaxRules().filter(r=>r.id!==id);
+  saveTaxRulesStorage(rules);
+  renderTaxRulesList();
+}
+
+function renderTaxRulesList(){
+  const el = document.getElementById('taxrules-list');
+  if(!el) return;
+  const rules = getTaxRules();
+
+  if(!rules.length){
+    el.innerHTML = `<div class="flag flag-blue">No hay reglas guardadas todavía.<br/>
+      <span style="font-size:10px;color:var(--tx5);margin-top:4px;display:block">💡 Cuando encontrés tasas reales de un producto en un país, las cargás acá y el sistema las usa automáticamente en cotizaciones.</span>
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = rules.map(r => {
+    const ctryTags = Object.entries(r.countries||{}).map(([ct,d]) => {
+      const lb = TR_COUNTRY_LABELS[ct] || ct;
+      const parts = [];
+      if(d.dutyPct!=null) parts.push(`Duties ${(d.dutyPct*100).toFixed(1)}%`);
+      if(d.vatPct!=null)  parts.push(`VAT ${(d.vatPct*100).toFixed(1)}%`);
+      if(d.note) parts.push(d.note);
+      return `<span style="background:var(--bg3);border:1px solid var(--bd);padding:4px 10px;margin:2px;display:inline-block;font-size:10px">
+        <span style="color:var(--teal)">${lb}</span>
+        <span style="color:var(--tx4);margin-left:6px">${parts.join(' · ')}</span>
+      </span>`;
+    }).join('');
+
+    return `<div style="background:var(--bg3);border:1px solid var(--bd);border-left:3px solid var(--teal);padding:12px 16px;margin-bottom:8px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div>
+          <span style="font-family:Barlow,sans-serif;font-weight:800;font-size:14px;color:var(--teal)">${r.hs}</span>
+          <span style="font-size:12px;color:var(--tx2);margin-left:12px">${r.desc}</span>
+          <span style="font-size:9px;color:var(--tx5);margin-left:10px">${r.updated||r.created||''}</span>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button onclick="editTaxRule('${r.id}')" class="btn btn-ghost btn-sm">✎ EDITAR</button>
+          <button onclick="deleteTaxRule('${r.id}')" style="background:none;border:1px solid var(--bd);color:var(--tx5);padding:5px 12px;font-size:10px;cursor:pointer">✕</button>
+        </div>
+      </div>
+      <div style="flex-wrap:wrap;display:flex">${ctryTags}</div>
+    </div>`;
+  }).join('');
+}
+
+
+
+// ── Recálculo de total editable en cotización ──────────────
+function recalcQuoteTotal(qn){
+  const data = window._qdata?.[qn];
+  if(!data) return;
+  let total = 0;
+  for(let i=0;i<data.svc;i++){
+    const el = document.getElementById('qline-svc-'+qn+'-'+i);
+    if(el) total += parseFloat(el.value)||0;
+  }
+  for(let i=0;i<data.tax;i++){
+    const el = document.getElementById('qline-tax-'+qn+'-'+i);
+    if(el) total += parseFloat(el.value)||0;
+  }
+  const el = document.getElementById('qtotal-'+qn);
+  if(el) el.textContent = '$'+fmt(total);
 }
 
 function calcProfit(s){
