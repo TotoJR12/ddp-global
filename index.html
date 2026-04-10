@@ -3048,19 +3048,37 @@ function doQuote(){
       </div>
       `:""}
 
+
       <!-- Total -->
       <div class="total-bar" style="margin-top:2px">
         <div>
           <div class="total-lbl">TOTAL DDP</div>
-          <div style="font-size:9px;color:rgba(255,255,255,.4);margin-top:2px">Editá los valores para ajustar · Solo esta cotización</div>
         </div>
-        <div id="qtotal-${qn}" class="total-val">$${fmt(grandTotal)}</div>
+        <div style="display:flex;align-items:center;gap:16px">
+          <button onclick="showAdjustPanel('${qn}')" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;padding:6px 14px;font-size:10px;font-family:Barlow,sans-serif;font-weight:700;cursor:pointer;letter-spacing:1px">⚙ AJUSTAR</button>
+          <div id="qtotal-${qn}" class="total-val">$${fmt(grandTotal)}</div>
+        </div>
       </div>
+
+      <!-- Panel de ajuste -->
+      <div id="qadjust-${qn}" style="display:none"></div>
+
       <script>
         (function(){
-          var svcCount=${r.li.length}, taxCount=${taxLines.length}, qn='${qn}';
           window._qdata = window._qdata||{};
-          window._qdata[qn] = {svc:${r.li.length}, tax:${taxLines.length}};
+          window._qdata['${qn}'] = {svc:${r.li.length}, tax:${taxLines.length}};
+          window._qparams = window._qparams||{};
+          window._qparams['${qn}'] = {
+            fob:${fob}, lbs:${lbs},
+            fobPct:${currentCtry==='brazil'?.01:.015}, fobMin:270,
+            frtRate:${currentCtry==='brazil'?3.76:currentCtry==='mexico'?1.57:currentCtry==='argentina'?1.99:currentCtry==='colombia'?1.84:currentCtry==='chile'?1.92:currentCtry==='usa'?9.73:1.84},
+            frtMin:350,
+            insPct:.01, insMin:80,
+            dsPct:${currentCtry==='brazil'?.02:currentCtry==='usa'?0:.025}, dsMin:${currentCtry==='brazil'?400:700},
+            iorPct:${currentCtry==='brazil'?.02:currentCtry==='colombia'?.03:currentCtry==='usa'?.03:.03},
+            iorMin:${currentCtry==='brazil'?860:currentCtry==='argentina'?750:currentCtry==='colombia'?650:860},
+            taxTotal:${taxLines.reduce((s,[,v])=>s+v,0)}
+          };
         })();
       <\/script>
 
@@ -4205,14 +4223,32 @@ function runFromAI() {
       <div class="total-bar" style="margin-top:2px">
         <div>
           <div class="total-lbl">TOTAL DDP</div>
-          <div style="font-size:9px;color:rgba(255,255,255,.4);margin-top:2px">Editá los valores para ajustar · Solo esta cotización</div>
         </div>
-        <div id="qtotal-${qn}" class="total-val">$${fmt(grandTotal)}</div>
+        <div style="display:flex;align-items:center;gap:16px">
+          <button onclick="showAdjustPanel('${qn}')" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;padding:6px 14px;font-size:10px;font-family:Barlow,sans-serif;font-weight:700;cursor:pointer;letter-spacing:1px">⚙ AJUSTAR</button>
+          <div id="qtotal-${qn}" class="total-val">$${fmt(grandTotal)}</div>
+        </div>
       </div>
+
+      <!-- Panel de ajuste -->
+      <div id="qadjust-${qn}" style="display:none"></div>
+
       <script>
         (function(){
           window._qdata = window._qdata||{};
           window._qdata['${qn}'] = {svc:${r.li.length}, tax:${taxLines.length}};
+          window._qparams = window._qparams||{};
+          window._qparams['${qn}'] = {
+            fob:${totalFob}, lbs:${totalLbs},
+            fobPct:${ctry==='brazil'?.01:.015}, fobMin:270,
+            frtRate:${ctry==='brazil'?3.76:ctry==='mexico'?1.57:ctry==='argentina'?1.99:ctry==='colombia'?1.84:ctry==='chile'?1.92:ctry==='usa'?9.73:1.84},
+            frtMin:350,
+            insPct:.01, insMin:80,
+            dsPct:${ctry==='brazil'?.02:ctry==='usa'?0:.025}, dsMin:${ctry==='brazil'?400:700},
+            iorPct:${ctry==='brazil'?.02:ctry==='colombia'?.03:ctry==='usa'?.03:.03},
+            iorMin:${ctry==='brazil'?860:ctry==='argentina'?750:ctry==='colombia'?650:860},
+            taxTotal:${taxLines.reduce((s,[,v])=>s+v,0)}
+          };
         })();
       <\/script>
 
@@ -5286,6 +5322,128 @@ function renderTaxRulesList(){
 
 
 // ── Recálculo de total editable en cotización ──────────────
+// ── Panel de ajuste de cotización ─────────────────────
+// Guarda los parámetros originales de cada cotización
+window._qparams = window._qparams || {};
+
+function showAdjustPanel(qn){
+  const p = window._qparams[qn];
+  if(!p) return;
+  const el = document.getElementById('qadjust-'+qn);
+  if(!el) return;
+  if(el.style.display !== 'none'){el.style.display='none';return;}
+
+  el.innerHTML = `
+    <div style="background:var(--bg3);border:1px solid var(--teal);padding:16px;margin-bottom:8px">
+      <div style="font-size:9px;color:var(--teal);letter-spacing:3px;font-family:Barlow,sans-serif;font-weight:700;margin-bottom:12px">⚙ AJUSTE DE PARÁMETROS — SOLO ESTA COTIZACIÓN</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px">
+        <div class="field">
+          <div class="field-label">FOB Fee %</div>
+          <input id="qp-fobpct-${qn}" type="number" step="0.1" value="${(p.fobPct*100).toFixed(2)}"
+            style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:7px 8px;font-size:12px;width:100%;font-family:'DM Mono',monospace"/>
+        </div>
+        <div class="field">
+          <div class="field-label">FOB Fee Mín $</div>
+          <input id="qp-fobmin-${qn}" type="number" step="1" value="${p.fobMin}"
+            style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:7px 8px;font-size:12px;width:100%;font-family:'DM Mono',monospace"/>
+        </div>
+        <div class="field">
+          <div class="field-label">Freight $/lb</div>
+          <input id="qp-frtrate-${qn}" type="number" step="0.01" value="${p.frtRate}"
+            style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:7px 8px;font-size:12px;width:100%;font-family:'DM Mono',monospace"/>
+        </div>
+        <div class="field">
+          <div class="field-label">Freight Mín $</div>
+          <input id="qp-frtmin-${qn}" type="number" step="1" value="${p.frtMin}"
+            style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:7px 8px;font-size:12px;width:100%;font-family:'DM Mono',monospace"/>
+        </div>
+        <div class="field">
+          <div class="field-label">Dest. Services %</div>
+          <input id="qp-dspct-${qn}" type="number" step="0.1" value="${(p.dsPct*100).toFixed(2)}"
+            style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:7px 8px;font-size:12px;width:100%;font-family:'DM Mono',monospace"/>
+        </div>
+        <div class="field">
+          <div class="field-label">Dest. Services Mín $</div>
+          <input id="qp-dsmin-${qn}" type="number" step="1" value="${p.dsMin}"
+            style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:7px 8px;font-size:12px;width:100%;font-family:'DM Mono',monospace"/>
+        </div>
+        <div class="field">
+          <div class="field-label">IOR Fee %</div>
+          <input id="qp-iorpct-${qn}" type="number" step="0.1" value="${(p.iorPct*100).toFixed(2)}"
+            style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:7px 8px;font-size:12px;width:100%;font-family:'DM Mono',monospace"/>
+        </div>
+        <div class="field">
+          <div class="field-label">IOR Fee Mín $</div>
+          <input id="qp-iormin-${qn}" type="number" step="1" value="${p.iorMin}"
+            style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:7px 8px;font-size:12px;width:100%;font-family:'DM Mono',monospace"/>
+        </div>
+        <div class="field">
+          <div class="field-label">Insurance %</div>
+          <input id="qp-inspct-${qn}" type="number" step="0.1" value="${(p.insPct*100).toFixed(2)}"
+            style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:7px 8px;font-size:12px;width:100%;font-family:'DM Mono',monospace"/>
+        </div>
+      </div>
+      <button onclick="applyAdjustment('${qn}')" class="btn btn-primary" style="padding:10px 24px">🔄 RECALCULAR</button>
+      <button onclick="resetAdjustment('${qn}')" class="btn btn-ghost" style="padding:10px 16px;margin-left:8px">RESTABLECER</button>
+      <span style="font-size:10px;color:var(--tx5);margin-left:12px">Solo afecta esta cotización en pantalla</span>
+    </div>`;
+  el.style.display = 'block';
+}
+
+function applyAdjustment(qn){
+  const p = window._qparams[qn];
+  if(!p) return;
+  const get = id => parseFloat(document.getElementById(id)?.value)||0;
+
+  const fobPct = get('qp-fobpct-'+qn)/100;
+  const fobMin = get('qp-fobmin-'+qn);
+  const frtRate = get('qp-frtrate-'+qn);
+  const frtMin = get('qp-frtmin-'+qn);
+  const dsPct = get('qp-dspct-'+qn)/100;
+  const dsMin = get('qp-dsmin-'+qn);
+  const iorPct = get('qp-iorpct-'+qn)/100;
+  const iorMin = get('qp-iormin-'+qn);
+  const insPct = get('qp-inspct-'+qn)/100;
+
+  const fob = p.fob, lbs = p.lbs;
+  const fc = Math.max(fob*fobPct, fobMin);
+  const fr = Math.max(lbs*frtRate, frtMin);
+  const ins = Math.max((fob+fr)*insPct, p.insMin||80);
+  const cif = fob+fr+ins;
+  const ds = Math.max(cif*dsPct, dsMin);
+  const ior = Math.max(cif*iorPct, iorMin);
+  const svcTotal = fc+fr+ins+ds+ior;
+  const grandTotal = svcTotal + p.taxTotal;
+
+  // Actualizar líneas de servicio
+  const svcVals = [fc,fr,ins,ds,ior];
+  svcVals.forEach((v,i)=>{
+    const el = document.getElementById('qline-svc-'+qn+'-'+i);
+    if(el) el.value = v.toFixed(2);
+    const dl = document.getElementById('qdisp-svc-'+qn+'-'+i);
+    if(dl) dl.textContent = '$'+fmt(v);
+  });
+
+  // Actualizar total
+  const tel = document.getElementById('qtotal-'+qn);
+  if(tel) tel.textContent = '$'+fmt(grandTotal);
+}
+
+function resetAdjustment(qn){
+  const p = window._qparams[qn];
+  if(!p) return;
+  document.getElementById('qp-fobpct-'+qn).value = (p.fobPct*100).toFixed(2);
+  document.getElementById('qp-fobmin-'+qn).value = p.fobMin;
+  document.getElementById('qp-frtrate-'+qn).value = p.frtRate;
+  document.getElementById('qp-frtmin-'+qn).value = p.frtMin;
+  document.getElementById('qp-dspct-'+qn).value = (p.dsPct*100).toFixed(2);
+  document.getElementById('qp-dsmin-'+qn).value = p.dsMin;
+  document.getElementById('qp-iorpct-'+qn).value = (p.iorPct*100).toFixed(2);
+  document.getElementById('qp-iormin-'+qn).value = p.iorMin;
+  document.getElementById('qp-inspct-'+qn).value = (p.insPct*100).toFixed(2);
+  applyAdjustment(qn);
+}
+
 function recalcQuoteTotal(qn){
   const data = window._qdata?.[qn];
   if(!data) return;
