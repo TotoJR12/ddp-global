@@ -147,7 +147,13 @@ a{color:var(--teal);text-decoration:none}
   .grid2,.grid3{grid-template-columns:1fr}
   .nav{display:none}
   .meta-bar{grid-template-columns:1fr 1fr}
+  .mob-menu-btn{display:flex!important}
 }
+.mob-menu-btn{display:none;background:none;border:1px solid var(--bd);color:var(--tx3);padding:6px 10px;cursor:pointer;margin-left:auto;font-size:18px;line-height:1}
+#mob-menu{display:none;position:fixed;top:56px;left:0;right:0;background:var(--bg2);border-bottom:1px solid var(--bd);z-index:200;padding:8px 0}
+#mob-menu.open{display:block}
+.mob-nav-btn{display:block;width:100%;background:none;border:none;color:var(--tx3);padding:12px 24px;font-family:Barlow,sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;text-align:left;cursor:pointer;border-left:3px solid transparent}
+.mob-nav-btn:hover,.mob-nav-btn.active{color:var(--teal);border-left-color:var(--teal);background:rgba(14,165,201,.06)}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
@@ -175,7 +181,21 @@ a{color:var(--teal);text-decoration:none}
     <button class="nav-btn" onclick="showPage('eor')" style="color:#f97316">🛡 EOR</button>
     <button class="nav-btn" onclick="showPage('taxrules')">⚙ TAX RULES</button>
   </nav>
+  <button class="mob-menu-btn" onclick="toggleMobMenu()" id="mob-hamburger">☰</button>
   <div class="version" style="display:flex;flex-direction:column;align-items:center;line-height:1.4;padding:3px 10px"><span style="font-size:9px;font-weight:700;letter-spacing:2px">v2.2</span><span style="font-size:7px;opacity:.75">2026-03-29</span></div>
+</div>
+
+<!-- MOBILE MENU -->
+<div id="mob-menu">
+  <button class="mob-nav-btn" onclick="mobNav('ai')">✦ AI QUOTE</button>
+  <button class="mob-nav-btn" onclick="mobNav('quoter')">QUOTER</button>
+  <button class="mob-nav-btn" onclick="mobNav('regulatory')">REGULATORY</button>
+  <button class="mob-nav-btn" onclick="mobNav('cases')">CASE LIBRARY</button>
+  <button class="mob-nav-btn" onclick="mobNav('log')">📄 QUOTES</button>
+  <button class="mob-nav-btn" onclick="mobNav('shipments')">✈️ SHIPMENTS</button>
+  <button class="mob-nav-btn" onclick="mobNav('freechat')">💬 CHAT IA</button>
+  <button class="mob-nav-btn" onclick="mobNav('eor')">🛡 EOR</button>
+  <button class="mob-nav-btn" onclick="mobNav('taxrules')">⚙ TAX RULES</button>
 </div>
 
 <!-- ════════════════════════════════════════════════ -->
@@ -2522,6 +2542,26 @@ IMPORTANT: Never invent prices. Only return data you actually found in web searc
 }
 
 
+
+function toggleMobMenu(){
+  const m = document.getElementById('mob-menu');
+  const b = document.getElementById('mob-hamburger');
+  m.classList.toggle('open');
+  b.textContent = m.classList.contains('open') ? '✕' : '☰';
+}
+
+function mobNav(id){
+  showPage(id);
+  // Cerrar menú
+  document.getElementById('mob-menu').classList.remove('open');
+  document.getElementById('mob-hamburger').textContent = '☰';
+  // Marcar activo en menú mobile
+  document.querySelectorAll('.mob-nav-btn').forEach(b=>b.classList.remove('active'));
+  const pages = ['ai','quoter','regulatory','cases','log','shipments','freechat','eor','taxrules'];
+  const idx = pages.indexOf(id);
+  const btns = document.querySelectorAll('.mob-nav-btn');
+  if(btns[idx]) btns[idx].classList.add('active');
+}
 
 function showPage(id){
   document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
