@@ -2020,7 +2020,7 @@ function calcQuote(ct, fob, lbs, coo, fo, product, hs, type){
     const laptop=isLaptop(product,hs,type);
     const tx=laptop?bTaxLaptop(cif):bTax(cif);
     const txLines=laptop
-      ?[["II (16%)",tx.ii],["IPI (0% — NT Laptops)",tx.ip],["PIS (2.1%)",tx.ps],["COFINS (9.65%)",tx.co],["ICMS SP (18%)",tx.ic]]
+      ?[["II (16%)",tx.ii],["IPI (15%)",tx.ip],["PIS (2.1%)",tx.ps],["COFINS (9.65%)",tx.co],["ICMS SP (18%)",tx.ic]]
       :[["II (16%)",tx.ii],["IPI (15%)",tx.ip],["PIS (2.1%)",tx.ps],["COFINS (9.65%)",tx.co],["ICMS (18%)",tx.ic]];
     return{li:[["FOB Charges","1% / min $270",fc],["Freight (Air Miami→GRU)","$3.76/lb / min $350",fr],["Insurance","1% CIF / min $80",ins],["Destination Services","2% CIF / min $400",ds],["Import License (IOR)","2% CIF / min $860",ior]],
       tx:txLines,tt:tx.t,tot:fc+fr+ins+ds+ior+tx.t,cif,tr:"21 Days",isLaptop:laptop};
@@ -3046,7 +3046,7 @@ function doQuote(){
       ${flags.length?`<div style="margin-bottom:14px">${flags.map(f=>`<div class="flag ${flagColors[f.level]||"flag-blue"}">⚠ ${f.msg}</div>`).join("")}</div>`:""}
 
       <!-- Laptop Brazil flag -->
-      ${hasLaptop&&currentCtry==="brazil"?`<div class="flag flag-yellow" style="margin-bottom:14px">⚠ <strong>LAPTOP / HS 8471.30:</strong> II 16% vigente. IPI = 0% permanente (NT). Carga efectiva total ~55% CIF.</div>`:""}
+      ${hasLaptop&&currentCtry==="brazil"?`<div class="flag flag-yellow" style="margin-bottom:14px">⚠ <strong>LAPTOP / NCM 8471.30.12:</strong> II 16% + IPI 15% + PIS 2.1% + COFINS 9.65% + ICMS 18%. Carga efectiva total ~77% CIF. Confirmado broker Abr-2026.</div>`:""}
 
       <!-- DV Assessment -->
       ${dv&&!dv.noRecord?`<div class="flag ${flagColors[dv.level]||"flag-blue"}" style="margin-bottom:14px">📊 <strong>DECLARED VALUE:</strong> ${dv.msg}</div>`:dv?.noRecord?`<div class="flag flag-blue" style="margin-bottom:14px"><span>⚠ <strong>SIN REGISTROS EN BASE INTERNA</strong> — Sin datos de precio para este producto.</span> <button data-prod="${(product||allItems?.[0]?.product||'').replace(/"/g,' ')}" data-fob="${totalFob||fob}" data-qty="${allItems?.[0]?.quantity||1}" data-cid="dvweb-q" onclick="webCheckPrice(this.dataset.prod,+this.dataset.fob,+this.dataset.qty,this.dataset.cid)" style="background:none;border:1px solid var(--teal);color:var(--teal);padding:3px 10px;font-size:10px;font-family:Barlow,sans-serif;font-weight:700;cursor:pointer;margin-left:8px">🔍 VERIFICAR EN WEB</button><div id="dvweb-q"></div></div>`:""}
@@ -4211,7 +4211,7 @@ function runFromAI() {
       ${flags.length ? `<div style="margin-bottom:14px">${flags.map(f => `<div class="flag ${flagColors[f.level]||"flag-blue"}">⚠ ${f.msg}</div>`).join("")}</div>` : ""}
 
       <!-- Laptop Brazil flag -->
-      ${hasLaptop&&ctry==="brazil"?`<div class="flag flag-yellow" style="margin-bottom:14px">⚠ <strong>LAPTOP / HS 8471.30:</strong> II 16% vigente. IPI = 0% permanente (NT). Carga efectiva total ~55% CIF.</div>`:""}
+      ${hasLaptop&&ctry==="brazil"?`<div class="flag flag-yellow" style="margin-bottom:14px">⚠ <strong>LAPTOP / NCM 8471.30.12:</strong> II 16% + IPI 15% + PIS 2.1% + COFINS 9.65% + ICMS 18%. Carga efectiva total ~77% CIF. Confirmado broker Abr-2026.</div>`:""}
 
       <!-- DV Assessment -->
       ${dv&&!dv.noRecord?`<div class="flag ${flagColors[dv.level]||"flag-blue"}" style="margin-bottom:14px">📊 <strong>DECLARED VALUE:</strong> ${dv.msg}</div>`:dv?.noRecord?`<div class="flag flag-blue" style="margin-bottom:14px"><span>⚠ <strong>SIN REGISTROS EN BASE INTERNA</strong> — Sin datos de precio para este producto.</span> <button data-prod="${(d.items[0].product||'').replace(/"/g,' ')}" data-fob="${totalFob}" data-qty="${d.items[0].quantity||1}" data-cid="dvweb-ai" onclick="webCheckPrice(this.dataset.prod,+this.dataset.fob,+this.dataset.qty,this.dataset.cid)" style="background:none;border:1px solid var(--teal);color:var(--teal);padding:3px 10px;font-size:10px;font-family:Barlow,sans-serif;font-weight:700;cursor:pointer;margin-left:8px">🔍 VERIFICAR EN WEB</button><div id="dvweb-ai"></div></div>`:""}
