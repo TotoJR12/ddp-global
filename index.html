@@ -1266,7 +1266,7 @@ const HW_DB = [
   { id:"HW014", model:"HP EliteBook", mfr:"HP", type:"Laptop / Notebook",
     hsCode:"8471.30.00", newLow:600, newHigh:2500, refLow:200, refHigh:900,
     typicalDeclared:"$600–$2,500 new / $200–$900 refurb",
-    countries:{brazil:{accepted:true,notes:"No ANATEL. HS 8471.30. II 16%, IPI 0%."},colombia:{accepted:true,notes:"0% duties."}},
+    countries:{brazil:{accepted:true,notes:"No ANATEL. NCM 8471.30.12. II 16%, IPI 15% (confirmado broker Abr-2026)."},colombia:{accepted:true,notes:"0% duties."}},
     anatel:false, exportControl:false,
     notes:"HP EliteBook — business laptop line. Wide range depending on config (i5/i7, RAM, SSD). Base models $600–$900, high-end with i7/32GB/1TB up to $2,500." },
 
@@ -1294,7 +1294,7 @@ const HW_DB = [
   { id:"HW018", model:"Laptop", mfr:"Generic", type:"Laptop / Notebook",
     hsCode:"8471.30.00", newLow:300, newHigh:3500, refLow:100, refHigh:1200,
     typicalDeclared:"$300–$3,500 depending on brand/config",
-    countries:{brazil:{accepted:true,notes:"No ANATEL. HS 8471.30. II 16%, IPI 0%."},colombia:{accepted:true,notes:"0% duties."}},
+    countries:{brazil:{accepted:true,notes:"No ANATEL. NCM 8471.30.12. II 16%, IPI 15% (confirmado broker Abr-2026)."},colombia:{accepted:true,notes:"0% duties."}},
     anatel:false, exportControl:false,
     notes:"Generic laptop entry. Range covers consumer ($300–$800) to enterprise ($800–$3,500). Always specify brand and model on commercial invoice." },
 ];
@@ -1592,13 +1592,13 @@ function bTax(cif){
   const ic=(cif+ii+ip+ps+co)/(1-.18)*.18;
   return{ii,ip,ps,co,ic,t:ii+ip+ps+co+ic};
 }
-// LAPTOPS / HS 8471.30 — GECEX 852/2026 (vigente desde 01-Mar-2026)
-// II: 16% (tasa vigente — exencion GECEX eliminada Feb 2026)
-// IPI: 0% permanente (NT — Nao Tributado, Decreto TIPI 11.158/2022)
+// LAPTOPS / HS 8471.30 — NCM 8471.30.12 (Standard Laptops)
+// II: 16% (tasa vigente — confirmado por agente/broker Brasil, Abril 2026)
+// IPI: 15% (base: CIF + II — confirmado TEC oficial NCM 8471.30.12)
 // PIS: 2.1% | COFINS: 9.65% | ICMS SP: 18% por dentro
-// VERIFICAR ex-tarifario activo en SISCOMEX antes de cotizar (si activo -> II=0%)
+// Fuente: TEC oficial + broker confirmado Abril 2026
 function bTaxLaptop(cif){
-  const ii=cif*.16,ip=0,ps=(cif+ii)*.021,co=(cif+ii)*.0965;
+  const ii=cif*.16,ip=(cif+ii)*.15,ps=(cif+ii+ip)*.021,co=(cif+ii+ip)*.0965;
   const ic=(cif+ii+ip+ps+co)/(1-.18)*.18;
   return{ii,ip,ps,co,ic,t:ii+ip+ps+co+ic};
 }
@@ -1668,7 +1668,7 @@ function canTax(cif){const v=cif*.05;return{v,t:v};}
 const HS_RATES = {
   // HS 8471.30 = Laptops/Notebooks
   '8471.30': {
-    brazil:    { dutyPct:0.16,  ipi:0,    vatPct:null, note:'IPI=0% (NT). II 16% vigente' },
+    brazil:    { dutyPct:0.16,  ipi:0.15, vatPct:null, note:'IPI=15% (NCM 8471.30.12). II 16% vigente — confirmado broker Abr-2026' },
     mexico:    { dutyPct:0,     vatPct:0.16 },
     argentina: { dutyPct:0.08,  vatPct:0.105, note:'Laptops ARG: Derechos 8% + Est 3% + IVA 10.5% + Ganancias 6% + IIBB 2.5%' },
     colombia:  { dutyPct:0,     vatPct:0.19, note:'Laptops exentos de arancel en Colombia' },
@@ -1739,8 +1739,8 @@ function calcItemTax(ct, cifItem, product, hs, type){
     }
     const tx = lap ? bTaxLaptop(cifItem) : bTax(cifItem);
     return { t:tx.t, dutyPct: lap?0.072:0.16,
-             note: lap?'IPI=0% (NT Laptops)':null,
-             label: lap?'II 16% + IPI 0% + PIS/COFINS + ICMS (Laptop)':'II 16% + IPI 15% + PIS/COFINS + ICMS' };
+             note: null,
+             label: lap?'II 16% + IPI 15% + PIS/COFINS + ICMS (Laptop)':'II 16% + IPI 15% + PIS/COFINS + ICMS' };
   }
 
   // ── MEXICO ──────────────────────────────────────────────────────
