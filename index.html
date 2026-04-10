@@ -5387,14 +5387,15 @@ function showAdjustPanel(qn){
     '</div>'+
 
     '<button onclick="applyAdjustment(\''+qn+'\')" class="btn btn-primary" style="padding:10px 24px">🔄 RECALCULAR</button>'+
-    '<button onclick="resetAdjustment(\''+qn+'\')" class="btn btn-ghost" style="padding:10px 16px;margin-left:8px">RESTABLECER</button>'+
-    '<span style="font-size:10px;color:var(--tx5);margin-left:12px">Solo afecta esta cotización en pantalla</span>'+
+    '<button id="qconfirm-btn-'+qn+'" onclick="applyAdjustment(\''+qn+'\',true)" class="btn btn-ghost" style="padding:10px 18px;margin-left:8px;border-color:var(--green);color:var(--green)">✅ CONFIRMAR Y APLICAR AL PDF</button>'+
+    '<button onclick="resetAdjustment(\''+qn+'\')" class="btn btn-ghost" style="padding:10px 14px;margin-left:8px">↩ RESTABLECER</button>'+
+    '<div style="font-size:10px;color:var(--tx5);margin-top:8px">⚠ Tocá <strong style="color:var(--green)">CONFIRMAR</strong> para que los cambios se reflejen en el PDF descargado.</div>'+
     '</div>';
 
   el.style.display = 'block';
 }
 
-function applyAdjustment(qn){
+function applyAdjustment(qn, confirm){
   const p = window._qparams[qn];
   if(!p) return;
   const get = id => parseFloat(document.getElementById('qp-'+id+'-'+qn)?.value)||0;
@@ -5419,7 +5420,7 @@ function applyAdjustment(qn){
   const ds  = Math.max(cif*dsPct, dsMin);
   const ior = Math.max(cif*iorPct, iorMin);
 
-  // Actualizar líneas de servicio
+  // Actualizar líneas de servicio en pantalla
   [fc, fr, ins, ds, ior].forEach((v,i)=>{
     const el = document.getElementById('qdisp-svc-'+qn+'-'+i);
     if(el) el.textContent = '$'+fmt(v);
@@ -5428,59 +5429,62 @@ function applyAdjustment(qn){
   // Recalcular impuestos en cascada según país
   let newTaxLines = [], taxTotal = 0;
   if(ctry==='brazil'){
-    const ii   = getTax('tax-ii')??16;
-    const ipi  = getTax('tax-ipi')??15;
-    const pis  = getTax('tax-pis')??2.1;
-    const cof  = getTax('tax-cof')??9.65;
-    const icms = getTax('tax-icms')??18;
-    const vii  = cif*(ii/100);
-    const vipi = (cif+vii)*(ipi/100);
-    const vpis = (cif+vii+vipi)*(pis/100);
-    const vcof = (cif+vii+vipi)*(cof/100);
-    const base_icms = cif+vii+vipi+vpis+vcof;
-    const vicms = base_icms/(1-(icms/100))*(icms/100);
+    const ii=getTax('tax-ii')??16, ipi=getTax('tax-ipi')??15;
+    const pis=getTax('tax-pis')??2.1, cof=getTax('tax-cof')??9.65, icms=getTax('tax-icms')??18;
+    const vii=cif*(ii/100), vipi=(cif+vii)*(ipi/100);
+    const vpis=(cif+vii+vipi)*(pis/100), vcof=(cif+vii+vipi)*(cof/100);
+    const vicms=(cif+vii+vipi+vpis+vcof)/(1-(icms/100))*(icms/100);
     newTaxLines=[['II ('+ii+'%)',vii],['IPI ('+ipi+'%)',vipi],['PIS ('+pis+'%)',vpis],['COFINS ('+cof+'%)',vcof],['ICMS ('+icms+'%)',vicms]];
     taxTotal=vii+vipi+vpis+vcof+vicms;
   } else if(ctry==='mexico'){
-    const dta = getTax('tax-dta')??0.93;
-    const iva = getTax('tax-iva')??16;
-    const vdta = cif*(dta/100);
-    const viva = (cif+vdta)*(iva/100);
+    const dta=getTax('tax-dta')??0.93, iva=getTax('tax-iva')??16;
+    const vdta=cif*(dta/100), viva=(cif+vdta)*(iva/100);
     newTaxLines=[['DTA ('+dta+'%)',vdta],['IVA ('+iva+'%)',viva]];
     taxTotal=vdta+viva;
   } else if(ctry==='argentina'){
-    const der  = getTax('tax-der')??16;
-    const est  = getTax('tax-est')??2.5;
-    const iva  = getTax('tax-iva')??21;
-    const gan  = getTax('tax-gan')??6;
-    const iibb = getTax('tax-iibb')??3;
-    const ivad = getTax('tax-ivad')??10;
+    const der=getTax('tax-der')??16, est=getTax('tax-est')??2.5;
+    const iva=getTax('tax-iva')??21, gan=getTax('tax-gan')??6;
+    const iibb=getTax('tax-iibb')??3, ivad=getTax('tax-ivad')??10;
     const vder=cif*(der/100),vest=cif*(est/100),base=cif+vder+vest;
     const viva=base*(iva/100),vgan=base*(gan/100),viibb=base*(iibb/100),vivad=base*(ivad/100);
     newTaxLines=[['Derechos ('+der+'%)',vder],['Estadística ('+est+'%)',vest],['IVA ('+iva+'%)',viva],['Ganancias ('+gan+'%)',vgan],['IIBB ('+iibb+'%)',viibb],['IVA Ad ('+ivad+'%)',vivad]];
     taxTotal=vder+vest+viva+vgan+viibb+vivad;
   } else if(ctry==='colombia'||ctry==='chile'){
-    const dut = getTax('tax-dut')??5;
-    const vat = getTax('tax-vat')??19;
+    const dut=getTax('tax-dut')??5, vat=getTax('tax-vat')??19;
     const vdut=cif*(dut/100), vvat=(cif+vdut)*(vat/100);
     newTaxLines=[['Duties ('+dut+'%)',vdut],['VAT ('+vat+'%)',vvat]];
     taxTotal=vdut+vvat;
   } else {
-    // Usar taxlines originales sin cambio
     taxTotal = p.taxTotal;
     newTaxLines = (p.taxLines||[]).map(t=>[t.l, t.v]);
   }
 
-  // Actualizar displays de impuestos
+  // Actualizar displays de impuestos en pantalla
   newTaxLines.forEach(([l,v],i)=>{
     const el = document.getElementById('qdisp-tax-'+qn+'-'+i);
     if(el) el.textContent = '$'+fmt(v);
   });
 
-  // Actualizar total
   const grandTotal = fc+fr+ins+ds+ior + taxTotal;
   const tel = document.getElementById('qtotal-'+qn);
   if(tel) tel.textContent = '$'+fmt(grandTotal);
+
+  // Si confirma → actualizar activeQuoteData para que el PDF tome los nuevos valores
+  if(confirm && activeQuoteData){
+    const svcLabels = activeQuoteData.lines ? activeQuoteData.lines.map(([l,b])=>[l,b]) : [];
+    const newLines = [fc,fr,ins,ds,ior].map((v,i)=>{
+      const lb = svcLabels[i]||['',''];
+      return [lb[0], lb[1], v];
+    });
+    activeQuoteData.lines  = newLines;
+    activeQuoteData.taxes  = newTaxLines;
+    activeQuoteData.tot    = grandTotal;
+
+    // Visual feedback
+    const btn = document.getElementById('qconfirm-btn-'+qn);
+    if(btn){ btn.textContent='✓ AJUSTE CONFIRMADO — PDF ACTUALIZADO'; btn.style.background='var(--green)'; btn.style.color='#fff';
+      setTimeout(()=>{ btn.textContent='✅ CONFIRMAR Y APLICAR AL PDF'; btn.style.background=''; btn.style.color=''; },3000); }
+  }
 }
 
 function resetAdjustment(qn){
