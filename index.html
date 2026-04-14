@@ -7180,22 +7180,76 @@ async function prCallClaude(system, userMsg, useSearch) {
   var PROXY = "https://ddp-proxy.nicolasjuarezroldan.workers.dev";
   var body = { model:"claude-sonnet-4-5", max_tokens:2000, system:system, messages:[{role:"user",content:userMsg}] };
   if (useSearch) body.tools = [{type:"web_search_20250305",name:"web_search"}];
+
   var r = await fetch(PROXY, {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
   var d = await r.json();
-  if (d.stop_reason === "tool_use" && useSearch) {
-    var tr = (d.content||[]).filter(function(b){return b.type==="tool_use";}).map(function(b){return {type:"tool_result",tool_use_id:b.id,content:""};});
-    var msgs2 = [{role:"user",content:userMsg},{role:"assistant",content:d.content}];
-    if (tr.length) msgs2.push({role:"user",content:tr});
-    var r2 = await fetch(PROXY, {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:body.model,max_tokens:body.max_tokens,system:system,tools:body.tools,messages:msgs2})});
-    var d2 = await r2.json();
-    var t2=""; for(var i=0;i<(d2.content||[]).length;i++) if(d2.content[i].type==="text") t2+=d2.content[i].text;
-    var c2=t2.replace(/```json|```/g,"").trim(); var s2=c2.indexOf("{"),e2=c2.lastIndexOf("}");
-    if(s2!==-1) return JSON.parse(c2.slice(s2,e2+1));
+
+  // Helper: extract text + try to parse JSON from any API response
+  function extractJson(resp) {
+    var text = "";
+    var blocks = resp.content || [];
+    for (var i = 0; i < blocks.length; i++) {
+      if (blocks[i].type === "text") text += blocks[i].text;
+    }
+    var clean = text.replace(/```json|```/g, "").trim();
+    var s = clean.indexOf("{"), e = clean.lastIndexOf("}");
+    if (s !== -1) return JSON.parse(clean.slice(s, e + 1));
+    return null;
   }
-  var t=""; for(var j=0;j<(d.content||[]).length;j++) if(d.content[j].type==="text") t+=d.content[j].text;
-  var c=t.replace(/```json|```/g,"").trim(); var s=c.indexOf("{"),e=c.lastIndexOf("}");
-  if(s===-1) throw new Error("No JSON - intenta de nuevo");
-  return JSON.parse(c.slice(s,e+1));
+
+  // If proxy handled web search and returned final answer directly (end_turn)
+  if (d.stop_reason === "end_turn") {
+    var result = extractJson(d);
+    if (result) return result;
+    throw new Error("No JSON en respuesta - intenta de nuevo");
+  }
+
+  // If stop_reason is tool_use, proxy needs us to handle the multi-turn
+  if (d.stop_reason === "tool_use" && useSearch) {
+    // Build tool results — proxy web search fills content automatically
+    var toolResults = (d.content || [])
+      .filter(function(b) { return b.type === "tool_use"; })
+      .map(function(b) { return { type: "tool_result", tool_use_id: b.id, content: "Search completed." }; });
+
+    var msgs2 = [
+      { role: "user", content: userMsg },
+      { role: "assistant", content: d.content }
+    ];
+    if (toolResults.length) msgs2.push({ role: "user", content: toolResults });
+
+    var r2 = await fetch(PROXY, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model: body.model, max_tokens: body.max_tokens, system: system, tools: body.tools, messages: msgs2 })
+    });
+    var d2 = await r2.json();
+    var result2 = extractJson(d2);
+    if (result2) return result2;
+
+    // If still tool_use, do one more round
+    if (d2.stop_reason === "tool_use") {
+      var tr2 = (d2.content || [])
+        .filter(function(b) { return b.type === "tool_use"; })
+        .map(function(b) { return { type: "tool_result", tool_use_id: b.id, content: "Search completed." }; });
+      var msgs3 = msgs2.concat([{ role: "assistant", content: d2.content }]);
+      if (tr2.length) msgs3.push({ role: "user", content: tr2 });
+      var r3 = await fetch(PROXY, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model: body.model, max_tokens: body.max_tokens, system: system, tools: body.tools, messages: msgs3 })
+      });
+      var d3 = await r3.json();
+      var result3 = extractJson(d3);
+      if (result3) return result3;
+    }
+
+    throw new Error("No JSON en respuesta - intenta de nuevo");
+  }
+
+  // Fallback: try to extract from whatever we got
+  var fallback = extractJson(d);
+  if (fallback) return fallback;
+  throw new Error("No JSON en respuesta - intenta de nuevo");
 }
 
 async function prRunResearch() {
