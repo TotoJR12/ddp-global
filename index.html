@@ -1096,21 +1096,19 @@ Please advise on DDP cost and transit time. Thanks"></textarea>
 </div>
 
 
-<!-- ════════════════════════════════════════════════ -->
-<!-- PAGE: PROSPECTS                                  -->
-<!-- ════════════════════════════════════════════════ -->
+<!-- PAGE: PROSPECTS -->
 <div class="page" id="page-prospects">
   <div class="page-title" style="display:flex;align-items:center;gap:10px">
-    <span style="color:#a855f7">🎯</span> PROSPECT INTELLIGENCE
+    <span style="color:#a855f7">&#127919;</span> PROSPECT INTELLIGENCE
   </div>
-  <div class="page-sub">Investigá empresas target, detectá señales de compra, encontrá contactos y generá mails. CRM con historial y alertas de follow-up.</div>
+  <div class="page-sub">Investiga empresas target, detecta senales, encuentra contactos y genera mails. CRM con historial y alertas de follow-up.</div>
   <div style="display:flex;gap:6px;margin-bottom:20px;flex-wrap:wrap;align-items:center">
     <button class="pr-filter-btn active" onclick="prSetView('home')" id="pr-nav-home">HOME</button>
     <button class="pr-filter-btn" onclick="prSetView('research')" id="pr-nav-research">+ INVESTIGAR</button>
     <button class="pr-filter-btn" onclick="prSetView('crm')" id="pr-nav-crm">CRM (<span id="pr-crm-count">0</span>)</button>
     <div style="margin-left:auto;display:flex;border:1px solid var(--bd);overflow:hidden">
-      <button onclick="prSetLang('en')" id="pr-lang-en" style="background:var(--teal);color:#fff;border:none;padding:4px 10px;font-size:9px;font-weight:700;cursor:pointer;font-family:'DM Mono',monospace">EN</button>
-      <button onclick="prSetLang('es')" id="pr-lang-es" style="background:transparent;color:var(--tx4);border:none;padding:4px 10px;font-size:9px;font-weight:700;cursor:pointer;font-family:'DM Mono',monospace">ES</button>
+      <button onclick="prSetLang('en')" id="pr-lang-en" style="background:var(--teal);color:#fff;border:none;padding:4px 10px;font-size:9px;font-weight:700;cursor:pointer">EN</button>
+      <button onclick="prSetLang('es')" id="pr-lang-es" style="background:transparent;color:var(--tx4);border:none;padding:4px 10px;font-size:9px;font-weight:700;cursor:pointer">ES</button>
     </div>
   </div>
   <div id="pr-home"></div>
@@ -7115,419 +7113,675 @@ function downloadQuotePDF() {
 }
 
 
-// ════════════════════════════════════════════════════════
-// PROSPECT INTELLIGENCE MODULE
-// ════════════════════════════════════════════════════════
-const PR_STORAGE_KEY = "ddp_prospects_v2";
-const PR_STATUS_CONFIG = {
-  "Investigado":    { color:"#0ea5c9", icon:"🔍" },
-  "Mail enviado":   { color:"#f0a030", icon:"📤" },
-  "Respondió":      { color:"#34c77a", icon:"💬" },
-  "En negociación": { color:"#f07840", icon:"🤝" },
-  "Cliente":        { color:"#a855f7", icon:"⭐" },
-  "Descartado":     { color:"#f06060", icon:"✗"  },
-};
-const PR_SUGGESTS = ["Bulk Infrastructure Norway","Connection PC USA","Onnec Group UK","IT resellers LATAM data center","System integrators UK infrastructure","Data center operators Brazil"];
 
-let prProspects = [];
-let prView = "home";
-let prLang = "en";
-let prSelectedId = null;
-let prResearchResult = null;
-let prContactResult = null;
-let prMailDraft = null;
-let prResearchLoading = false;
-let prContactLoading = false;
-let prMailLoading = false;
-let prFilterStatus = "Todos";
-let prResearchInput = "";
+// ════════════════════════════════════════
+// PROSPECT INTELLIGENCE MODULE
+// ════════════════════════════════════════
+var PR_SK = "ddp_prospects_v2";
+var PR_SC = {
+  "Investigado":    { color:"#0ea5c9", icon:"&#128269;" },
+  "Mail enviado":   { color:"#f0a030", icon:"&#128228;" },
+  "Respodio":      { color:"#34c77a", icon:"&#128172;" },
+  "En negociacion": { color:"#f07840", icon:"&#129309;" },
+  "Cliente":        { color:"#a855f7", icon:"&#11088;" },
+  "Descartado":     { color:"#f06060", icon:"&#10005;"  }
+};
+var PR_STATUS_LABELS = ["Investigado","Mail enviado","Respodio","En negociacion","Cliente","Descartado"];
+var PR_ACTIVITY_TYPES = ["Mail","Llamada","LinkedIn","Nota","Follow Up"];
+var PR_SUGGESTS = [
+  "Bulk Infrastructure Norway",
+  "Connection PC USA",
+  "Onnec Group UK",
+  "IT resellers LATAM data center",
+  "System integrators UK infrastructure",
+  "Data center operators Brazil"
+];
+
+var prProspects = [];
+var prView = "home";
+var prLang = "en";
+var prSelectedId = null;
+var prResearchResult = null;
+var prContactResult = null;
+var prMailDraft = null;
+var prResearchLoading = false;
+var prContactLoading = false;
+var prMailLoading = false;
+var prFilterStatus = "Todos";
+var prResearchInput = "";
 
 function prSave() {
-  try { localStorage.setItem(PR_STORAGE_KEY, JSON.stringify(prProspects)); } catch(_) {}
-  const el = document.getElementById("pr-crm-count");
+  try { localStorage.setItem(PR_SK, JSON.stringify(prProspects)); } catch(e) {}
+  var el = document.getElementById("pr-crm-count");
   if (el) el.textContent = prProspects.length;
 }
 
 function prGetAlert(p) {
   if (p.status !== "Mail enviado") return null;
-  const acts = p.activity || [];
-  const lastDate = acts.length ? new Date(acts[acts.length-1].date) : new Date(p.updatedAt);
-  const days = Math.floor((Date.now() - lastDate) / 86400000);
-  if (days >= 10) return { level:"urgent", color:"var(--red)",    label:days+"d sin respuesta \u2014 FOLLOW UP URGENTE" };
-  if (days >= 5)  return { level:"warn",   color:"var(--yellow)", label:days+"d sin actividad \u2014 considerá hacer follow up" };
+  var acts = p.activity || [];
+  var lastDate = acts.length ? new Date(acts[acts.length-1].date) : new Date(p.updatedAt);
+  var days = Math.floor((Date.now() - lastDate) / 86400000);
+  if (days >= 10) return { level:"urgent", color:"var(--red)",    label: days + "d sin respuesta - FOLLOW UP URGENTE" };
+  if (days >= 5)  return { level:"warn",   color:"var(--yellow)", label: days + "d sin actividad - considera hacer follow up" };
   return null;
 }
-function prPriColor(p) { return p==="High"?"var(--red)":p==="Medium"?"var(--yellow)":"var(--tx4)"; }
+
+function prPriColor(p) {
+  if (p === "High") return "var(--red)";
+  if (p === "Medium") return "var(--yellow)";
+  return "var(--tx4)";
+}
+
+function prEsc(s) { return (s || "").replace(/'/g, "\\'").replace(/"/g, "&quot;"); }
+function prEscHtml(s) { return (s || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
 
 async function prCallClaude(system, userMsg, useSearch) {
   if (useSearch === undefined) useSearch = true;
-  const PROXY = "https://ddp-proxy.nicolasjuarezroldan.workers.dev";
-  const body = { model:"claude-sonnet-4-5", max_tokens:2000, system:system, messages:[{role:"user",content:userMsg}] };
-  if (useSearch) body.tools = [{type:"web_search_20250305",name:"web_search"}];
-  const r = await fetch(PROXY, {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
-  const d = await r.json();
+  var PROXY = "https://ddp-proxy.nicolasjuarezroldan.workers.dev";
+  var body = {
+    model: "claude-sonnet-4-5",
+    max_tokens: 2000,
+    system: system,
+    messages: [{ role: "user", content: userMsg }]
+  };
+  if (useSearch) body.tools = [{ type: "web_search_20250305", name: "web_search" }];
+
+  var r = await fetch(PROXY, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+  var d = await r.json();
+
   if (d.stop_reason === "tool_use" && useSearch) {
-    const tr = (d.content||[]).filter(function(b){return b.type==="tool_use";}).map(function(b){return {type:"tool_result",tool_use_id:b.id,content:""};});
-    const r2 = await fetch(PROXY, {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
-      ...body, messages:[{role:"user",content:userMsg},{role:"assistant",content:d.content},...(tr.length?[{role:"user",content:tr}]:[])]
-    })});
-    const d2 = await r2.json();
-    let t2=""; for(const b of d2.content||[]) if(b.type==="text") t2+=b.text;
-    const c2=t2.replace(/```json|```/g,"").trim(); const s2=c2.indexOf("{"),e2=c2.lastIndexOf("}");
-    if(s2!==-1) return JSON.parse(c2.slice(s2,e2+1));
+    var tr = (d.content || [])
+      .filter(function(b) { return b.type === "tool_use"; })
+      .map(function(b) { return { type: "tool_result", tool_use_id: b.id, content: "" }; });
+    var msgs2 = [
+      { role: "user", content: userMsg },
+      { role: "assistant", content: d.content }
+    ];
+    if (tr.length) msgs2.push({ role: "user", content: tr });
+    var r2 = await fetch(PROXY, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model: body.model, max_tokens: body.max_tokens, system: system, tools: body.tools, messages: msgs2 })
+    });
+    var d2 = await r2.json();
+    var t2 = "";
+    for (var i = 0; i < (d2.content || []).length; i++) {
+      if (d2.content[i].type === "text") t2 += d2.content[i].text;
+    }
+    var c2 = t2.replace(/```json|```/g, "").trim();
+    var s2 = c2.indexOf("{"), e2 = c2.lastIndexOf("}");
+    if (s2 !== -1) return JSON.parse(c2.slice(s2, e2 + 1));
   }
-  let t=""; for(const b of d.content||[]) if(b.type==="text") t+=b.text;
-  const c=t.replace(/```json|```/g,"").trim(); const s=c.indexOf("{"),e=c.lastIndexOf("}");
-  if(s===-1) throw new Error("No JSON — intentá de nuevo");
-  return JSON.parse(c.slice(s,e+1));
+
+  var t = "";
+  for (var j = 0; j < (d.content || []).length; j++) {
+    if (d.content[j].type === "text") t += d.content[j].text;
+  }
+  var c = t.replace(/```json|```/g, "").trim();
+  var s = c.indexOf("{"), e = c.lastIndexOf("}");
+  if (s === -1) throw new Error("No JSON - intenta de nuevo");
+  return JSON.parse(c.slice(s, e + 1));
 }
 
 async function prRunResearch() {
-  const inp = document.getElementById("pr-research-input");
+  var inp = document.getElementById("pr-research-input");
   if (!inp) return;
   prResearchInput = inp.value.trim();
   if (!prResearchInput) return;
   prResearchResult = null; prContactResult = null; prMailDraft = null;
-  prResearchLoading = true; prRenderResearch();
+  prResearchLoading = true;
+  prRenderResearch();
+
+  var langNote = prLang === "es"
+    ? "Write ALL text fields in Spanish except company names and proper nouns."
+    : "Write all text fields in English.";
+
+  var sys = "You are a B2B sales intelligence agent for DDP Global LLC, a Miami-based U.S. EOR/IOR company specialized in Data Center & AI Infrastructure Logistics. DDP Global handles door-to-door international shipments with full customs clearance across Europe, Nordics, LATAM, and other regions.\n"
+    + langNote
+    + "\nReturn ONLY valid JSON:\n"
+    + '{"companyName":"string","industry":"string (Data Center Operator|IT Reseller/VAR|System Integrator|Hyperscaler|Other)","headquarters":"string","regions":["string"],"signals":[{"type":"Expansion|Job Posting|Funding|Pain Point|News","description":"string","relevance":"High|Medium|Low"}],"suggestedContact":{"title":"string","why":"string"},"ddpAngle":"string","mailHook":"string","priority":"High|Medium|Low","priorityReason":"string"}';
+
   try {
-    prResearchResult = await prCallClaude(
-      "You are a B2B sales intelligence agent for DDP Global LLC, a Miami-based U.S. EOR/IOR company specialized in Data Center & AI Infrastructure Logistics. DDP Global handles door-to-door international shipments with full customs clearance across Europe, Nordics, LATAM, and other regions.\n"+(prLang==="es"?"Write ALL text fields in Spanish except company names and proper nouns.":"Write all text fields in English.")+"\nReturn ONLY valid JSON:\n{\"companyName\":\"string\",\"industry\":\"string (Data Center Operator|IT Reseller/VAR|System Integrator|Hyperscaler|Other)\",\"headquarters\":\"string\",\"regions\":[\"string\"],\"signals\":[{\"type\":\"Expansion|Job Posting|Funding|Pain Point|News\",\"description\":\"string\",\"relevance\":\"High|Medium|Low\"}],\"suggestedContact\":{\"title\":\"string\",\"why\":\"string\"},\"ddpAngle\":\"string\",\"mailHook\":\"string\",\"priority\":\"High|Medium|Low\",\"priorityReason\":\"string\"}",
-      "Research for DDP Global prospecting: "+prResearchInput
-    );
-  } catch(err) { prResearchResult = {error:err.message}; }
-  prResearchLoading = false; prRenderResearch();
+    prResearchResult = await prCallClaude(sys, "Research for DDP Global prospecting: " + prResearchInput);
+  } catch(err) {
+    prResearchResult = { error: err.message };
+  }
+  prResearchLoading = false;
+  prRenderResearch();
 }
 
 async function prFindContact(company, contactTitle, isDetail) {
   prContactResult = null; prContactLoading = true;
-  if(isDetail) prRenderDetail(); else prRenderResearch();
+  if (isDetail) prRenderDetail(); else prRenderResearch();
+
+  var sys = "You are an expert B2B contact finder. Search exhaustively for the real name of a specific executive.\n"
+    + "Try: (1) \"[company] [title] site:linkedin.com\" (2) \"[company] leadership team site\" (3) \"[company] [title] DatacenterDynamics\" (4) \"[company] [title] speaker conference\"\n"
+    + "Return ONLY valid JSON:\n"
+    + '{"found":true,"name":"string or null","title":"string or null","linkedinUrl":"string or null","emailPattern":"string or null","source":"string","confidence":"High|Medium|Low","alternativeContacts":[{"name":"string","title":"string","linkedinUrl":"string or null"}],"actionPlan":{"googleSearch":"exact search string","linkedinSearch":"LinkedIn URL","suggestedSites":["string"],"tip":"string"}}';
+
   try {
-    prContactResult = await prCallClaude(
-      "You are an expert B2B contact finder. Search exhaustively for the real name of a specific executive.\nTry: (1) \"[company] [title] site:linkedin.com\" (2) \"[company] leadership team site\" (3) \"[company] [title] DatacenterDynamics\" (4) \"[company] [title] speaker conference\"\nReturn ONLY valid JSON:\n{\"found\":true,\"name\":\"string or null\",\"title\":\"string or null\",\"linkedinUrl\":\"string or null\",\"emailPattern\":\"string or null\",\"source\":\"string\",\"confidence\":\"High|Medium|Low\",\"alternativeContacts\":[{\"name\":\"string\",\"title\":\"string\",\"linkedinUrl\":\"string or null\"}],\"actionPlan\":{\"googleSearch\":\"exact search string\",\"linkedinSearch\":\"LinkedIn URL\",\"suggestedSites\":[\"string\"],\"tip\":\"string\"}}",
-      "Find \""+contactTitle+"\" at \""+company+"\". Search exhaustively."
-    );
-  } catch(err) { prContactResult = {found:false,error:err.message}; }
+    prContactResult = await prCallClaude(sys, "Find \"" + contactTitle + "\" at \"" + company + "\". Search exhaustively.");
+  } catch(err) {
+    prContactResult = { found: false, error: err.message };
+  }
   prContactLoading = false;
-  if(isDetail) prRenderDetail(); else prRenderResearch();
+  if (isDetail) prRenderDetail(); else prRenderResearch();
 }
 
 async function prGenerateMail(prospect, contactName, isDetail) {
   prMailDraft = null; prMailLoading = true;
-  if(isDetail) prRenderDetail(); else prRenderResearch();
+  if (isDetail) prRenderDetail(); else prRenderResearch();
+
+  var signals = (prospect.signals || []).map(function(s) { return s.description; }).join("; ");
+  var contactTitle = (prospect.suggestedContact && prospect.suggestedContact.title) ? prospect.suggestedContact.title : "unknown";
+
+  var sys = "You are a B2B cold email writer for Nicolas Juarez Roldan, Founder & Managing Director of DDP Global LLC, a Miami-based U.S. EOR/IOR specialized in Data Center & AI Infrastructure Logistics.\n"
+    + "STRICT RULES: No bullet points. No em-dashes. No filler openers. Short paragraphs (3-4 max). Sharp and human. Subject format: \"Service Description | Company Name\". Signature: Nicolas Juarez Roldan | Founder & Managing Director | DDP Global LLC | ddp-global.com\n"
+    + "Return ONLY valid JSON:\n"
+    + '{"subject":"string","body":"string (use \\n for line breaks)","followUpSubject":"string","followUpBody":"string (2-3 sentences max)"}';
+
+  var userMsg = "Write cold email for:\nCompany: " + (prospect.companyName || "")
+    + "\nContact title: " + contactTitle
+    + "\nContact name: " + (contactName || "unknown, use title only")
+    + "\nDDP angle: " + (prospect.ddpAngle || "")
+    + "\nHook: " + (prospect.mailHook || "")
+    + "\nSignals: " + signals;
+
   try {
-    prMailDraft = await prCallClaude(
-      "You are a B2B cold email writer for Nicolás Juárez Roldán, Founder & Managing Director of DDP Global LLC, a Miami-based U.S. EOR/IOR specialized in Data Center & AI Infrastructure Logistics.\nSTRICT RULES: No bullet points. No em-dashes. No filler openers. Short paragraphs (3-4 max). Sharp and human. Subject format: \"Service Description | Company Name\". Signature: Nicolás Juárez Roldán | Founder & Managing Director | DDP Global LLC | ddp-global.com\nReturn ONLY valid JSON:\n{\"subject\":\"string\",\"body\":\"string (use \\n for line breaks)\",\"followUpSubject\":\"string\",\"followUpBody\":\"string (2-3 sentences max)\"}",
-      "Write cold email for:\nCompany: "+(prospect.companyName||"")+"\nContact title: "+((prospect.suggestedContact&&prospect.suggestedContact.title)||"unknown")+"\nContact name: "+(contactName||"unknown, use title only")+"\nDDP angle: "+(prospect.ddpAngle||"")+"\nHook: "+(prospect.mailHook||"")+"\nSignals: "+((prospect.signals||[]).map(function(s){return s.description;}).join("; ")),
-      false
-    );
-  } catch(err) { prMailDraft = {error:err.message}; }
+    prMailDraft = await prCallClaude(sys, userMsg, false);
+  } catch(err) {
+    prMailDraft = { error: err.message };
+  }
   prMailLoading = false;
-  if(isDetail) prRenderDetail(); else prRenderResearch();
+  if (isDetail) prRenderDetail(); else prRenderResearch();
 }
 
 function prSaveProspect() {
   if (!prResearchResult || prResearchResult.error) return;
-  const newP = Object.assign({}, prResearchResult, {
+  var newP = {
     id: Date.now(),
-    savedContact: prContactResult&&prContactResult.found ? prContactResult : null,
-    status:"Investigado", notes:"",
-    activity:[{date:new Date().toISOString(),type:"Research",note:"Prospecto investigado y agregado al CRM"}],
-    createdAt:new Date().toISOString(), updatedAt:new Date().toISOString()
-  });
+    companyName: prResearchResult.companyName,
+    industry: prResearchResult.industry,
+    headquarters: prResearchResult.headquarters,
+    regions: prResearchResult.regions,
+    signals: prResearchResult.signals,
+    suggestedContact: prResearchResult.suggestedContact,
+    ddpAngle: prResearchResult.ddpAngle,
+    mailHook: prResearchResult.mailHook,
+    priority: prResearchResult.priority,
+    priorityReason: prResearchResult.priorityReason,
+    savedContact: (prContactResult && prContactResult.found) ? prContactResult : null,
+    status: "Investigado",
+    notes: "",
+    activity: [{ date: new Date().toISOString(), type: "Research", note: "Prospecto investigado y agregado al CRM" }],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
   prProspects = [newP].concat(prProspects);
   prSave();
-  const btn = document.getElementById("pr-save-btn");
-  if (btn) { btn.textContent="✓ GUARDADO"; setTimeout(function(){btn.textContent="GUARDAR EN CRM →";},2500); }
+  var btn = document.getElementById("pr-save-btn");
+  if (btn) {
+    btn.textContent = "GUARDADO EN CRM";
+    setTimeout(function() { btn.textContent = "GUARDAR EN CRM"; }, 2500);
+  }
 }
 
 function prUpdateStatus(id, status) {
-  prProspects = prProspects.map(function(p) {
-    if (p.id !== id) return p;
-    return Object.assign({},p,{status:status,activity:(p.activity||[]).concat([{date:new Date().toISOString(),type:"Estado",note:"Estado cambiado a: "+status}]),updatedAt:new Date().toISOString()});
-  });
-  prSave(); prRenderDetail();
+  for (var i = 0; i < prProspects.length; i++) {
+    if (prProspects[i].id === id) {
+      prProspects[i].status = status;
+      prProspects[i].activity = (prProspects[i].activity || []).concat([{
+        date: new Date().toISOString(), type: "Estado", note: "Estado cambiado a: " + status
+      }]);
+      prProspects[i].updatedAt = new Date().toISOString();
+      break;
+    }
+  }
+  prSave();
+  prRenderDetail();
 }
 
 function prAddActivity(id, type) {
-  const inp = document.getElementById("pr-activity-input");
+  var inp = document.getElementById("pr-activity-input");
   if (!inp || !inp.value.trim()) return;
-  const note = inp.value.trim();
-  prProspects = prProspects.map(function(p) {
-    if (p.id !== id) return p;
-    return Object.assign({},p,{activity:(p.activity||[]).concat([{date:new Date().toISOString(),type:type,note:note}]),updatedAt:new Date().toISOString()});
-  });
-  prSave(); inp.value=""; prRenderDetail();
+  var note = inp.value.trim();
+  for (var i = 0; i < prProspects.length; i++) {
+    if (prProspects[i].id === id) {
+      prProspects[i].activity = (prProspects[i].activity || []).concat([{
+        date: new Date().toISOString(), type: type, note: note
+      }]);
+      prProspects[i].updatedAt = new Date().toISOString();
+      break;
+    }
+  }
+  prSave();
+  inp.value = "";
+  prRenderDetail();
 }
 
 function prSaveNote(id) {
-  const inp = document.getElementById("pr-note-input");
+  var inp = document.getElementById("pr-note-input");
   if (!inp) return;
-  prProspects = prProspects.map(function(p){ return p.id!==id?p:Object.assign({},p,{notes:inp.value,updatedAt:new Date().toISOString()}); });
+  for (var i = 0; i < prProspects.length; i++) {
+    if (prProspects[i].id === id) {
+      prProspects[i].notes = inp.value;
+      prProspects[i].updatedAt = new Date().toISOString();
+      break;
+    }
+  }
   prSave();
-  const btn=document.getElementById("pr-note-save-btn");
-  if(btn){btn.textContent="✓ GUARDADA";setTimeout(function(){btn.textContent="GUARDAR NOTA";},2000);}
+  var btn = document.getElementById("pr-note-save-btn");
+  if (btn) { btn.textContent = "GUARDADA"; setTimeout(function() { btn.textContent = "GUARDAR NOTA"; }, 2000); }
 }
 
 function prDeleteProspect(id) {
-  if (!confirm("¿Eliminar este prospecto?")) return;
-  prProspects = prProspects.filter(function(p){return p.id!==id;});
-  prSave(); prSetView("crm");
+  if (!confirm("Eliminar este prospecto?")) return;
+  prProspects = prProspects.filter(function(p) { return p.id !== id; });
+  prSave();
+  prSetView("crm");
 }
 
 function prCopyText(text, btnId) {
-  navigator.clipboard.writeText(text).then(function(){
-    const btn=document.getElementById(btnId);
-    if(btn){const o=btn.textContent;btn.textContent="✓ COPIADO";setTimeout(function(){btn.textContent=o;},2000);}
+  navigator.clipboard.writeText(text).then(function() {
+    var btn = document.getElementById(btnId);
+    if (btn) { var o = btn.textContent; btn.textContent = "COPIADO"; setTimeout(function() { btn.textContent = o; }, 2000); }
   });
 }
 
 function prSetView(v) {
-  prView=v;
-  ["home","research","crm","detail"].forEach(function(id){
-    const el=document.getElementById("pr-"+id); if(el) el.style.display=id===v?"block":"none";
-  });
-  ["home","research","crm"].forEach(function(id){
-    const btn=document.getElementById("pr-nav-"+id); if(btn) btn.classList.toggle("active",id===v);
-  });
-  if(v==="home")     prRenderHome();
-  if(v==="research") prRenderResearch();
-  if(v==="crm")      prRenderCRM();
-  if(v==="detail")   prRenderDetail();
+  prView = v;
+  var views = ["home","research","crm","detail"];
+  for (var i = 0; i < views.length; i++) {
+    var el = document.getElementById("pr-" + views[i]);
+    if (el) el.style.display = views[i] === v ? "block" : "none";
+  }
+  var navs = ["home","research","crm"];
+  for (var j = 0; j < navs.length; j++) {
+    var btn = document.getElementById("pr-nav-" + navs[j]);
+    if (btn) {
+      if (navs[j] === v) btn.classList.add("active");
+      else btn.classList.remove("active");
+    }
+  }
+  if (v === "home")     prRenderHome();
+  if (v === "research") prRenderResearch();
+  if (v === "crm")      prRenderCRM();
+  if (v === "detail")   prRenderDetail();
 }
 
 function prSetLang(l) {
-  prLang=l;
-  ["en","es"].forEach(function(x){
-    const b=document.getElementById("pr-lang-"+x);
-    if(b){b.style.background=x===l?"var(--teal)":"transparent";b.style.color=x===l?"#fff":"var(--tx4)";}
-  });
-  prResearchResult=null; prContactResult=null; prMailDraft=null;
-  if(prView==="research") prRenderResearch();
+  prLang = l;
+  var en = document.getElementById("pr-lang-en");
+  var es = document.getElementById("pr-lang-es");
+  if (en) { en.style.background = l === "en" ? "var(--teal)" : "transparent"; en.style.color = l === "en" ? "#fff" : "var(--tx4)"; }
+  if (es) { es.style.background = l === "es" ? "var(--teal)" : "transparent"; es.style.color = l === "es" ? "#fff" : "var(--tx4)"; }
+  prResearchResult = null; prContactResult = null; prMailDraft = null;
+  if (prView === "research") prRenderResearch();
 }
 
-function prSetFS(s){prFilterStatus=s;prRenderCRM();}
+function prSetFS(s) { prFilterStatus = s; prRenderCRM(); }
 
-// ── RENDER: HOME ────────────────────────────────────────
+// ── RENDER HOME ──────────────────────────────────────────
 function prRenderHome() {
-  const el=document.getElementById("pr-home"); if(!el) return;
-  const urgent=prProspects.filter(function(p){const a=prGetAlert(p);return a&&a.level==="urgent";});
-  const warn=prProspects.filter(function(p){const a=prGetAlert(p);return a&&a.level==="warn";});
-  const recent=prProspects.slice(0,3);
-  el.className="pr-fadein";
-  el.innerHTML=
-    '<div style="margin-bottom:20px">'
-    +'<div style="font-family:Barlow,sans-serif;font-weight:800;font-size:22px;line-height:1.2;margin-bottom:6px">Tu agente de <span style="color:var(--teal)">prospección B2B.</span></div>'
-    +'<div style="font-size:11px;color:var(--tx4);line-height:1.7">Investigá empresas target, detectá señales, encontrá contactos y generá mails. Todo registrado.</div>'
-    +'</div>'
-    +(urgent.length?'<div class="pr-alert-urgent" onclick="prSetFS('Mail enviado');prSetView('crm')"><span style="font-size:16px">🔴</span><div><div style="font-size:12px;color:var(--red);font-weight:600">'+urgent.length+' prospecto'+(urgent.length>1?"s":"")+" sin follow up hace 10+ días</div><div style='font-size:10px;color:var(--tx4);margin-top:2px'>Clic para ver →</div></div></div>":"")
-    +(warn.length?'<div class="pr-alert-warn" onclick="prSetFS('Mail enviado');prSetView('crm')"><span style="font-size:16px">🟡</span><div><div style="font-size:12px;color:var(--yellow);font-weight:600">'+warn.length+' prospecto'+(warn.length>1?"s":"")+" sin actividad hace 5+ días</div><div style='font-size:10px;color:var(--tx4);margin-top:2px'>Considerá hacer follow up →</div></div></div>":"")
-    +'<div class="pr-stats-grid">'
-    +[{l:"Total",v:prProspects.length},{l:"Activos",v:prProspects.filter(function(p){return!["Descartado","Cliente"].includes(p.status);}).length},{l:"Clientes",v:prProspects.filter(function(p){return p.status==="Cliente";}).length},{l:"Alertas",v:urgent.length+warn.length}]
-    .map(function(s,i){const alert=i===3&&urgent.length>0;return '<div class="pr-stat-box" style="border-color:'+(alert?"var(--red)":"var(--bd)")+'"><div class="pr-stat-val" style="color:'+(alert?"var(--red)":"var(--teal)")+'">'+s.v+'</div><div class="pr-stat-lbl">'+s.l.toUpperCase()+'</div></div>';}).join("")
-    +'</div>'
-    +'<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px">'
-    +'<button class="btn btn-primary btn-full" style="text-align:left;padding:13px 18px;font-size:13px" onclick="prSetView('research')">+ INVESTIGAR EMPRESA →</button>'
-    +'<button class="btn btn-ghost btn-full" style="text-align:left;padding:13px 18px" onclick="prSetView('crm')">VER CRM →</button>'
-    +'</div>'
-    +(recent.length?'<div style="font-size:9px;color:var(--tx5);letter-spacing:3px;margin-bottom:10px">RECIENTES</div>'+recent.map(function(p){
-      const alert=prGetAlert(p);const sc=PR_STATUS_CONFIG[p.status]||{color:"var(--tx4)",icon:"·"};
-      return '<div class="pr-card" style="border-left:3px solid '+(alert?alert.color:"var(--bd)")+'" onclick="prOpenDetail('+p.id+')">'
-        +'<div style="display:flex;justify-content:space-between;align-items:center">'
-        +'<div><div class="pr-card-name">'+p.companyName+'</div>'
-        +'<div class="pr-card-sub">'+(p.industry||"")+(alert?' · <span style="color:'+alert.color+'">⚠ '+alert.label+"</span>":"")+'</div></div>'
-        +'<span class="pr-status-badge" style="color:'+sc.color+';border-color:'+sc.color+'">'+sc.icon+' '+p.status+'</span>'
-        +'</div></div>';
-    }).join(""):"");
+  var el = document.getElementById("pr-home");
+  if (!el) return;
+  var urgent = prProspects.filter(function(p) { var a = prGetAlert(p); return a && a.level === "urgent"; });
+  var warn   = prProspects.filter(function(p) { var a = prGetAlert(p); return a && a.level === "warn"; });
+  var recent = prProspects.slice(0, 3);
+  var h = "";
+  h += "<div class='pr-fadein'>";
+  h += "<div style='margin-bottom:20px'>";
+  h += "<div style='font-family:Barlow,sans-serif;font-weight:800;font-size:22px;line-height:1.2;margin-bottom:6px'>Tu agente de <span style='color:var(--teal)'>prospeccion B2B.</span></div>";
+  h += "<div style='font-size:11px;color:var(--tx4);line-height:1.7'>Investiga empresas target, detecta senales, encuentra contactos y genera mails.</div>";
+  h += "</div>";
+  if (urgent.length) {
+    h += "<div class='pr-alert-urgent' onclick=\"prSetFS('Mail enviado');prSetView('crm')\">";
+    h += "<span style='font-size:16px'>&#128308;</span>";
+    h += "<div><div style='font-size:12px;color:var(--red);font-weight:600'>" + urgent.length + " prospecto" + (urgent.length > 1 ? "s" : "") + " sin follow up hace 10+ dias</div>";
+    h += "<div style='font-size:10px;color:var(--tx4);margin-top:2px'>Clic para ver</div></div></div>";
+  }
+  if (warn.length) {
+    h += "<div class='pr-alert-warn' onclick=\"prSetFS('Mail enviado');prSetView('crm')\">";
+    h += "<span style='font-size:16px'>&#128993;</span>";
+    h += "<div><div style='font-size:12px;color:var(--yellow);font-weight:600'>" + warn.length + " prospecto" + (warn.length > 1 ? "s" : "") + " sin actividad hace 5+ dias</div>";
+    h += "<div style='font-size:10px;color:var(--tx4);margin-top:2px'>Considera hacer follow up</div></div></div>";
+  }
+  var stats = [
+    { l:"Total",   v: prProspects.length, alert: false },
+    { l:"Activos", v: prProspects.filter(function(p) { return p.status !== "Descartado" && p.status !== "Cliente"; }).length, alert: false },
+    { l:"Clientes",v: prProspects.filter(function(p) { return p.status === "Cliente"; }).length, alert: false },
+    { l:"Alertas", v: urgent.length + warn.length, alert: urgent.length > 0 }
+  ];
+  h += "<div class='pr-stats-grid'>";
+  for (var i = 0; i < stats.length; i++) {
+    var s = stats[i];
+    h += "<div class='pr-stat-box' style='border-color:" + (s.alert ? "var(--red)" : "var(--bd)") + "'>";
+    h += "<div class='pr-stat-val' style='color:" + (s.alert ? "var(--red)" : "var(--teal)") + "'>" + s.v + "</div>";
+    h += "<div class='pr-stat-lbl'>" + s.l.toUpperCase() + "</div></div>";
+  }
+  h += "</div>";
+  h += "<div style='display:flex;flex-direction:column;gap:8px;margin-bottom:20px'>";
+  h += "<button class='btn btn-primary btn-full' style='text-align:left;padding:13px 18px;font-size:13px' onclick=\"prSetView('research')\">+ INVESTIGAR EMPRESA</button>";
+  h += "<button class='btn btn-ghost btn-full' style='text-align:left;padding:13px 18px' onclick=\"prSetView('crm')\">VER CRM</button>";
+  h += "</div>";
+  if (recent.length) {
+    h += "<div style='font-size:9px;color:var(--tx5);letter-spacing:3px;margin-bottom:10px'>RECIENTES</div>";
+    for (var ri = 0; ri < recent.length; ri++) {
+      var p = recent[ri];
+      var alert = prGetAlert(p);
+      var sc = PR_SC[p.status] || { color:"var(--tx4)", icon:"" };
+      h += "<div class='pr-card' style='border-left:3px solid " + (alert ? alert.color : "var(--bd)") + "' onclick='prOpenDetail(" + p.id + ")'>";
+      h += "<div style='display:flex;justify-content:space-between;align-items:center'>";
+      h += "<div><div class='pr-card-name'>" + prEscHtml(p.companyName) + "</div>";
+      h += "<div class='pr-card-sub'>" + prEscHtml(p.industry || "") + (alert ? " &bull; <span style='color:" + alert.color + "'>&#9888; " + alert.label + "</span>" : "") + "</div></div>";
+      h += "<span class='pr-status-badge' style='color:" + sc.color + ";border-color:" + sc.color + "'>" + sc.icon + " " + p.status + "</span>";
+      h += "</div></div>";
+    }
+  }
+  h += "</div>";
+  el.innerHTML = h;
 }
 
-// ── RENDER: RESEARCH ─────────────────────────────────────
+// ── RENDER RESEARCH ──────────────────────────────────────
 function prRenderResearch() {
-  const el=document.getElementById("pr-research"); if(!el) return;
-  const safeInput=prResearchInput.replace(/"/g,"&quot;");
-  let h='<div class="pr-fadein">'
-    +'<div style="margin-bottom:16px"><div style="font-family:Barlow,sans-serif;font-weight:800;font-size:18px;margin-bottom:4px">Research de <span style="color:var(--teal)">Prospecto</span></div>'
-    +'<div style="font-size:11px;color:var(--tx4)">Empresa o vertical (ej: "Onnec Group UK", "data center operators Norway")</div></div>'
-    +'<div style="display:flex;gap:8px;margin-bottom:12px">'
-    +'<input id="pr-research-input" value="'+safeInput+'" placeholder="Empresa o vertical..." style="flex:1;background:var(--bg2);border:1px solid var(--bd);color:var(--tx);padding:10px 14px;font-size:13px;font-family:'DM Mono',monospace;border-radius:2px" onkeydown="if(event.key==='Enter')prRunResearch()"/>'
-    +'<button class="btn btn-primary" style="padding:10px 20px" onclick="prRunResearch()" '+(prResearchLoading?"disabled":"")+'>'
-    +(prResearchLoading?'<span class="pr-pulse">···</span>':"BUSCAR")+'</button></div>'
-    +'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px">'
-    +PR_SUGGESTS.map(function(s){return '<button class="pr-suggest-chip" onclick="var i=document.getElementById('pr-research-input');i.value=this.textContent;prResearchInput=this.textContent">'+s+'</button>';}).join("")
-    +'</div>';
-  if(prResearchLoading){
-    h+='<div style="text-align:center;padding:40px 0;color:var(--tx4)"><div style="font-size:24px;margin-bottom:8px">🔍</div><div class="pr-pulse" style="font-size:11px;letter-spacing:3px;font-family:Barlow,sans-serif">INVESTIGANDO CON WEB SEARCH...</div></div>';
-  } else if(prResearchResult&&prResearchResult.error){
-    h+='<div class="flag flag-yellow">⚠ Error: '+prResearchResult.error+'</div>';
-  } else if(prResearchResult){
-    const d=prResearchResult; const pc=prPriColor(d.priority);
-    h+='<div class="card pr-fadein" style="border-color:var(--teal)">'
-      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">'
-      +'<div><div style="font-family:Barlow,sans-serif;font-weight:800;font-size:18px;color:#fff">'+(d.companyName||"")+'</div>'
-      +'<div style="font-size:10px;color:var(--tx4);margin-top:2px">'+(d.industry||"")+" · "+(d.headquarters||"")+'</div></div>'
-      +'<span class="pr-priority-badge" style="color:'+pc+';border-color:'+pc+'">'+(d.priority||"").toUpperCase()+' PRIORITY</span></div>'
-      +((d.signals||[]).length?'<div class="pr-section"><div class="pr-section-title">SEÑALES</div>'+(d.signals||[]).map(function(s){return '<div class="pr-signal" style="border-color:'+(s.relevance==="High"?"var(--red)":s.relevance==="Medium"?"var(--yellow)":"var(--tx5)")+'"><span style="font-size:9px;color:var(--tx5)">'+s.type+' · </span>'+s.description+'</div>';}).join("")+'</div>':"")
-      +'<div class="pr-section"><div class="pr-section-title">CONTACTO TARGET</div>'
-      +'<div style="font-size:13px;color:var(--teal);margin-bottom:4px">'+((d.suggestedContact&&d.suggestedContact.title)||"")+'</div>'
-      +'<div style="font-size:10px;color:var(--tx4);margin-bottom:10px">'+((d.suggestedContact&&d.suggestedContact.why)||"")+'</div>'
-      +prContactWidget(d.companyName,d.suggestedContact&&d.suggestedContact.title,false)+'</div>'
-      +'<div class="pr-section"><div class="pr-section-title">ÁNGULO DE ENTRADA</div><div style="font-size:12px;color:var(--tx2);line-height:1.7">'+(d.ddpAngle||"")+'</div></div>'
-      +'<div class="pr-section"><div class="pr-section-title">HOOK</div><div class="pr-hook">"'+(d.mailHook||"")+'"</div></div>'
-      +'<div class="pr-section"><button class="btn btn-ghost btn-full" onclick="prGenerateMail(prResearchResult,prContactResult&&prContactResult.name?prContactResult.name:null,false)" '+(prMailLoading?"disabled":"")+'>'
-      +(prMailLoading?'<span class="pr-pulse">GENERANDO MAIL...</span>':"✉ GENERAR MAIL COMPLETO")+'</button>'
-      +(prMailDraft&&prMailDraft.error?'<div class="flag flag-yellow" style="margin-top:8px">⚠ '+prMailDraft.error+'</div>':"")
-      +(prMailDraft&&!prMailDraft.error?prMailWidget(prMailDraft):"")+'</div>'
-      +'<button id="pr-save-btn" class="btn btn-primary btn-full" style="font-size:13px;padding:13px" onclick="prSaveProspect()">GUARDAR EN CRM →</button>'
-      +'</div>';
+  var el = document.getElementById("pr-research");
+  if (!el) return;
+  var h = "<div class='pr-fadein'>";
+  h += "<div style='margin-bottom:16px'>";
+  h += "<div style='font-family:Barlow,sans-serif;font-weight:800;font-size:18px;margin-bottom:4px'>Research de <span style='color:var(--teal)'>Prospecto</span></div>";
+  h += "<div style='font-size:11px;color:var(--tx4)'>Empresa o vertical (ej: Onnec Group UK, data center operators Norway)</div>";
+  h += "</div>";
+  h += "<div style='display:flex;gap:8px;margin-bottom:12px'>";
+  h += "<input id='pr-research-input' value='" + prEsc(prResearchInput) + "' placeholder='Empresa o vertical...' style='flex:1;background:var(--bg2);border:1px solid var(--bd);color:var(--tx);padding:10px 14px;font-size:13px;border-radius:2px' onkeydown='if(event.key===\"Enter\")prRunResearch()'/>";
+  h += "<button class='btn btn-primary' style='padding:10px 20px' onclick='prRunResearch()'" + (prResearchLoading ? " disabled" : "") + ">";
+  h += prResearchLoading ? "<span class='pr-pulse'>...</span>" : "BUSCAR";
+  h += "</button></div>";
+  h += "<div style='display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px'>";
+  for (var si = 0; si < PR_SUGGESTS.length; si++) {
+    h += "<button class='pr-suggest-chip' onclick='document.getElementById(\"pr-research-input\").value=this.textContent;prResearchInput=this.textContent'>" + PR_SUGGESTS[si] + "</button>";
   }
-  h+='</div>';
-  el.innerHTML=h;
+  h += "</div>";
+
+  if (prResearchLoading) {
+    h += "<div style='text-align:center;padding:40px 0;color:var(--tx4)'>";
+    h += "<div style='font-size:24px;margin-bottom:8px'>&#128269;</div>";
+    h += "<div class='pr-pulse' style='font-size:11px;letter-spacing:3px;font-family:Barlow,sans-serif'>INVESTIGANDO CON WEB SEARCH...</div></div>";
+  } else if (prResearchResult && prResearchResult.error) {
+    h += "<div class='flag flag-yellow'>Error: " + prEscHtml(prResearchResult.error) + "</div>";
+  } else if (prResearchResult) {
+    var d = prResearchResult;
+    var pc = prPriColor(d.priority);
+    h += "<div class='card pr-fadein' style='border-color:var(--teal)'>";
+    h += "<div style='display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px'>";
+    h += "<div><div style='font-family:Barlow,sans-serif;font-weight:800;font-size:18px;color:#fff'>" + prEscHtml(d.companyName || "") + "</div>";
+    h += "<div style='font-size:10px;color:var(--tx4);margin-top:2px'>" + prEscHtml(d.industry || "") + " &bull; " + prEscHtml(d.headquarters || "") + "</div></div>";
+    h += "<span class='pr-priority-badge' style='color:" + pc + ";border-color:" + pc + "'>" + (d.priority || "").toUpperCase() + " PRIORITY</span></div>";
+    var sigs = d.signals || [];
+    if (sigs.length) {
+      h += "<div class='pr-section'><div class='pr-section-title'>SENALES</div>";
+      for (var si2 = 0; si2 < sigs.length; si2++) {
+        var sig = sigs[si2];
+        var sc2 = sig.relevance === "High" ? "var(--red)" : sig.relevance === "Medium" ? "var(--yellow)" : "var(--tx5)";
+        h += "<div class='pr-signal' style='border-color:" + sc2 + "'><span style='font-size:9px;color:var(--tx5)'>" + prEscHtml(sig.type || "") + " &bull; </span>" + prEscHtml(sig.description || "") + "</div>";
+      }
+      h += "</div>";
+    }
+    var ctitle = (d.suggestedContact && d.suggestedContact.title) ? d.suggestedContact.title : "";
+    var cwhy   = (d.suggestedContact && d.suggestedContact.why)   ? d.suggestedContact.why   : "";
+    h += "<div class='pr-section'><div class='pr-section-title'>CONTACTO TARGET</div>";
+    h += "<div style='font-size:13px;color:var(--teal);margin-bottom:4px'>" + prEscHtml(ctitle) + "</div>";
+    h += "<div style='font-size:10px;color:var(--tx4);margin-bottom:10px'>" + prEscHtml(cwhy) + "</div>";
+    h += prContactWidget(d.companyName, ctitle, false);
+    h += "</div>";
+    h += "<div class='pr-section'><div class='pr-section-title'>ANGULO DE ENTRADA</div><div style='font-size:12px;color:var(--tx2);line-height:1.7'>" + prEscHtml(d.ddpAngle || "") + "</div></div>";
+    h += "<div class='pr-section'><div class='pr-section-title'>HOOK</div><div class='pr-hook'>\"" + prEscHtml(d.mailHook || "") + "\"</div></div>";
+    h += "<div class='pr-section'>";
+    h += "<button class='btn btn-ghost btn-full' onclick='prGenerateMail(prResearchResult,prContactResult&&prContactResult.name?prContactResult.name:null,false)'" + (prMailLoading ? " disabled" : "") + ">";
+    h += prMailLoading ? "<span class='pr-pulse'>GENERANDO MAIL...</span>" : "GENERAR MAIL COMPLETO";
+    h += "</button>";
+    if (prMailDraft && prMailDraft.error) h += "<div class='flag flag-yellow' style='margin-top:8px'>" + prEscHtml(prMailDraft.error) + "</div>";
+    if (prMailDraft && !prMailDraft.error) h += prMailWidget(prMailDraft);
+    h += "</div>";
+    h += "<button id='pr-save-btn' class='btn btn-primary btn-full' style='font-size:13px;padding:13px' onclick='prSaveProspect()'>GUARDAR EN CRM</button>";
+    h += "</div>";
+  }
+  h += "</div>";
+  el.innerHTML = h;
 }
 
 function prContactWidget(company, contactTitle, isDetail) {
-  const esc=function(s){return (s||"").replace(/'/g,"\\'");};
-  const fn=isDetail?"prFindContact('"+esc(company)+"','"+esc(contactTitle)+"',true)":"prFindContact('"+esc(company)+"','"+esc(contactTitle)+"',false)";
-  const back=isDetail?"prContactResult=null;prRenderDetail()":"prContactResult=null;prRenderResearch()";
-  if(prContactLoading) return '<div style="font-size:11px;color:var(--tx4)" class="pr-pulse">BUSCANDO EN WEB...</div>';
-  if(!prContactResult) return '<button class="btn btn-ghost btn-sm" onclick="'+fn+'">🔎 BUSCAR NOMBRE EN WEB</button>';
-  if(prContactResult.error) return '<div class="flag flag-yellow" style="margin-bottom:8px">⚠ '+prContactResult.error+'</div><button class="btn btn-ghost btn-sm" onclick="'+back+'">BUSCAR DE NUEVO</button>';
-  if(prContactResult.found){
-    const c=prContactResult; const cc=c.confidence==="High"?"var(--green)":c.confidence==="Medium"?"var(--yellow)":"var(--tx4)";
-    return '<div class="pr-contact-found">'
-      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
-      +'<div style="font-size:14px;font-weight:600;color:#fff">'+(c.name||"")+'</div>'
-      +'<span style="font-size:8px;color:'+cc+';border:1px solid '+cc+';padding:2px 6px;border-radius:2px">'+c.confidence+' CONF.</span></div>'
-      +(c.title?'<div style="font-size:10px;color:var(--tx4);margin-bottom:4px">'+c.title+'</div>':"")
-      +(c.linkedinUrl?'<a href="'+c.linkedinUrl+'" target="_blank" style="font-size:10px;color:var(--teal);display:block;margin-bottom:4px">🔗 LinkedIn →</a>':"")
-      +(c.emailPattern?'<div style="font-size:10px;color:var(--tx4)">📧 Patrón: <span style="color:var(--tx2)">'+c.emailPattern+'</span></div>':"")
-      +((c.alternativeContacts||[]).length?'<div style="margin-top:8px;border-top:1px solid var(--bd);padding-top:8px"><div style="font-size:9px;color:var(--tx5);letter-spacing:2px;margin-bottom:4px">OTROS CONTACTOS</div>'+(c.alternativeContacts||[]).map(function(a){return '<div style="font-size:10px;margin-bottom:3px"><span style="color:var(--teal)">'+a.name+'</span> · <span style="color:var(--tx4)">'+a.title+'</span>'+(a.linkedinUrl?'<a href="'+a.linkedinUrl+'" target="_blank" style="color:var(--teal);margin-left:6px;font-size:9px">→</a>':"")+'</div>';}).join("")+'</div>':"")
-      +'<button style="margin-top:8px;background:transparent;border:none;color:var(--tx5);font-size:9px;cursor:pointer;font-family:'DM Mono',monospace" onclick="'+back+'">BUSCAR DE NUEVO</button>'
-      +'</div>';
+  var cEsc = (company || "").replace(/\\/g,"\\\\").replace(/'/g,"\\'");
+  var tEsc = (contactTitle || "").replace(/\\/g,"\\\\").replace(/'/g,"\\'");
+  var fn = "prFindContact('" + cEsc + "','" + tEsc + "'," + (isDetail ? "true" : "false") + ")";
+  var back = isDetail ? "prContactResult=null;prRenderDetail()" : "prContactResult=null;prRenderResearch()";
+  if (prContactLoading) return "<div style='font-size:11px;color:var(--tx4)' class='pr-pulse'>BUSCANDO EN WEB...</div>";
+  if (!prContactResult) return "<button class='btn btn-ghost btn-sm' onclick='" + fn + "'>BUSCAR NOMBRE EN WEB</button>";
+  if (prContactResult.error) return "<div class='flag flag-yellow' style='margin-bottom:8px'>" + prEscHtml(prContactResult.error) + "</div><button class='btn btn-ghost btn-sm' onclick='" + back + "'>BUSCAR DE NUEVO</button>";
+  if (prContactResult.found) {
+    var c = prContactResult;
+    var cc = c.confidence === "High" ? "var(--green)" : c.confidence === "Medium" ? "var(--yellow)" : "var(--tx4)";
+    var h = "<div class='pr-contact-found'>";
+    h += "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:6px'>";
+    h += "<div style='font-size:14px;font-weight:600;color:#fff'>" + prEscHtml(c.name || "") + "</div>";
+    h += "<span style='font-size:8px;color:" + cc + ";border:1px solid " + cc + ";padding:2px 6px;border-radius:2px'>" + c.confidence + " CONF.</span></div>";
+    if (c.title) h += "<div style='font-size:10px;color:var(--tx4);margin-bottom:4px'>" + prEscHtml(c.title) + "</div>";
+    if (c.linkedinUrl) h += "<a href='" + c.linkedinUrl + "' target='_blank' style='font-size:10px;color:var(--teal);display:block;margin-bottom:4px'>LinkedIn &rarr;</a>";
+    if (c.emailPattern) h += "<div style='font-size:10px;color:var(--tx4)'>Email patron: <span style='color:var(--tx2)'>" + prEscHtml(c.emailPattern) + "</span></div>";
+    var alts = c.alternativeContacts || [];
+    if (alts.length) {
+      h += "<div style='margin-top:8px;border-top:1px solid var(--bd);padding-top:8px'><div style='font-size:9px;color:var(--tx5);letter-spacing:2px;margin-bottom:4px'>OTROS CONTACTOS</div>";
+      for (var ai = 0; ai < alts.length; ai++) {
+        h += "<div style='font-size:10px;margin-bottom:3px'><span style='color:var(--teal)'>" + prEscHtml(alts[ai].name) + "</span> &bull; <span style='color:var(--tx4)'>" + prEscHtml(alts[ai].title) + "</span>";
+        if (alts[ai].linkedinUrl) h += " <a href='" + alts[ai].linkedinUrl + "' target='_blank' style='color:var(--teal);font-size:9px'>&rarr;</a>";
+        h += "</div>";
+      }
+      h += "</div>";
+    }
+    h += "<button style='margin-top:8px;background:transparent;border:none;color:var(--tx5);font-size:9px;cursor:pointer' onclick='" + back + "'>BUSCAR DE NUEVO</button></div>";
+    return h;
   }
-  const ap=prContactResult.actionPlan||{}; const uid="prc"+Date.now();
-  return '<div class="pr-contact-notfound">'
-    +'<div style="font-size:11px;color:var(--yellow);margin-bottom:10px;font-weight:600">⚠ No encontrado — plan de acción:</div>'
-    +(ap.googleSearch?'<div class="pr-action-plan-step"><div style="font-size:9px;color:var(--tx5);letter-spacing:2px;margin-bottom:4px">1. BUSCÁ EN GOOGLE</div><div style="font-size:11px;color:var(--tx);font-family:monospace;background:var(--bg4);padding:5px 7px;margin-bottom:4px">'+ap.googleSearch+'</div><button class="pr-copy-btn" id="'+uid+'-g" onclick="prCopyText(this.previousElementSibling.textContent,''+uid+'-g')">COPIAR</button></div>':"")
-    +(ap.linkedinSearch?'<div class="pr-action-plan-step"><div style="font-size:9px;color:var(--tx5);letter-spacing:2px;margin-bottom:4px">2. LINKEDIN</div><a href="'+ap.linkedinSearch+'" target="_blank" style="font-size:11px;color:var(--teal)">🔗 Buscar en LinkedIn →</a></div>':"")
-    +(ap.tip?'<div class="pr-tip-box"><div style="font-size:9px;color:var(--teal);letter-spacing:2px;margin-bottom:4px">💡 TIP</div><div style="font-size:11px;color:var(--tx2);line-height:1.6">'+ap.tip+'</div></div>':"")
-    +'<button style="margin-top:8px;background:transparent;border:none;color:var(--tx5);font-size:9px;cursor:pointer;font-family:'DM Mono',monospace" onclick="'+back+'">BUSCAR DE NUEVO</button>'
-    +'</div>';
+  var ap = prContactResult.actionPlan || {};
+  var uid = "prc" + Date.now();
+  var h2 = "<div class='pr-contact-notfound'>";
+  h2 += "<div style='font-size:11px;color:var(--yellow);margin-bottom:10px;font-weight:600'>No encontrado &mdash; plan de accion:</div>";
+  if (ap.googleSearch) {
+    h2 += "<div class='pr-action-plan-step'><div style='font-size:9px;color:var(--tx5);letter-spacing:2px;margin-bottom:4px'>1. BUSCA EN GOOGLE</div>";
+    h2 += "<div id='" + uid + "-gt' style='font-size:11px;color:var(--tx);font-family:monospace;background:var(--bg4);padding:5px 7px;margin-bottom:4px'>" + prEscHtml(ap.googleSearch) + "</div>";
+    h2 += "<button class='pr-copy-btn' id='" + uid + "-gb' onclick='prCopyText(document.getElementById(\"" + uid + "-gt\").textContent,\"" + uid + "-gb\")'>COPIAR</button></div>";
+  }
+  if (ap.linkedinSearch) {
+    h2 += "<div class='pr-action-plan-step'><div style='font-size:9px;color:var(--tx5);letter-spacing:2px;margin-bottom:4px'>2. LINKEDIN</div>";
+    h2 += "<a href='" + ap.linkedinSearch + "' target='_blank' style='font-size:11px;color:var(--teal)'>Buscar en LinkedIn &rarr;</a></div>";
+  }
+  if (ap.tip) {
+    h2 += "<div class='pr-tip-box'><div style='font-size:9px;color:var(--teal);letter-spacing:2px;margin-bottom:4px'>TIP</div>";
+    h2 += "<div style='font-size:11px;color:var(--tx2);line-height:1.6'>" + prEscHtml(ap.tip) + "</div></div>";
+  }
+  h2 += "<button style='margin-top:8px;background:transparent;border:none;color:var(--tx5);font-size:9px;cursor:pointer' onclick='" + back + "'>BUSCAR DE NUEVO</button></div>";
+  return h2;
 }
 
 function prMailWidget(mail) {
-  const uid="prm"+Date.now();
-  const s=JSON.stringify(mail.subject||""); const b=JSON.stringify(mail.body||""); const fu=JSON.stringify(mail.followUpBody||"");
-  return '<div style="margin-top:10px" class="pr-fadein">'
-    +'<div class="pr-mail-box"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div style="font-size:9px;color:var(--tx5);letter-spacing:2px">ASUNTO</div><button class="pr-copy-btn" id="'+uid+'-s" onclick="prCopyText('+s+',''+uid+'-s')">COPIAR</button></div>'
-    +'<div style="font-size:12px;color:var(--teal);font-weight:600">'+(mail.subject||"")+'</div></div>'
-    +'<div class="pr-mail-box"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div style="font-size:9px;color:var(--tx5);letter-spacing:2px">CUERPO</div><button class="pr-copy-btn" id="'+uid+'-b" onclick="prCopyText('+b+',''+uid+'-b')">COPIAR</button></div>'
-    +'<div style="font-size:12px;color:var(--tx2);line-height:1.8;white-space:pre-line">'+(mail.body||"")+'</div></div>'
-    +(mail.followUpBody?'<details><summary style="font-size:9px;color:var(--tx5);letter-spacing:2px;cursor:pointer;padding:6px 0">▶ FOLLOW UP (7-10 días)</summary>'
-    +'<div class="pr-mail-box" style="margin-top:6px"><div style="font-size:9px;color:var(--tx5);margin-bottom:4px">ASUNTO FU</div><div style="font-size:12px;color:var(--teal)">'+(mail.followUpSubject||"")+'</div></div>'
-    +'<div class="pr-mail-box"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div style="font-size:9px;color:var(--tx5)">CUERPO FU</div><button class="pr-copy-btn" id="'+uid+'-fu" onclick="prCopyText('+fu+',''+uid+'-fu')">COPIAR</button></div>'
-    +'<div style="font-size:12px;color:var(--tx2);line-height:1.8;white-space:pre-line">'+(mail.followUpBody||"")+'</div></div></details>':"")
-    +'</div>';
+  var uid = "prm" + Date.now();
+  var subj = mail.subject || "";
+  var body = mail.body || "";
+  var fuSubj = mail.followUpSubject || "";
+  var fuBody = mail.followUpBody || "";
+  var h = "<div style='margin-top:10px' class='pr-fadein'>";
+  h += "<div class='pr-mail-box'>";
+  h += "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:6px'>";
+  h += "<div style='font-size:9px;color:var(--tx5);letter-spacing:2px'>ASUNTO</div>";
+  h += "<button class='pr-copy-btn' id='" + uid + "-s' onclick='prCopyText(document.getElementById(\"" + uid + "-st\").textContent,\"" + uid + "-s\")'>COPIAR</button></div>";
+  h += "<div id='" + uid + "-st' style='font-size:12px;color:var(--teal);font-weight:600'>" + prEscHtml(subj) + "</div></div>";
+  h += "<div class='pr-mail-box'>";
+  h += "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:8px'>";
+  h += "<div style='font-size:9px;color:var(--tx5);letter-spacing:2px'>CUERPO</div>";
+  h += "<button class='pr-copy-btn' id='" + uid + "-b' onclick='prCopyText(document.getElementById(\"" + uid + "-bt\").textContent,\"" + uid + "-b\")'>COPIAR</button></div>";
+  h += "<div id='" + uid + "-bt' style='font-size:12px;color:var(--tx2);line-height:1.8;white-space:pre-line'>" + prEscHtml(body) + "</div></div>";
+  if (fuBody) {
+    h += "<details><summary style='font-size:9px;color:var(--tx5);letter-spacing:2px;cursor:pointer;padding:6px 0'>FOLLOW UP (7-10 dias)</summary>";
+    h += "<div class='pr-mail-box' style='margin-top:6px'><div style='font-size:9px;color:var(--tx5);margin-bottom:4px'>ASUNTO FU</div><div style='font-size:12px;color:var(--teal)'>" + prEscHtml(fuSubj) + "</div></div>";
+    h += "<div class='pr-mail-box'><div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:6px'>";
+    h += "<div style='font-size:9px;color:var(--tx5)'>CUERPO FU</div>";
+    h += "<button class='pr-copy-btn' id='" + uid + "-fu' onclick='prCopyText(document.getElementById(\"" + uid + "-fut\").textContent,\"" + uid + "-fu\")'>COPIAR</button></div>";
+    h += "<div id='" + uid + "-fut' style='font-size:12px;color:var(--tx2);line-height:1.8;white-space:pre-line'>" + prEscHtml(fuBody) + "</div></div>";
+    h += "</details>";
+  }
+  h += "</div>";
+  return h;
 }
 
-// ── RENDER: CRM ─────────────────────────────────────────
+// ── RENDER CRM ───────────────────────────────────────────
 function prRenderCRM() {
-  const el=document.getElementById("pr-crm"); if(!el) return;
-  const filtered=prFilterStatus==="Todos"?prProspects:prProspects.filter(function(p){return p.status===prFilterStatus;});
-  el.innerHTML='<div class="pr-fadein">'
-    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">'
-    +'<div style="font-family:Barlow,sans-serif;font-weight:800;font-size:18px">Pipeline <span style="color:var(--teal)">CRM</span></div>'
-    +'<button class="btn btn-primary btn-sm" onclick="prSetView('research')">+ NUEVO</button></div>'
-    +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">'
-    +["Todos"].concat(Object.keys(PR_STATUS_CONFIG)).map(function(s){
-      return '<button class="pr-filter-btn'+(prFilterStatus===s?" active":"")+'" onclick="prSetFS(''+s+'')">'+(s==="Todos"?"TODOS":(PR_STATUS_CONFIG[s].icon+" "+s.toUpperCase()))+'</button>';
-    }).join("")+'</div>'
-    +(filtered.length===0
-      ?'<div style="text-align:center;padding:50px 0;color:var(--tx4)"><div style="font-size:32px;margin-bottom:10px">📭</div><div style="font-size:12px">'+(prProspects.length===0?"Todavía no hay prospectos.":"No hay prospectos con este estado.")+'</div>'+(prProspects.length===0?'<button class="btn btn-primary" style="margin-top:14px" onclick="prSetView('research')">INVESTIGAR PRIMERA EMPRESA →</button>':"")+'</div>'
-      :filtered.map(function(p){
-        const alert=prGetAlert(p); const sc=PR_STATUS_CONFIG[p.status]||{color:"var(--tx4)",icon:"·"}; const pc=prPriColor(p.priority);
-        return '<div class="pr-card" style="border-left:3px solid '+(alert?alert.color:"var(--bd)")+'" onclick="prOpenDetail('+p.id+')">'
-          +'<div style="display:flex;justify-content:space-between;align-items:flex-start">'
-          +'<div style="flex:1"><div style="display:flex;align-items:center;gap:8px;margin-bottom:3px"><div class="pr-card-name">'+p.companyName+'</div>'
-          +'<span class="pr-priority-badge" style="color:'+pc+';border-color:'+pc+'">'+(p.priority||"").toUpperCase()+'</span></div>'
-          +'<div class="pr-card-sub">'+(p.industry||"")+" · "+(p.headquarters||"")+'</div>'
-          +(alert?'<div style="font-size:9px;color:'+alert.color+';margin-top:3px">⚠ '+alert.label+'</div>':"")+'</div>'
-          +'<div style="text-align:right;margin-left:12px"><div class="pr-status-badge" style="color:'+sc.color+';border-color:'+sc.color+'">'+sc.icon+' '+p.status+'</div>'
-          +'<div style="font-size:8px;color:var(--tx5);margin-top:3px">'+new Date(p.updatedAt).toLocaleDateString("es-AR")+'</div></div>'
-          +'</div></div>';
-      }).join(""))
-    +'</div>';
+  var el = document.getElementById("pr-crm");
+  if (!el) return;
+  var filtered = prFilterStatus === "Todos" ? prProspects : prProspects.filter(function(p) { return p.status === prFilterStatus; });
+  var h = "<div class='pr-fadein'>";
+  h += "<div style='display:flex;align-items:center;justify-content:space-between;margin-bottom:14px'>";
+  h += "<div style='font-family:Barlow,sans-serif;font-weight:800;font-size:18px'>Pipeline <span style='color:var(--teal)'>CRM</span></div>";
+  h += "<button class='btn btn-primary btn-sm' onclick=\"prSetView('research')\">+ NUEVO</button></div>";
+  h += "<div style='display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px'>";
+  var allStatuses = ["Todos"].concat(PR_STATUS_LABELS);
+  for (var fi = 0; fi < allStatuses.length; fi++) {
+    var fs = allStatuses[fi];
+    var fsc = PR_SC[fs];
+    var isActive = prFilterStatus === fs;
+    h += "<button class='pr-filter-btn" + (isActive ? " active" : "") + "' onclick=\"prSetFS('" + fs + "')\">";
+    h += fs === "Todos" ? "TODOS" : (fsc ? fsc.icon + " " : "") + fs.toUpperCase();
+    h += "</button>";
+  }
+  h += "</div>";
+  if (filtered.length === 0) {
+    h += "<div style='text-align:center;padding:50px 0;color:var(--tx4)'>";
+    h += "<div style='font-size:32px;margin-bottom:10px'>&#128205;</div>";
+    h += "<div style='font-size:12px'>" + (prProspects.length === 0 ? "Todavia no hay prospectos." : "No hay prospectos con este estado.") + "</div>";
+    if (prProspects.length === 0) h += "<button class='btn btn-primary' style='margin-top:14px' onclick=\"prSetView('research')\">INVESTIGAR PRIMERA EMPRESA</button>";
+    h += "</div>";
+  } else {
+    for (var ci = 0; ci < filtered.length; ci++) {
+      var p = filtered[ci];
+      var alert = prGetAlert(p);
+      var psc = PR_SC[p.status] || { color:"var(--tx4)", icon:"" };
+      var ppc = prPriColor(p.priority);
+      h += "<div class='pr-card' style='border-left:3px solid " + (alert ? alert.color : "var(--bd)") + "' onclick='prOpenDetail(" + p.id + ")'>";
+      h += "<div style='display:flex;justify-content:space-between;align-items:flex-start'>";
+      h += "<div style='flex:1'>";
+      h += "<div style='display:flex;align-items:center;gap:8px;margin-bottom:3px'>";
+      h += "<div class='pr-card-name'>" + prEscHtml(p.companyName) + "</div>";
+      h += "<span class='pr-priority-badge' style='color:" + ppc + ";border-color:" + ppc + "'>" + (p.priority || "").toUpperCase() + "</span></div>";
+      h += "<div class='pr-card-sub'>" + prEscHtml(p.industry || "") + " &bull; " + prEscHtml(p.headquarters || "") + "</div>";
+      if (alert) h += "<div style='font-size:9px;color:" + alert.color + ";margin-top:3px'>&#9888; " + alert.label + "</div>";
+      h += "</div>";
+      h += "<div style='text-align:right;margin-left:12px'>";
+      h += "<div class='pr-status-badge' style='color:" + psc.color + ";border-color:" + psc.color + "'>" + psc.icon + " " + p.status + "</div>";
+      h += "<div style='font-size:8px;color:var(--tx5);margin-top:3px'>" + new Date(p.updatedAt).toLocaleDateString("es-AR") + "</div></div>";
+      h += "</div></div>";
+    }
+  }
+  h += "</div>";
+  el.innerHTML = h;
 }
 
-// ── RENDER: DETAIL ───────────────────────────────────────
+// ── RENDER DETAIL ────────────────────────────────────────
 function prOpenDetail(id) {
-  prSelectedId=id; prContactResult=null; prMailDraft=null; prSetView("detail");
+  prSelectedId = id; prContactResult = null; prMailDraft = null; prSetView("detail");
 }
 
 function prRenderDetail() {
-  const el=document.getElementById("pr-detail"); if(!el) return;
-  const p=prProspects.find(function(x){return x.id===prSelectedId;});
-  if(!p){prSetView("crm");return;}
-  const alert=prGetAlert(p); const pc=prPriColor(p.priority);
-  el.innerHTML='<div class="pr-fadein">'
-    +'<button style="background:transparent;border:none;color:var(--tx4);cursor:pointer;font-size:12px;margin-bottom:14px;padding:0;font-family:'DM Mono',monospace" onclick="prSetView('crm')">← VOLVER AL CRM</button>'
-    +(alert?'<div style="background:rgba(240,96,96,.08);border:1px solid '+alert.color+';padding:10px 14px;margin-bottom:14px;font-size:12px;color:'+alert.color+';border-radius:2px">⚠ '+alert.label+'</div>':"")
-    +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px">'
-    +'<div><div style="font-family:Barlow,sans-serif;font-weight:800;font-size:20px;color:#fff">'+p.companyName+'</div>'
-    +'<div style="font-size:11px;color:var(--tx4);margin-top:2px">'+(p.industry||"")+" · "+(p.headquarters||"")+'</div></div>'
-    +'<span class="pr-priority-badge" style="color:'+pc+';border-color:'+pc+'">'+(p.priority||"").toUpperCase()+' PRIORITY</span></div>'
-    // ESTADO
-    +'<div class="pr-section"><div class="pr-section-title">ESTADO</div><div style="display:flex;flex-wrap:wrap;gap:6px">'
-    +Object.entries(PR_STATUS_CONFIG).map(function(e){
-      const s=e[0],cfg=e[1];
-      return '<button class="pr-filter-btn'+(p.status===s?" active":"")+'" onclick="prUpdateStatus('+p.id+',''+s+'')">'+cfg.icon+' '+s+'</button>';
-    }).join("")+'</div></div>'
-    // SEÑALES
-    +((p.signals||[]).length?'<div class="pr-section"><div class="pr-section-title">SEÑALES DETECTADAS</div>'+(p.signals||[]).map(function(s){return '<div class="pr-signal" style="border-color:'+(s.relevance==="High"?"var(--red)":s.relevance==="Medium"?"var(--yellow)":"var(--tx5)")+'"><div style="font-size:9px;color:var(--tx5);margin-bottom:2px">'+s.type+'</div>'+s.description+'</div>';}).join("")+'</div>':"")
-    // ÁNGULO
-    +'<div class="pr-section"><div class="pr-section-title">ÁNGULO DDP GLOBAL</div><div style="font-size:12px;color:var(--tx2);line-height:1.7">'+(p.ddpAngle||"")+'</div></div>'
-    // CONTACTO
-    +(p.suggestedContact?'<div class="pr-section"><div class="pr-section-title">CONTACTO SUGERIDO</div>'
-    +'<div style="font-size:13px;color:var(--teal);margin-bottom:4px">'+(p.suggestedContact.title||"")+'</div>'
-    +'<div style="font-size:11px;color:var(--tx4);margin-bottom:8px">'+(p.suggestedContact.why||"")+'</div>'
-    +prContactWidget(p.companyName,p.suggestedContact.title,true)+'</div>':"")
-    // MAIL
-    +'<div class="pr-section"><div class="pr-section-title">MAIL COMPLETO</div>'
-    +'<button class="btn btn-ghost btn-full" onclick="prGenerateMail(prProspects.find(function(x){return x.id==='+p.id+';}),prContactResult&&prContactResult.name?prContactResult.name:null,true)" '+(prMailLoading?"disabled":"")+'>'
-    +(prMailLoading?'<span class="pr-pulse">GENERANDO...</span>':"✉ GENERAR MAIL COMPLETO")+'</button>'
-    +(prMailDraft&&prMailDraft.error?'<div class="flag flag-yellow" style="margin-top:8px">⚠ '+prMailDraft.error+'</div>':"")
-    +(prMailDraft&&!prMailDraft.error?prMailWidget(prMailDraft):"")+'</div>'
-    // HOOK
-    +'<div class="pr-section"><div class="pr-section-title">HOOK</div><div class="pr-hook">"'+(p.mailHook||"")+'"</div></div>'
-    // REGIONES
-    +((p.regions||[]).length?'<div class="pr-section"><div class="pr-section-title">REGIONES</div><div style="display:flex;flex-wrap:wrap;gap:6px">'+(p.regions||[]).map(function(r){return '<span class="tag">'+r+'</span>';}).join("")+'</div></div>':"")
-    // HISTORIAL
-    +'<div class="pr-section"><div class="pr-section-title">HISTORIAL DE ACTIVIDAD</div>'
-    +'<div style="margin-bottom:12px">'
-    +((p.activity||[]).length===0?'<div style="font-size:11px;color:var(--tx5)">Sin actividad aún.</div>':"")
-    +[].concat(p.activity||[]).reverse().map(function(a){
-      return '<div class="pr-activity-entry"><div class="pr-activity-date">'+new Date(a.date).toLocaleDateString("es-AR")+'</div>'
-        +'<div class="pr-activity-body"><div class="pr-activity-type">'+(a.type||"").toUpperCase()+'</div>'
-        +'<div class="pr-activity-note">'+a.note+'</div></div></div>';
-    }).join("")
-    +'</div>'
-    +'<textarea id="pr-activity-input" rows="2" placeholder="Ej: Mandé mail hoy. Esperando respuesta..." style="width:100%;background:var(--bg4);border:1px solid var(--bd);color:var(--tx);padding:8px 10px;font-size:11px;font-family:'DM Mono',monospace;resize:vertical;margin-bottom:8px;border-radius:2px"></textarea>'
-    +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
-    +["Mail","Llamada","LinkedIn","Nota","Follow Up"].map(function(type){return '<button class="btn btn-ghost btn-sm" onclick="prAddActivity('+p.id+',''+type+'')">+ '+type+'</button>';}).join("")
-    +'</div></div>'
-    // NOTAS
-    +'<div class="pr-section"><div class="pr-section-title">NOTAS</div>'
-    +'<textarea id="pr-note-input" rows="3" placeholder="Notas libres..." style="width:100%;background:var(--bg4);border:1px solid var(--bd);color:var(--tx);padding:10px 12px;font-size:12px;font-family:'DM Mono',monospace;resize:vertical;line-height:1.6;border-radius:2px">'+(p.notes||"").replace(/</g,"&lt;")+'</textarea>'
-    +'<button id="pr-note-save-btn" class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="prSaveNote('+p.id+')">GUARDAR NOTA</button></div>'
-    // PRIORIDAD RAZÓN
-    +(p.priorityReason?'<div class="pr-section"><div class="pr-section-title">POR QUÉ ESTE NIVEL DE PRIORIDAD</div><div style="font-size:11px;color:var(--tx4);line-height:1.6">'+p.priorityReason+'</div></div>':"")
-    +'<div style="font-size:9px;color:var(--tx5);margin-top:12px;margin-bottom:8px">Creado: '+new Date(p.createdAt).toLocaleString("es-AR")+'</div>'
-    +'<button class="btn btn-ghost btn-sm" style="border-color:var(--red);color:var(--red)" onclick="prDeleteProspect('+p.id+')">ELIMINAR PROSPECTO</button>'
-    +'</div>';
+  var el = document.getElementById("pr-detail");
+  if (!el) return;
+  var p = null;
+  for (var i = 0; i < prProspects.length; i++) { if (prProspects[i].id === prSelectedId) { p = prProspects[i]; break; } }
+  if (!p) { prSetView("crm"); return; }
+  var alert = prGetAlert(p); var pc = prPriColor(p.priority);
+  var h = "<div class='pr-fadein'>";
+  h += "<button style='background:transparent;border:none;color:var(--tx4);cursor:pointer;font-size:12px;margin-bottom:14px;padding:0' onclick=\"prSetView('crm')\">&#8592; VOLVER AL CRM</button>";
+  if (alert) h += "<div style='background:rgba(240,96,96,.08);border:1px solid " + alert.color + ";padding:10px 14px;margin-bottom:14px;font-size:12px;color:" + alert.color + ";border-radius:2px'>&#9888; " + alert.label + "</div>";
+  h += "<div style='display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px'>";
+  h += "<div><div style='font-family:Barlow,sans-serif;font-weight:800;font-size:20px;color:#fff'>" + prEscHtml(p.companyName) + "</div>";
+  h += "<div style='font-size:11px;color:var(--tx4);margin-top:2px'>" + prEscHtml(p.industry || "") + " &bull; " + prEscHtml(p.headquarters || "") + "</div></div>";
+  h += "<span class='pr-priority-badge' style='color:" + pc + ";border-color:" + pc + "'>" + (p.priority || "").toUpperCase() + " PRIORITY</span></div>";
+  // ESTADO
+  h += "<div class='pr-section'><div class='pr-section-title'>ESTADO</div><div style='display:flex;flex-wrap:wrap;gap:6px'>";
+  for (var si = 0; si < PR_STATUS_LABELS.length; si++) {
+    var sl = PR_STATUS_LABELS[si]; var scfg = PR_SC[sl];
+    h += "<button class='pr-filter-btn" + (p.status === sl ? " active" : "") + "' onclick='prUpdateStatus(" + p.id + ",\"" + sl + "\")'>" + (scfg ? scfg.icon + " " : "") + sl + "</button>";
+  }
+  h += "</div></div>";
+  // SENALES
+  var sigs = p.signals || [];
+  if (sigs.length) {
+    h += "<div class='pr-section'><div class='pr-section-title'>SENALES</div>";
+    for (var si2 = 0; si2 < sigs.length; si2++) {
+      var sig = sigs[si2]; var sigc = sig.relevance === "High" ? "var(--red)" : sig.relevance === "Medium" ? "var(--yellow)" : "var(--tx5)";
+      h += "<div class='pr-signal' style='border-color:" + sigc + "'><div style='font-size:9px;color:var(--tx5);margin-bottom:2px'>" + prEscHtml(sig.type || "") + "</div>" + prEscHtml(sig.description || "") + "</div>";
+    }
+    h += "</div>";
+  }
+  // ANGULO
+  h += "<div class='pr-section'><div class='pr-section-title'>ANGULO DDP GLOBAL</div><div style='font-size:12px;color:var(--tx2);line-height:1.7'>" + prEscHtml(p.ddpAngle || "") + "</div></div>";
+  // CONTACTO
+  if (p.suggestedContact) {
+    h += "<div class='pr-section'><div class='pr-section-title'>CONTACTO SUGERIDO</div>";
+    h += "<div style='font-size:13px;color:var(--teal);margin-bottom:4px'>" + prEscHtml(p.suggestedContact.title || "") + "</div>";
+    h += "<div style='font-size:11px;color:var(--tx4);margin-bottom:8px'>" + prEscHtml(p.suggestedContact.why || "") + "</div>";
+    h += prContactWidget(p.companyName, p.suggestedContact.title, true);
+    h += "</div>";
+  }
+  // MAIL
+  h += "<div class='pr-section'><div class='pr-section-title'>MAIL COMPLETO</div>";
+  h += "<button class='btn btn-ghost btn-full' onclick='prGenerateMail(prProspects.filter(function(x){return x.id===" + p.id + ";})[0],prContactResult&&prContactResult.name?prContactResult.name:null,true)'" + (prMailLoading ? " disabled" : "") + ">";
+  h += prMailLoading ? "<span class='pr-pulse'>GENERANDO...</span>" : "GENERAR MAIL COMPLETO";
+  h += "</button>";
+  if (prMailDraft && prMailDraft.error) h += "<div class='flag flag-yellow' style='margin-top:8px'>" + prEscHtml(prMailDraft.error) + "</div>";
+  if (prMailDraft && !prMailDraft.error) h += prMailWidget(prMailDraft);
+  h += "</div>";
+  // HOOK
+  h += "<div class='pr-section'><div class='pr-section-title'>HOOK</div><div class='pr-hook'>\"" + prEscHtml(p.mailHook || "") + "\"</div></div>";
+  // REGIONES
+  var regs = p.regions || [];
+  if (regs.length) {
+    h += "<div class='pr-section'><div class='pr-section-title'>REGIONES</div><div style='display:flex;flex-wrap:wrap;gap:6px'>";
+    for (var ri = 0; ri < regs.length; ri++) h += "<span class='tag'>" + prEscHtml(regs[ri]) + "</span>";
+    h += "</div></div>";
+  }
+  // HISTORIAL
+  h += "<div class='pr-section'><div class='pr-section-title'>HISTORIAL DE ACTIVIDAD</div><div style='margin-bottom:12px'>";
+  var acts = [].concat(p.activity || []).reverse();
+  if (acts.length === 0) h += "<div style='font-size:11px;color:var(--tx5)'>Sin actividad aun.</div>";
+  for (var ai = 0; ai < acts.length; ai++) {
+    var act = acts[ai];
+    h += "<div class='pr-activity-entry'><div class='pr-activity-date'>" + new Date(act.date).toLocaleDateString("es-AR") + "</div>";
+    h += "<div class='pr-activity-body'><div class='pr-activity-type'>" + prEscHtml((act.type || "").toUpperCase()) + "</div><div class='pr-activity-note'>" + prEscHtml(act.note || "") + "</div></div></div>";
+  }
+  h += "</div>";
+  h += "<textarea id='pr-activity-input' rows='2' placeholder='Ej: Mande mail hoy. Esperando respuesta...' style='width:100%;background:var(--bg4);border:1px solid var(--bd);color:var(--tx);padding:8px 10px;font-size:11px;resize:vertical;margin-bottom:8px;border-radius:2px'></textarea>";
+  h += "<div style='display:flex;gap:6px;flex-wrap:wrap'>";
+  for (var ati = 0; ati < PR_ACTIVITY_TYPES.length; ati++) {
+    var at = PR_ACTIVITY_TYPES[ati];
+    h += "<button class='btn btn-ghost btn-sm' onclick='prAddActivity(" + p.id + ",\"" + at + "\")'>+ " + at + "</button>";
+  }
+  h += "</div></div>";
+  // NOTAS
+  h += "<div class='pr-section'><div class='pr-section-title'>NOTAS</div>";
+  h += "<textarea id='pr-note-input' rows='3' placeholder='Notas libres...' style='width:100%;background:var(--bg4);border:1px solid var(--bd);color:var(--tx);padding:10px 12px;font-size:12px;resize:vertical;line-height:1.6;border-radius:2px'>" + prEscHtml(p.notes || "") + "</textarea>";
+  h += "<button id='pr-note-save-btn' class='btn btn-ghost btn-sm' style='margin-top:8px' onclick='prSaveNote(" + p.id + ")'>GUARDAR NOTA</button></div>";
+  // PRIORIDAD
+  if (p.priorityReason) h += "<div class='pr-section'><div class='pr-section-title'>POR QUE ESTE NIVEL DE PRIORIDAD</div><div style='font-size:11px;color:var(--tx4);line-height:1.6'>" + prEscHtml(p.priorityReason) + "</div></div>";
+  h += "<div style='font-size:9px;color:var(--tx5);margin-top:12px;margin-bottom:8px'>Creado: " + new Date(p.createdAt).toLocaleString("es-AR") + "</div>";
+  h += "<button class='btn btn-ghost btn-sm' style='border-color:var(--red);color:var(--red)' onclick='prDeleteProspect(" + p.id + ")'>ELIMINAR PROSPECTO</button>";
+  h += "</div>";
+  el.innerHTML = h;
 }
 
 // ── INIT ─────────────────────────────────────────────────
-(function(){
-  try{ const v=localStorage.getItem(PR_STORAGE_KEY); if(v) prProspects=JSON.parse(v); }catch(_){}
-  const c=document.getElementById("pr-crm-count"); if(c) c.textContent=prProspects.length;
+(function() {
+  try { var v = localStorage.getItem(PR_SK); if (v) prProspects = JSON.parse(v); } catch(e) {}
+  var c = document.getElementById("pr-crm-count"); if (c) c.textContent = prProspects.length;
   prRenderHome();
 })();
 
