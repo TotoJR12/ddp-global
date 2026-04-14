@@ -7181,32 +7181,17 @@ async function prCallClaude(system, userMsg, useSearch) {
   var body = { model:"claude-sonnet-4-5", max_tokens:2000, system:system, messages:[{role:"user",content:userMsg}] };
   if (useSearch) body.tools = [{type:"web_search_20250305",name:"web_search"}];
   var r = await fetch(PROXY, {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
-  if (!r.ok) { var errText = await r.text(); throw new Error("Proxy error " + r.status + " - " + errText.slice(0,100)); }
+  if (r.status === 429) throw new Error("Limite de requests alcanzado — espera 60 segundos y reintenta");
+  if (!r.ok) throw new Error("Error del servidor (" + r.status + ") — reintenta");
   var d = await r.json();
-  // Extract JSON from any response - handles both end_turn and tool_use
-  function extractJson(resp) {
-    var txt = "";
-    for (var i = 0; i < (resp.content||[]).length; i++) { if (resp.content[i].type==="text") txt += resp.content[i].text; }
-    var clean = txt.replace(/```json|```/g,"").trim();
-    var s = clean.indexOf("{"), e = clean.lastIndexOf("}");
-    if (s !== -1) { try { return JSON.parse(clean.slice(s,e+1)); } catch(ex) { return null; } }
-    return null;
-  }
-  // If proxy already resolved web search (end_turn), extract directly
-  var res = extractJson(d);
-  if (res) return res;
-  // If tool_use, do ONE more round and extract
-  if (d.stop_reason === "tool_use" && useSearch) {
-    var tr = (d.content||[]).filter(function(b){return b.type==="tool_use";}).map(function(b){return {type:"tool_result",tool_use_id:b.id,content:"Results retrieved."};});
-    var msgs2 = [{role:"user",content:userMsg},{role:"assistant",content:d.content}];
-    if (tr.length) msgs2.push({role:"user",content:tr});
-    var r2 = await fetch(PROXY, {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:body.model,max_tokens:body.max_tokens,system:system,tools:body.tools,messages:msgs2})});
-    if (!r2.ok) { var e2t = await r2.text(); throw new Error("Proxy error " + r2.status + " - " + e2t.slice(0,100)); }
-    var d2 = await r2.json();
-    var res2 = extractJson(d2);
-    if (res2) return res2;
-  }
-  throw new Error("No JSON en respuesta — reintenta en unos segundos");
+  if (d.error) throw new Error(d.error.message || "Error de API");
+  // Extract text from all content blocks
+  var txt = "";
+  for (var i = 0; i < (d.content||[]).length; i++) { if (d.content[i].type==="text") txt += d.content[i].text; }
+  var clean = txt.replace(/```json|```/g,"").trim();
+  var s = clean.indexOf("{"), e = clean.lastIndexOf("}");
+  if (s === -1) throw new Error("Respuesta sin JSON — reintenta");
+  return JSON.parse(clean.slice(s, e+1));
 }
 
 async function prRunResearch() {
@@ -7214,19 +7199,26 @@ async function prRunResearch() {
   if (!inp) return;
   prResearchInput = inp.value.trim();
   if (!prResearchInput) return;
-  var contactInp = document.getElementById("pr-contact-input");
-  var specificContact = contactInp ? contactInp.value.trim() : "";
+  // Get optional specific contact name
+  var cinp = document.getElementById("pr-contact-input");
+  var specificContact = cinp ? cinp.value.trim() : "";
   prResearchResult = null; prContactResult = null; prMailDraft = null;
   prResearchLoading = true; prRenderResearch();
   var langNote = prLang==="es" ? "Write ALL text fields in Spanish except company names and proper nouns." : "Write all text fields in English.";
   var sys = "You are a B2B sales intelligence agent for DDP Global LLC, a Miami-based U.S. EOR/IOR company specialized in Data Center & AI Infrastructure Logistics. DDP Global handles door-to-door international shipments with full customs clearance across Europe, Nordics, LATAM, and other regions.\n" + langNote + "\nReturn ONLY valid JSON:\n" + '{"companyName":"string","industry":"string (Data Center Operator|IT Reseller/VAR|System Integrator|Hyperscaler|Other)","headquarters":"string","regions":["string"],"signals":[{"type":"Expansion|Job Posting|Funding|Pain Point|News","description":"string","relevance":"High|Medium|Low"}],"suggestedContact":{"title":"string","why":"string"},"ddpAngle":"string","mailHook":"string","priority":"High|Medium|Low","priorityReason":"string"}';
   var userMsg = "Research for DDP Global prospecting: " + prResearchInput;
-  if (specificContact) userMsg += "\nSpecific contact to find: " + specificContact + " — include this person as suggestedContact and note their name in suggestedContact.title.";
+  if (specificContact) userMsg += ". The specific contact I want to reach is: " + specificContact + " — use their name in suggestedContact.title.";
   try { prResearchResult = await prCallClaude(sys, userMsg); }
   catch(err) { prResearchResult = {error:err.message}; }
-  // If specific contact provided, pre-fill contact result
+  // If specific contact was provided, pre-fill contactResult without any API call
   if (specificContact && prResearchResult && !prResearchResult.error) {
-    prContactResult = { found:true, name:specificContact, title:(prResearchResult.suggestedContact&&prResearchResult.suggestedContact.title)||"", confidence:"Medium", source:"User provided", linkedinUrl:null, emailPattern:null, alternativeContacts:[], actionPlan:{googleSearch:specificContact+" "+prResearchInput+" LinkedIn",linkedinSearch:"https://www.linkedin.com/search/results/people/?keywords="+encodeURIComponent(specificContact+" "+prResearchInput),suggestedSites:[],tip:"Contacto provisto manualmente."} };
+    prContactResult = {
+      found: true, name: specificContact,
+      title: (prResearchResult.suggestedContact && prResearchResult.suggestedContact.title) || "",
+      confidence: "Medium", source: "Contacto especificado manualmente",
+      linkedinUrl: null, emailPattern: null, alternativeContacts: [],
+      actionPlan: { googleSearch: specificContact + " " + prResearchInput, linkedinSearch: "https://www.linkedin.com/search/results/people/?keywords=" + encodeURIComponent(specificContact + " " + prResearchInput), suggestedSites: [], tip: "Contacto provisto por el usuario." }
+    };
   }
   prResearchLoading = false; prRenderResearch();
 }
@@ -7346,7 +7338,7 @@ function prRenderResearch(){
   var h="<div class='pr-fadein'>";
   h+="<div style='margin-bottom:16px'><div style='font-family:Barlow,sans-serif;font-weight:800;font-size:18px;margin-bottom:4px'>Research de <span style='color:var(--teal)'>Prospecto</span></div><div style='font-size:11px;color:var(--tx4)'>Empresa o vertical (ej: Onnec Group UK, data center operators Norway)</div></div>";
   h+="<div style='display:flex;gap:8px;margin-bottom:8px'><input id='pr-research-input' value='"+prH(prResearchInput)+"' placeholder='Empresa o vertical (ej: Digital Realty, Bulk Infrastructure Norway)...' style='flex:1;background:var(--bg2);border:1px solid var(--bd);color:var(--tx);padding:10px 14px;font-size:13px;border-radius:2px' onkeydown='if(event.key===\"Enter\")prRunResearch()'/><button class='btn btn-primary' style='padding:10px 20px' onclick='prRunResearch()'>"+(prResearchLoading?"<span class='pr-pulse'>...</span>":"BUSCAR")+"</button></div>";
-  h+="<div style='display:flex;gap:8px;margin-bottom:12px;align-items:center'><input id='pr-contact-input' placeholder='Contacto especifico (opcional — ej: Christian Sinzinger)' style='flex:1;background:var(--bg2);border:1px solid var(--bd);color:var(--tx4);padding:8px 14px;font-size:11px;border-radius:2px'/><span style='font-size:9px;color:var(--tx5);white-space:nowrap'>CONTACTO PUNTUAL</span></div>";
+  h+="<input id='pr-contact-input' placeholder='Contacto especifico (opcional — ej: Christian Sinzinger)' style='width:100%;background:var(--bg2);border:1px solid var(--bd2);color:var(--tx3);padding:8px 14px;font-size:11px;border-radius:2px;margin-bottom:12px'/>";
   h+="<div style='display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px'>";
   for(var si=0;si<PR_SUGGESTS.length;si++) h+="<button class='pr-suggest-chip' onclick='document.getElementById(\"pr-research-input\").value=this.textContent;prResearchInput=this.textContent'>"+PR_SUGGESTS[si]+"</button>";
   h+="</div>";
