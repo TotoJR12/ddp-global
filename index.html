@@ -7180,76 +7180,33 @@ async function prCallClaude(system, userMsg, useSearch) {
   var PROXY = "https://ddp-proxy.nicolasjuarezroldan.workers.dev";
   var body = { model:"claude-sonnet-4-5", max_tokens:2000, system:system, messages:[{role:"user",content:userMsg}] };
   if (useSearch) body.tools = [{type:"web_search_20250305",name:"web_search"}];
-
   var r = await fetch(PROXY, {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+  if (!r.ok) { var errText = await r.text(); throw new Error("Proxy error " + r.status + " - " + errText.slice(0,100)); }
   var d = await r.json();
-
-  // Helper: extract text + try to parse JSON from any API response
+  // Extract JSON from any response - handles both end_turn and tool_use
   function extractJson(resp) {
-    var text = "";
-    var blocks = resp.content || [];
-    for (var i = 0; i < blocks.length; i++) {
-      if (blocks[i].type === "text") text += blocks[i].text;
-    }
-    var clean = text.replace(/```json|```/g, "").trim();
+    var txt = "";
+    for (var i = 0; i < (resp.content||[]).length; i++) { if (resp.content[i].type==="text") txt += resp.content[i].text; }
+    var clean = txt.replace(/```json|```/g,"").trim();
     var s = clean.indexOf("{"), e = clean.lastIndexOf("}");
-    if (s !== -1) return JSON.parse(clean.slice(s, e + 1));
+    if (s !== -1) { try { return JSON.parse(clean.slice(s,e+1)); } catch(ex) { return null; } }
     return null;
   }
-
-  // If proxy handled web search and returned final answer directly (end_turn)
-  if (d.stop_reason === "end_turn") {
-    var result = extractJson(d);
-    if (result) return result;
-    throw new Error("No JSON en respuesta - intenta de nuevo");
-  }
-
-  // If stop_reason is tool_use, proxy needs us to handle the multi-turn
+  // If proxy already resolved web search (end_turn), extract directly
+  var res = extractJson(d);
+  if (res) return res;
+  // If tool_use, do ONE more round and extract
   if (d.stop_reason === "tool_use" && useSearch) {
-    // Build tool results — proxy web search fills content automatically
-    var toolResults = (d.content || [])
-      .filter(function(b) { return b.type === "tool_use"; })
-      .map(function(b) { return { type: "tool_result", tool_use_id: b.id, content: "Search completed." }; });
-
-    var msgs2 = [
-      { role: "user", content: userMsg },
-      { role: "assistant", content: d.content }
-    ];
-    if (toolResults.length) msgs2.push({ role: "user", content: toolResults });
-
-    var r2 = await fetch(PROXY, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ model: body.model, max_tokens: body.max_tokens, system: system, tools: body.tools, messages: msgs2 })
-    });
+    var tr = (d.content||[]).filter(function(b){return b.type==="tool_use";}).map(function(b){return {type:"tool_result",tool_use_id:b.id,content:"Results retrieved."};});
+    var msgs2 = [{role:"user",content:userMsg},{role:"assistant",content:d.content}];
+    if (tr.length) msgs2.push({role:"user",content:tr});
+    var r2 = await fetch(PROXY, {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:body.model,max_tokens:body.max_tokens,system:system,tools:body.tools,messages:msgs2})});
+    if (!r2.ok) { var e2t = await r2.text(); throw new Error("Proxy error " + r2.status + " - " + e2t.slice(0,100)); }
     var d2 = await r2.json();
-    var result2 = extractJson(d2);
-    if (result2) return result2;
-
-    // If still tool_use, do one more round
-    if (d2.stop_reason === "tool_use") {
-      var tr2 = (d2.content || [])
-        .filter(function(b) { return b.type === "tool_use"; })
-        .map(function(b) { return { type: "tool_result", tool_use_id: b.id, content: "Search completed." }; });
-      var msgs3 = msgs2.concat([{ role: "assistant", content: d2.content }]);
-      if (tr2.length) msgs3.push({ role: "user", content: tr2 });
-      var r3 = await fetch(PROXY, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ model: body.model, max_tokens: body.max_tokens, system: system, tools: body.tools, messages: msgs3 })
-      });
-      var d3 = await r3.json();
-      var result3 = extractJson(d3);
-      if (result3) return result3;
-    }
-
-    throw new Error("No JSON en respuesta - intenta de nuevo");
+    var res2 = extractJson(d2);
+    if (res2) return res2;
   }
-
-  // Fallback: try to extract from whatever we got
-  var fallback = extractJson(d);
-  if (fallback) return fallback;
-  throw new Error("No JSON en respuesta - intenta de nuevo");
+  throw new Error("No JSON en respuesta — reintenta en unos segundos");
 }
 
 async function prRunResearch() {
@@ -7257,12 +7214,20 @@ async function prRunResearch() {
   if (!inp) return;
   prResearchInput = inp.value.trim();
   if (!prResearchInput) return;
+  var contactInp = document.getElementById("pr-contact-input");
+  var specificContact = contactInp ? contactInp.value.trim() : "";
   prResearchResult = null; prContactResult = null; prMailDraft = null;
   prResearchLoading = true; prRenderResearch();
   var langNote = prLang==="es" ? "Write ALL text fields in Spanish except company names and proper nouns." : "Write all text fields in English.";
   var sys = "You are a B2B sales intelligence agent for DDP Global LLC, a Miami-based U.S. EOR/IOR company specialized in Data Center & AI Infrastructure Logistics. DDP Global handles door-to-door international shipments with full customs clearance across Europe, Nordics, LATAM, and other regions.\n" + langNote + "\nReturn ONLY valid JSON:\n" + '{"companyName":"string","industry":"string (Data Center Operator|IT Reseller/VAR|System Integrator|Hyperscaler|Other)","headquarters":"string","regions":["string"],"signals":[{"type":"Expansion|Job Posting|Funding|Pain Point|News","description":"string","relevance":"High|Medium|Low"}],"suggestedContact":{"title":"string","why":"string"},"ddpAngle":"string","mailHook":"string","priority":"High|Medium|Low","priorityReason":"string"}';
-  try { prResearchResult = await prCallClaude(sys, "Research for DDP Global prospecting: " + prResearchInput); }
+  var userMsg = "Research for DDP Global prospecting: " + prResearchInput;
+  if (specificContact) userMsg += "\nSpecific contact to find: " + specificContact + " — include this person as suggestedContact and note their name in suggestedContact.title.";
+  try { prResearchResult = await prCallClaude(sys, userMsg); }
   catch(err) { prResearchResult = {error:err.message}; }
+  // If specific contact provided, pre-fill contact result
+  if (specificContact && prResearchResult && !prResearchResult.error) {
+    prContactResult = { found:true, name:specificContact, title:(prResearchResult.suggestedContact&&prResearchResult.suggestedContact.title)||"", confidence:"Medium", source:"User provided", linkedinUrl:null, emailPattern:null, alternativeContacts:[], actionPlan:{googleSearch:specificContact+" "+prResearchInput+" LinkedIn",linkedinSearch:"https://www.linkedin.com/search/results/people/?keywords="+encodeURIComponent(specificContact+" "+prResearchInput),suggestedSites:[],tip:"Contacto provisto manualmente."} };
+  }
   prResearchLoading = false; prRenderResearch();
 }
 
@@ -7270,86 +7235,9 @@ async function prFindContact(company, title, isDetail) {
   _prCo = company; _prCt = title; _prCd = isDetail;
   prContactResult = null; prContactLoading = true;
   if (isDetail) prRenderDetail(); else prRenderResearch();
-
-  var PROXY = "https://ddp-proxy.nicolasjuarezroldan.workers.dev";
-
-  try {
-    // STEP 1: Free web search — no JSON required, just find info
-    var searchSys = "You are an expert B2B contact finder for a logistics company. Search for the real name and LinkedIn of a specific executive. Search thoroughly using multiple queries. Report everything you find about this person: full name, title, LinkedIn URL, email pattern, and any alternative contacts at the company. If you cannot find the person, describe what action plan you would recommend (Google search string, LinkedIn search URL, relevant sites to check).";
-    var searchMsg = "Find the " + title + " at " + company + ". Search LinkedIn, company website, DatacenterDynamics, conference speakers, press releases. Report all findings.";
-
-    var body1 = {
-      model: "claude-sonnet-4-5",
-      max_tokens: 1500,
-      system: searchSys,
-      messages: [{ role: "user", content: searchMsg }],
-      tools: [{ type: "web_search_20250305", name: "web_search" }]
-    };
-    var r1 = await fetch(PROXY, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body1) });
-    var d1 = await r1.json();
-
-    // Collect all text from the search response (handle multi-turn automatically)
-    var searchText = "";
-    var content1 = d1.content || [];
-    for (var i = 0; i < content1.length; i++) {
-      if (content1[i].type === "text") searchText += content1[i].text;
-    }
-
-    // If tool_use, do one more round to get the final answer
-    if (d1.stop_reason === "tool_use") {
-      var tr1 = content1.filter(function(b) { return b.type === "tool_use"; })
-                        .map(function(b) { return { type: "tool_result", tool_use_id: b.id, content: "Search completed, please summarize findings." }; });
-      var msgs1b = [
-        { role: "user", content: searchMsg },
-        { role: "assistant", content: content1 },
-        { role: "user", content: tr1 }
-      ];
-      var r1b = await fetch(PROXY, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model: body1.model, max_tokens: body1.max_tokens, system: searchSys, tools: body1.tools, messages: msgs1b }) });
-      var d1b = await r1b.json();
-      for (var j = 0; j < (d1b.content || []).length; j++) {
-        if (d1b.content[j].type === "text") searchText += d1b.content[j].text;
-      }
-    }
-
-    if (!searchText.trim()) throw new Error("Sin respuesta del buscador");
-
-    // STEP 2: Convert search findings to JSON — NO web search tool
-    var jsonSys = "You are a data formatter. Convert research findings into a strict JSON object. Output ONLY the JSON, no other text, no markdown.";
-    var jsonMsg = "Convert these research findings about finding " + title + " at " + company + " into this exact JSON format:\n"
-      + '{"found":true,"name":"full name or null","title":"job title or null","linkedinUrl":"url or null","emailPattern":"pattern or null","source":"where found","confidence":"High or Medium or Low","alternativeContacts":[{"name":"name","title":"title","linkedinUrl":"url or null"}],"actionPlan":{"googleSearch":"suggested google search","linkedinSearch":"linkedin search url","suggestedSites":["site1"],"tip":"tip text"}}'
-      + "\n\nIf the person was NOT found, set found to false and name to null, but fill actionPlan with useful search suggestions.\n\nResearch findings:\n" + searchText;
-
-    var body2 = {
-      model: "claude-sonnet-4-5",
-      max_tokens: 800,
-      system: jsonSys,
-      messages: [{ role: "user", content: jsonMsg }]
-    };
-    var r2 = await fetch(PROXY, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body2) });
-    var d2 = await r2.json();
-
-    var jsonText = "";
-    for (var k = 0; k < (d2.content || []).length; k++) {
-      if (d2.content[k].type === "text") jsonText += d2.content[k].text;
-    }
-    var clean = jsonText.replace(/```json|```/g, "").trim();
-    var s = clean.indexOf("{"), e = clean.lastIndexOf("}");
-    if (s === -1) throw new Error("No se pudo estructurar la respuesta");
-    prContactResult = JSON.parse(clean.slice(s, e + 1));
-
-  } catch(err) {
-    prContactResult = {
-      found: false,
-      error: err.message,
-      actionPlan: {
-        googleSearch: title + " " + company + " LinkedIn",
-        linkedinSearch: "https://www.linkedin.com/search/results/people/?keywords=" + encodeURIComponent(title + " " + company),
-        suggestedSites: [company.toLowerCase().replace(/\s+/g, "") + ".com"],
-        tip: "Busca manualmente en LinkedIn con el nombre de la empresa y el cargo."
-      }
-    };
-  }
-
+  var sys = "You are an expert B2B contact finder. Search exhaustively for the real name of a specific executive.\nTry: (1) \"[company] [title] site:linkedin.com\" (2) \"[company] leadership team site\" (3) \"[company] [title] DatacenterDynamics\" (4) \"[company] [title] speaker conference\"\nReturn ONLY valid JSON:\n" + '{"found":true,"name":"string or null","title":"string or null","linkedinUrl":"string or null","emailPattern":"string or null","source":"string","confidence":"High|Medium|Low","alternativeContacts":[{"name":"string","title":"string","linkedinUrl":"string or null"}],"actionPlan":{"googleSearch":"exact search string","linkedinSearch":"LinkedIn URL","suggestedSites":["string"],"tip":"string"}}';
+  try { prContactResult = await prCallClaude(sys, "Find \"" + title + "\" at \"" + company + "\". Search exhaustively."); }
+  catch(err) { prContactResult = {found:false,error:err.message}; }
   prContactLoading = false;
   if (isDetail) prRenderDetail(); else prRenderResearch();
 }
@@ -7457,7 +7345,8 @@ function prRenderResearch(){
   var el=document.getElementById("pr-research"); if(!el) return;
   var h="<div class='pr-fadein'>";
   h+="<div style='margin-bottom:16px'><div style='font-family:Barlow,sans-serif;font-weight:800;font-size:18px;margin-bottom:4px'>Research de <span style='color:var(--teal)'>Prospecto</span></div><div style='font-size:11px;color:var(--tx4)'>Empresa o vertical (ej: Onnec Group UK, data center operators Norway)</div></div>";
-  h+="<div style='display:flex;gap:8px;margin-bottom:12px'><input id='pr-research-input' value='"+prH(prResearchInput)+"' placeholder='Empresa o vertical...' style='flex:1;background:var(--bg2);border:1px solid var(--bd);color:var(--tx);padding:10px 14px;font-size:13px;border-radius:2px' onkeydown='if(event.key===\"Enter\")prRunResearch()'/><button class='btn btn-primary' style='padding:10px 20px' onclick='prRunResearch()'>"+(prResearchLoading?"<span class='pr-pulse'>...</span>":"BUSCAR")+"</button></div>";
+  h+="<div style='display:flex;gap:8px;margin-bottom:8px'><input id='pr-research-input' value='"+prH(prResearchInput)+"' placeholder='Empresa o vertical (ej: Digital Realty, Bulk Infrastructure Norway)...' style='flex:1;background:var(--bg2);border:1px solid var(--bd);color:var(--tx);padding:10px 14px;font-size:13px;border-radius:2px' onkeydown='if(event.key===\"Enter\")prRunResearch()'/><button class='btn btn-primary' style='padding:10px 20px' onclick='prRunResearch()'>"+(prResearchLoading?"<span class='pr-pulse'>...</span>":"BUSCAR")+"</button></div>";
+  h+="<div style='display:flex;gap:8px;margin-bottom:12px;align-items:center'><input id='pr-contact-input' placeholder='Contacto especifico (opcional — ej: Christian Sinzinger)' style='flex:1;background:var(--bg2);border:1px solid var(--bd);color:var(--tx4);padding:8px 14px;font-size:11px;border-radius:2px'/><span style='font-size:9px;color:var(--tx5);white-space:nowrap'>CONTACTO PUNTUAL</span></div>";
   h+="<div style='display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px'>";
   for(var si=0;si<PR_SUGGESTS.length;si++) h+="<button class='pr-suggest-chip' onclick='document.getElementById(\"pr-research-input\").value=this.textContent;prResearchInput=this.textContent'>"+PR_SUGGESTS[si]+"</button>";
   h+="</div>";
