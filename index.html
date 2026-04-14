@@ -147,13 +147,7 @@ a{color:var(--teal);text-decoration:none}
   .grid2,.grid3{grid-template-columns:1fr}
   .nav{display:none}
   .meta-bar{grid-template-columns:1fr 1fr}
-  .mob-menu-btn{display:flex!important}
 }
-.mob-menu-btn{display:none;background:none;border:1px solid var(--bd);color:var(--tx3);padding:6px 10px;cursor:pointer;margin-left:auto;font-size:18px;line-height:1}
-#mob-menu{display:none;position:fixed;top:56px;left:0;right:0;background:var(--bg2);border-bottom:1px solid var(--bd);z-index:200;padding:8px 0}
-#mob-menu.open{display:block}
-.mob-nav-btn{display:block;width:100%;background:none;border:none;color:var(--tx3);padding:12px 24px;font-family:Barlow,sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;text-align:left;cursor:pointer;border-left:3px solid transparent}
-.mob-nav-btn:hover,.mob-nav-btn.active{color:var(--teal);border-left-color:var(--teal);background:rgba(14,165,201,.06)}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
@@ -181,21 +175,7 @@ a{color:var(--teal);text-decoration:none}
     <button class="nav-btn" onclick="showPage('eor')" style="color:#f97316">🛡 EOR</button>
     <button class="nav-btn" onclick="showPage('taxrules')">⚙ TAX RULES</button>
   </nav>
-  <button class="mob-menu-btn" onclick="toggleMobMenu()" id="mob-hamburger">☰</button>
   <div class="version" style="display:flex;flex-direction:column;align-items:center;line-height:1.4;padding:3px 10px"><span style="font-size:9px;font-weight:700;letter-spacing:2px">v2.2</span><span style="font-size:7px;opacity:.75">2026-03-29</span></div>
-</div>
-
-<!-- MOBILE MENU -->
-<div id="mob-menu">
-  <button class="mob-nav-btn" onclick="mobNav('ai')">✦ AI QUOTE</button>
-  <button class="mob-nav-btn" onclick="mobNav('quoter')">QUOTER</button>
-  <button class="mob-nav-btn" onclick="mobNav('regulatory')">REGULATORY</button>
-  <button class="mob-nav-btn" onclick="mobNav('cases')">CASE LIBRARY</button>
-  <button class="mob-nav-btn" onclick="mobNav('log')">📄 QUOTES</button>
-  <button class="mob-nav-btn" onclick="mobNav('shipments')">✈️ SHIPMENTS</button>
-  <button class="mob-nav-btn" onclick="mobNav('freechat')">💬 CHAT IA</button>
-  <button class="mob-nav-btn" onclick="mobNav('eor')">🛡 EOR</button>
-  <button class="mob-nav-btn" onclick="mobNav('taxrules')">⚙ TAX RULES</button>
 </div>
 
 <!-- ════════════════════════════════════════════════ -->
@@ -1266,7 +1246,7 @@ const HW_DB = [
   { id:"HW014", model:"HP EliteBook", mfr:"HP", type:"Laptop / Notebook",
     hsCode:"8471.30.00", newLow:600, newHigh:2500, refLow:200, refHigh:900,
     typicalDeclared:"$600–$2,500 new / $200–$900 refurb",
-    countries:{brazil:{accepted:true,notes:"No ANATEL. NCM 8471.30.12. II 16%, IPI 15% (confirmado broker Abr-2026)."},colombia:{accepted:true,notes:"0% duties."}},
+    countries:{brazil:{accepted:true,notes:"No ANATEL. HS 8471.30. II 16%, IPI 0%."},colombia:{accepted:true,notes:"0% duties."}},
     anatel:false, exportControl:false,
     notes:"HP EliteBook — business laptop line. Wide range depending on config (i5/i7, RAM, SSD). Base models $600–$900, high-end with i7/32GB/1TB up to $2,500." },
 
@@ -1294,7 +1274,7 @@ const HW_DB = [
   { id:"HW018", model:"Laptop", mfr:"Generic", type:"Laptop / Notebook",
     hsCode:"8471.30.00", newLow:300, newHigh:3500, refLow:100, refHigh:1200,
     typicalDeclared:"$300–$3,500 depending on brand/config",
-    countries:{brazil:{accepted:true,notes:"No ANATEL. NCM 8471.30.12. II 16%, IPI 15% (confirmado broker Abr-2026)."},colombia:{accepted:true,notes:"0% duties."}},
+    countries:{brazil:{accepted:true,notes:"No ANATEL. HS 8471.30. II 16%, IPI 0%."},colombia:{accepted:true,notes:"0% duties."}},
     anatel:false, exportControl:false,
     notes:"Generic laptop entry. Range covers consumer ($300–$800) to enterprise ($800–$3,500). Always specify brand and model on commercial invoice." },
 ];
@@ -1592,13 +1572,13 @@ function bTax(cif){
   const ic=(cif+ii+ip+ps+co)/(1-.18)*.18;
   return{ii,ip,ps,co,ic,t:ii+ip+ps+co+ic};
 }
-// LAPTOPS / HS 8471.30 — NCM 8471.30.12 (Standard Laptops)
-// II: 16% (tasa vigente — confirmado por agente/broker Brasil, Abril 2026)
-// IPI: 15% (base: CIF + II — confirmado TEC oficial NCM 8471.30.12)
+// LAPTOPS / HS 8471.30 — GECEX 852/2026 (vigente desde 01-Mar-2026)
+// II: 16% (tasa vigente — exencion GECEX eliminada Feb 2026)
+// IPI: 0% permanente (NT — Nao Tributado, Decreto TIPI 11.158/2022)
 // PIS: 2.1% | COFINS: 9.65% | ICMS SP: 18% por dentro
-// Fuente: TEC oficial + broker confirmado Abril 2026
+// VERIFICAR ex-tarifario activo en SISCOMEX antes de cotizar (si activo -> II=0%)
 function bTaxLaptop(cif){
-  const ii=cif*.16,ip=(cif+ii)*.15,ps=(cif+ii+ip)*.021,co=(cif+ii+ip)*.0965;
+  const ii=cif*.16,ip=0,ps=(cif+ii)*.021,co=(cif+ii)*.0965;
   const ic=(cif+ii+ip+ps+co)/(1-.18)*.18;
   return{ii,ip,ps,co,ic,t:ii+ip+ps+co+ic};
 }
@@ -1668,7 +1648,7 @@ function canTax(cif){const v=cif*.05;return{v,t:v};}
 const HS_RATES = {
   // HS 8471.30 = Laptops/Notebooks
   '8471.30': {
-    brazil:    { dutyPct:0.16,  ipi:0.15, vatPct:null, note:'IPI=15% (NCM 8471.30.12). II 16% vigente — confirmado broker Abr-2026' },
+    brazil:    { dutyPct:0.16,  ipi:0,    vatPct:null, note:'IPI=0% (NT). II 16% vigente' },
     mexico:    { dutyPct:0,     vatPct:0.16 },
     argentina: { dutyPct:0.08,  vatPct:0.105, note:'Laptops ARG: Derechos 8% + Est 3% + IVA 10.5% + Ganancias 6% + IIBB 2.5%' },
     colombia:  { dutyPct:0,     vatPct:0.19, note:'Laptops exentos de arancel en Colombia' },
@@ -1739,8 +1719,8 @@ function calcItemTax(ct, cifItem, product, hs, type){
     }
     const tx = lap ? bTaxLaptop(cifItem) : bTax(cifItem);
     return { t:tx.t, dutyPct: lap?0.072:0.16,
-             note: null,
-             label: lap?'II 16% + IPI 15% + PIS/COFINS + ICMS (Laptop)':'II 16% + IPI 15% + PIS/COFINS + ICMS' };
+             note: lap?'IPI=0% (NT Laptops)':null,
+             label: lap?'II 16% + IPI 0% + PIS/COFINS + ICMS (Laptop)':'II 16% + IPI 15% + PIS/COFINS + ICMS' };
   }
 
   // ── MEXICO ──────────────────────────────────────────────────────
@@ -2020,7 +2000,7 @@ function calcQuote(ct, fob, lbs, coo, fo, product, hs, type){
     const laptop=isLaptop(product,hs,type);
     const tx=laptop?bTaxLaptop(cif):bTax(cif);
     const txLines=laptop
-      ?[["II (16%)",tx.ii],["IPI (15%)",tx.ip],["PIS (2.1%)",tx.ps],["COFINS (9.65%)",tx.co],["ICMS SP (18%)",tx.ic]]
+      ?[["II (16%)",tx.ii],["IPI (0% — NT Laptops)",tx.ip],["PIS (2.1%)",tx.ps],["COFINS (9.65%)",tx.co],["ICMS SP (18%)",tx.ic]]
       :[["II (16%)",tx.ii],["IPI (15%)",tx.ip],["PIS (2.1%)",tx.ps],["COFINS (9.65%)",tx.co],["ICMS (18%)",tx.ic]];
     return{li:[["FOB Charges","1% / min $270",fc],["Freight (Air Miami→GRU)","$3.76/lb / min $350",fr],["Insurance","1% CIF / min $80",ins],["Destination Services","2% CIF / min $400",ds],["Import License (IOR)","2% CIF / min $860",ior]],
       tx:txLines,tt:tx.t,tot:fc+fr+ins+ds+ior+tx.t,cif,tr:"21 Days",isLaptop:laptop};
@@ -2413,7 +2393,7 @@ function getRegFlags(product, type, coo, ct){
 }
 
 // ── Declared value check inline ────────────────────────
-function getDVCheck(product, fob, type, qty){
+function getDVCheck(product, fob, type, qty, country){
   if(!product||!fob) return null;
   const isRefurb=/refurb/i.test(type||"");
   const prodLower = product.toLowerCase();
@@ -2445,8 +2425,11 @@ function getDVCheck(product, fob, type, qty){
   const units = Math.max(1, parseInt(qty)||1);
   const fobUnit = fob / units;
   const unitLabel = units > 1 ? ` (${units} units × $${fmt(fobUnit)}/unit)` : '';
-  if(fobUnit < lo*0.5) return {level:"critical",score:10,lo,hi,msg:`<strong>CRITICAL — DECLARED VALUE EXTREMELY LOW</strong><br/>$${fmt(fobUnit)}/unit${unitLabel} vs market range $${fmt(lo)}–$${fmt(hi)}. ${Math.round((1-fobUnit/lo)*100)}% below low end. Canal Cinza/audit risk: VERY HIGH.`};
-  if(fobUnit < lo*0.8) return {level:"high",score:35,lo,hi,msg:`<strong>HIGH RISK — BELOW MARKET RANGE</strong><br/>$${fmt(fobUnit)}/unit${unitLabel} vs market range $${fmt(lo)}–$${fmt(hi)}. Prepare supporting documentation (LOE, purchase history).`};
+  const isBrazil = /brazil/i.test(country||"");
+  const auditLabel = isBrazil ? "Canal Cinza/audit risk: VERY HIGH." : "Customs inspection risk: VERY HIGH.";
+  const highAuditLabel = isBrazil ? "High inspection risk. Prepare supporting documentation (LOE, purchase history)." : "High customs inspection risk. Prepare supporting documentation (LOE, purchase history).";
+  if(fobUnit < lo*0.5) return {level:"critical",score:10,lo,hi,msg:`<strong>CRITICAL — DECLARED VALUE EXTREMELY LOW</strong><br/>$${fmt(fobUnit)}/unit${unitLabel} vs market range $${fmt(lo)}–$${fmt(hi)}. ${Math.round((1-fobUnit/lo)*100)}% below low end. ${auditLabel}`};
+  if(fobUnit < lo*0.8) return {level:"high",score:35,lo,hi,msg:`<strong>HIGH RISK — BELOW MARKET RANGE</strong><br/>$${fmt(fobUnit)}/unit${unitLabel} vs market range $${fmt(lo)}–$${fmt(hi)}. ${highAuditLabel}`};
   if(fobUnit <= hi*1.1) return {level:"green",score:90,lo,hi,msg:`<strong>VALUE ACCEPTABLE</strong><br/>$${fmt(fobUnit)}/unit${unitLabel} within market range $${fmt(lo)}–$${fmt(hi)}. Low customs scrutiny risk.`};
   return {level:"medium",score:75,lo,hi,msg:`<strong>NOTE — ABOVE TYPICAL RANGE</strong><br/>$${fmt(fobUnit)}/unit${unitLabel} above typical $${fmt(lo)}–$${fmt(hi)}. High value — ensure documentation complete.`};
 }
@@ -2515,7 +2498,7 @@ IMPORTANT: Never invent prices. Only return data you actually found in web searc
     const unitLabel = units > 1 ? ` (${units} units × $${fmt(fobUnit)}/unit)` : '';
     let level, msg;
     if(fobUnit < lo*0.5){
-      level='critical'; msg=`<strong>CRITICAL — VALOR MUY BAJO</strong><br/>$${fmt(fobUnit)}/unit${unitLabel} vs mercado $${fmt(lo)}–$${fmt(hi)}. Riesgo Canal Cinza/inspección: ALTO.`;
+      level='critical'; msg=`<strong>CRITICAL — VALOR MUY BAJO</strong><br/>$${fmt(fobUnit)}/unit${unitLabel} vs mercado $${fmt(lo)}–$${fmt(hi)}. Riesgo de inspección aduanera: ALTO.`;
     } else if(fobUnit < lo*0.8){
       level='high'; msg=`<strong>RIESGO — BAJO RANGO DE MERCADO</strong><br/>$${fmt(fobUnit)}/unit${unitLabel} vs mercado $${fmt(lo)}–$${fmt(hi)}. Preparar documentación de soporte.`;
     } else if(fobUnit <= hi*1.1){
@@ -2542,26 +2525,6 @@ IMPORTANT: Never invent prices. Only return data you actually found in web searc
 }
 
 
-
-function toggleMobMenu(){
-  const m = document.getElementById('mob-menu');
-  const b = document.getElementById('mob-hamburger');
-  m.classList.toggle('open');
-  b.textContent = m.classList.contains('open') ? '✕' : '☰';
-}
-
-function mobNav(id){
-  showPage(id);
-  // Cerrar menú
-  document.getElementById('mob-menu').classList.remove('open');
-  document.getElementById('mob-hamburger').textContent = '☰';
-  // Marcar activo en menú mobile
-  document.querySelectorAll('.mob-nav-btn').forEach(b=>b.classList.remove('active'));
-  const pages = ['ai','quoter','regulatory','cases','log','shipments','freechat','eor','taxrules'];
-  const idx = pages.indexOf(id);
-  const btns = document.querySelectorAll('.mob-nav-btn');
-  if(btns[idx]) btns[idx].classList.add('active');
-}
 
 function showPage(id){
   document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
@@ -2689,7 +2652,7 @@ function updateInlineChecks(){
   // DV Check
   const dvEl=document.getElementById("dv-check-inline");
   if(product&&fob){
-    const dv=getDVCheck(product,fob,type,parseInt(document.getElementById("q-qty")?.value)||1);
+    const dv=getDVCheck(product,fob,type,parseInt(document.getElementById("q-qty")?.value)||1,currentCtry);
     if(dv && !dv.noRecord){
       const colors={critical:"var(--red)",high:"#f97316",green:"var(--green)",medium:"var(--yellow)"};
       const bgs={critical:"var(--redbg)",high:"var(--orangebg)",green:"var(--greenbg)",medium:"var(--yellowbg)"};
@@ -3013,7 +2976,7 @@ function doQuote(){
   const qn=nextQN(code);
   const dest=COUNTRIES.find(c=>c.id===currentCtry).lb;
   const flags=getRegFlags(product,type,coo,currentCtry);
-  const dv=getDVCheck(product,fob,type,allItems[0]?.quantity||parseInt(document.getElementById("q-qty")?.value)||1);
+  const dv=getDVCheck(product,fob,type,allItems[0]?.quantity||parseInt(document.getElementById("q-qty")?.value)||1,currentCtry);
 
   // Find related cases
   const _cm={brazil:'brazil',mexico:'mexico',argentina:'argentina',colombia:'colombia',chile:'chile',peru:'peru',usa:'usa'};
@@ -3046,7 +3009,7 @@ function doQuote(){
       ${flags.length?`<div style="margin-bottom:14px">${flags.map(f=>`<div class="flag ${flagColors[f.level]||"flag-blue"}">⚠ ${f.msg}</div>`).join("")}</div>`:""}
 
       <!-- Laptop Brazil flag -->
-      ${hasLaptop&&currentCtry==="brazil"?`<div class="flag flag-yellow" style="margin-bottom:14px">⚠ <strong>LAPTOP / NCM 8471.30.12:</strong> II 16% + IPI 15% + PIS 2.1% + COFINS 9.65% + ICMS 18%. Carga efectiva total ~77% CIF. Confirmado broker Abr-2026.</div>`:""}
+      ${hasLaptop&&currentCtry==="brazil"?`<div class="flag flag-yellow" style="margin-bottom:14px">⚠ <strong>LAPTOP / HS 8471.30:</strong> II 16% vigente. IPI = 0% permanente (NT). Carga efectiva total ~55% CIF.</div>`:""}
 
       <!-- DV Assessment -->
       ${dv&&!dv.noRecord?`<div class="flag ${flagColors[dv.level]||"flag-blue"}" style="margin-bottom:14px">📊 <strong>DECLARED VALUE:</strong> ${dv.msg}</div>`:dv?.noRecord?`<div class="flag flag-blue" style="margin-bottom:14px"><span>⚠ <strong>SIN REGISTROS EN BASE INTERNA</strong> — Sin datos de precio para este producto.</span> <button data-prod="${(product||allItems?.[0]?.product||'').replace(/"/g,' ')}" data-fob="${totalFob||fob}" data-qty="${allItems?.[0]?.quantity||1}" data-cid="dvweb-q" onclick="webCheckPrice(this.dataset.prod,+this.dataset.fob,+this.dataset.qty,this.dataset.cid)" style="background:none;border:1px solid var(--teal);color:var(--teal);padding:3px 10px;font-size:10px;font-family:Barlow,sans-serif;font-weight:700;cursor:pointer;margin-left:8px">🔍 VERIFICAR EN WEB</button><div id="dvweb-q"></div></div>`:""}
@@ -4140,7 +4103,7 @@ function runFromAI() {
   const qn = nextQN(code);
   const dest = COUNTRIES.find(c => c.id === ctry).lb;
   const flags = getRegFlags(d.items[0].product, d.items[0].equipmentType, d.countryOfOrigin, ctry);
-  const dv = getDVCheck(d.items[0].product, totalFob, d.items[0].equipmentType, d.items[0].quantity||1);
+  const dv = getDVCheck(d.items[0].product, totalFob, d.items[0].equipmentType, d.items[0].quantity||1, ctry);
 
   const _cm2 = {brazil:'brazil',mexico:'mexico',argentina:'argentina',colombia:'colombia',chile:'chile',peru:'peru',usa:'usa'};
   const relCases = CASE_DB.filter(c => (_cm2[c.country.toLowerCase()]||c.country.toLowerCase()) === ctry).slice(0,2);
@@ -4211,7 +4174,7 @@ function runFromAI() {
       ${flags.length ? `<div style="margin-bottom:14px">${flags.map(f => `<div class="flag ${flagColors[f.level]||"flag-blue"}">⚠ ${f.msg}</div>`).join("")}</div>` : ""}
 
       <!-- Laptop Brazil flag -->
-      ${hasLaptop&&ctry==="brazil"?`<div class="flag flag-yellow" style="margin-bottom:14px">⚠ <strong>LAPTOP / NCM 8471.30.12:</strong> II 16% + IPI 15% + PIS 2.1% + COFINS 9.65% + ICMS 18%. Carga efectiva total ~77% CIF. Confirmado broker Abr-2026.</div>`:""}
+      ${hasLaptop&&ctry==="brazil"?`<div class="flag flag-yellow" style="margin-bottom:14px">⚠ <strong>LAPTOP / HS 8471.30:</strong> II 16% vigente. IPI = 0% permanente (NT). Carga efectiva total ~55% CIF.</div>`:""}
 
       <!-- DV Assessment -->
       ${dv&&!dv.noRecord?`<div class="flag ${flagColors[dv.level]||"flag-blue"}" style="margin-bottom:14px">📊 <strong>DECLARED VALUE:</strong> ${dv.msg}</div>`:dv?.noRecord?`<div class="flag flag-blue" style="margin-bottom:14px"><span>⚠ <strong>SIN REGISTROS EN BASE INTERNA</strong> — Sin datos de precio para este producto.</span> <button data-prod="${(d.items[0].product||'').replace(/"/g,' ')}" data-fob="${totalFob}" data-qty="${d.items[0].quantity||1}" data-cid="dvweb-ai" onclick="webCheckPrice(this.dataset.prod,+this.dataset.fob,+this.dataset.qty,this.dataset.cid)" style="background:none;border:1px solid var(--teal);color:var(--teal);padding:3px 10px;font-size:10px;font-family:Barlow,sans-serif;font-weight:700;cursor:pointer;margin-left:8px">🔍 VERIFICAR EN WEB</button><div id="dvweb-ai"></div></div>`:""}
@@ -4809,6 +4772,7 @@ function createShipmentFromLog(logEntry){
     originProv: '', originPickup: 0, originFreight: 0, originOther: 0, originInvoice: '', originPaid: false,
     destProv: '', destLiberation: 0, destDelivery: 0, destOther: 0, destInvoice: '', destPaid: false,
     clientInvoice: '', clientInvoiceDate: '', clientPaid: false, clientPaidDate: '',
+    dtInvoice: '', dtInvoiceDate: '', dtPaid: false, dtPaidDate: '',
   };
   const arr = getShipments();
   arr.unshift(shipment);
@@ -5986,30 +5950,72 @@ function openShipmentModal(id){
     </div>
 
     <!-- FACTURACIÓN AL CLIENTE -->
+    ${(()=>{
+      const _hasDT = (s.dtSeparate||0) > 0;
+      const _dtPaid = s.dtPaid || false;
+      const _svcPaid = s.clientPaid || false;
+      const _bothPaid = _dtPaid && _svcPaid;
+      const _anyPaid = _dtPaid || _svcPaid;
+      const _statusLabel = _hasDT
+        ? (_bothPaid ? '✓ TODO COBRADO' : _dtPaid ? '⚡ D&T COBRADO · SVC PENDIENTE' : _svcPaid ? '⚡ SVC COBRADO · D&T PENDIENTE' : '⏳ PENDIENTE COBRO')
+        : (_svcPaid ? '✓ COBRADO' : '⏳ PENDIENTE COBRO');
+      const _statusColor = (_hasDT ? _bothPaid : _svcPaid) ? 'var(--green)' : 'var(--yellow)';
+      const _inpStyle = 'background:var(--bg);border:1px solid #2d1b69;color:var(--tx);padding:8px;font-size:12px;width:100%';
+      const _inp = (field,val,type='text') => `<input type="${type}" value="${val||''}" onchange="updateShipmentField(${id},'${field}',this.value)${field==='clientPaid'||field==='dtPaid'?';renderShipments()':''}" style="${_inpStyle}"/>`;
+      const _sel = (field, paid) => `<select onchange="updateShipmentField(${id},'${field}',this.value==='true');renderShipments()" style="${_inpStyle}"><option value="false"${!paid?' selected':''}>⏳ Pendiente</option><option value="true"${paid?' selected':''}>✓ Cobrado</option></select>`;
+      const _amtFields = `
+        <div class="grid2" style="gap:8px;margin-bottom:12px">
+          <div class="field"><div class="field-label">DDP Cotizado (USD)</div>
+            <input type="number" value="${s.ddpQuoted||''}" onchange="updateShipmentField(${id},'ddpQuoted',this.value)" style="${_inpStyle}"/></div>
+          <div class="field"><div class="field-label">D&T x Separado (USD)</div>
+            <input type="number" value="${s.dtSeparate||''}" onchange="updateShipmentField(${id},'dtSeparate',this.value)" style="${_inpStyle}"/></div>
+        </div>`;
+      const _header = `
     <div style="background:#1a0a2e;border:1px solid #a78bfa;border-left:4px solid #a78bfa;padding:10px 16px;margin-top:16px;margin-bottom:12px;display:flex;align-items:center;gap:10px">
       <span style="font-size:16px">🧾</span>
       <span style="font-family:Barlow,sans-serif;font-weight:800;font-size:11px;color:#a78bfa;letter-spacing:3px">FACTURACIÓN AL CLIENTE</span>
-      <span style="margin-left:auto;font-size:10px;color:${s.clientPaid?'var(--green)':'var(--yellow)'};font-family:Barlow,sans-serif;font-weight:700">${s.clientPaid?'✓ COBRADO':'⏳ PENDIENTE COBRO'}</span>
-    </div>
+      <span style="margin-left:auto;font-size:10px;color:${_statusColor};font-family:Barlow,sans-serif;font-weight:700">${_statusLabel}</span>
+    </div>`;
+      if(_hasDT){
+        return _header + `
     <div style="background:#1a0a2e;border:1px solid #2d1b69;padding:14px;margin-bottom:8px">
-    <div class="grid3" style="gap:8px;margin-bottom:8px">
-      <div class="field"><div class="field-label">DDP Cotizado (USD)</div>
-        <input type="number" value="${s.ddpQuoted||''}" onchange="updateShipmentField(${id},'ddpQuoted',this.value)" style="background:var(--bg);border:1px solid #2d1b69;color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
-      <div class="field"><div class="field-label">D&T x Separado (USD)</div>
-        <input type="number" value="${s.dtSeparate||''}" onchange="updateShipmentField(${id},'dtSeparate',this.value)" style="background:var(--bg);border:1px solid #2d1b69;color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
-      <div class="field"><div class="field-label"># Invoice</div>
-        <input value="${s.clientInvoice||''}" onchange="updateShipmentField(${id},'clientInvoice',this.value)" style="background:var(--bg);border:1px solid #2d1b69;color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
-      <div class="field"><div class="field-label">Fecha Invoice</div>
-        <input type="date" value="${s.clientInvoiceDate||''}" onchange="updateShipmentField(${id},'clientInvoiceDate',this.value)" style="background:var(--bg);border:1px solid #2d1b69;color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
-      <div class="field"><div class="field-label">Cobrado</div>
-        <select onchange="updateShipmentField(${id},'clientPaid',this.value==='true');renderShipments()" style="background:var(--bg);border:1px solid #2d1b69;color:var(--tx);padding:8px;font-size:12px;width:100%">
-          <option value="false"${!s.clientPaid?' selected':''}>⏳ Pendiente</option>
-          <option value="true"${s.clientPaid?' selected':''}>✓ Cobrado</option>
-        </select></div>
-      <div class="field"><div class="field-label">Fecha Cobro</div>
-        <input type="date" value="${s.clientPaidDate||''}" onchange="updateShipmentField(${id},'clientPaidDate',this.value)" style="background:var(--bg);border:1px solid #2d1b69;color:var(--tx);padding:8px;font-size:12px;width:100%"/></div>
-    </div>
-    </div>
+      ${_amtFields}
+      <div style="border:1px solid #3d2b00;border-left:3px solid var(--yellow);padding:10px 12px;margin-bottom:10px;background:#1a1200">
+        <div style="font-family:Barlow,sans-serif;font-weight:700;font-size:9px;color:var(--yellow);letter-spacing:2px;margin-bottom:8px">📋 INVOICE 1 — D&T ANTICIPADO (cobrar antes del despacho)</div>
+        <div class="grid3" style="gap:8px">
+          <div class="field"><div class="field-label">Monto D&T (USD)</div>
+            <input type="number" value="${s.dtSeparate||''}" disabled style="background:var(--bg3);border:1px solid #3d2b00;color:var(--yellow);padding:8px;font-size:12px;width:100%;opacity:0.8"/></div>
+          <div class="field"><div class="field-label"># Invoice D&T</div>${_inp('dtInvoice',s.dtInvoice)}</div>
+          <div class="field"><div class="field-label">Fecha Invoice</div>${_inp('dtInvoiceDate',s.dtInvoiceDate,'date')}</div>
+          <div class="field"><div class="field-label">Cobrado</div>${_sel('dtPaid',_dtPaid)}</div>
+          <div class="field"><div class="field-label">Fecha Cobro</div>${_inp('dtPaidDate',s.dtPaidDate,'date')}</div>
+        </div>
+      </div>
+      <div style="border:1px solid #0d2b1a;border-left:3px solid var(--green);padding:10px 12px;background:#0a1810">
+        <div style="font-family:Barlow,sans-serif;font-weight:700;font-size:9px;color:var(--green);letter-spacing:2px;margin-bottom:8px">📋 INVOICE 2 — SERVICIO DDP (cobrar al entregar)</div>
+        <div class="grid3" style="gap:8px">
+          <div class="field"><div class="field-label">Monto DDP (USD)</div>
+            <input type="number" value="${s.ddpQuoted||''}" disabled style="background:var(--bg3);border:1px solid #0d2b1a;color:var(--green);padding:8px;font-size:12px;width:100%;opacity:0.8"/></div>
+          <div class="field"><div class="field-label"># Invoice Servicio</div>${_inp('clientInvoice',s.clientInvoice)}</div>
+          <div class="field"><div class="field-label">Fecha Invoice</div>${_inp('clientInvoiceDate',s.clientInvoiceDate,'date')}</div>
+          <div class="field"><div class="field-label">Cobrado</div>${_sel('clientPaid',_svcPaid)}</div>
+          <div class="field"><div class="field-label">Fecha Cobro</div>${_inp('clientPaidDate',s.clientPaidDate,'date')}</div>
+        </div>
+      </div>
+    </div>`;
+      } else {
+        return _header + `
+    <div style="background:#1a0a2e;border:1px solid #2d1b69;padding:14px;margin-bottom:8px">
+      ${_amtFields}
+      <div class="grid3" style="gap:8px">
+        <div class="field"><div class="field-label"># Invoice</div>${_inp('clientInvoice',s.clientInvoice)}</div>
+        <div class="field"><div class="field-label">Fecha Invoice</div>${_inp('clientInvoiceDate',s.clientInvoiceDate,'date')}</div>
+        <div class="field"><div class="field-label">Cobrado</div>${_sel('clientPaid',_svcPaid)}</div>
+        <div class="field"><div class="field-label">Fecha Cobro</div>${_inp('clientPaidDate',s.clientPaidDate,'date')}</div>
+      </div>
+    </div>`;
+      }
+    })()}
 
     <div style="display:flex;gap:8px;margin-top:8px">
       <button class="btn btn-ghost btn-sm" onclick="deleteShipment(${id})" style="color:var(--red);border-color:var(--red)">ELIMINAR SHIPMENT</button>
