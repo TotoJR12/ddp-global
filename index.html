@@ -7270,9 +7270,86 @@ async function prFindContact(company, title, isDetail) {
   _prCo = company; _prCt = title; _prCd = isDetail;
   prContactResult = null; prContactLoading = true;
   if (isDetail) prRenderDetail(); else prRenderResearch();
-  var sys = "You are an expert B2B contact finder. Search exhaustively for the real name of a specific executive.\nTry: (1) \"[company] [title] site:linkedin.com\" (2) \"[company] leadership team site\" (3) \"[company] [title] DatacenterDynamics\" (4) \"[company] [title] speaker conference\"\nReturn ONLY valid JSON:\n" + '{"found":true,"name":"string or null","title":"string or null","linkedinUrl":"string or null","emailPattern":"string or null","source":"string","confidence":"High|Medium|Low","alternativeContacts":[{"name":"string","title":"string","linkedinUrl":"string or null"}],"actionPlan":{"googleSearch":"exact search string","linkedinSearch":"LinkedIn URL","suggestedSites":["string"],"tip":"string"}}';
-  try { prContactResult = await prCallClaude(sys, "Find \"" + title + "\" at \"" + company + "\". Search exhaustively."); }
-  catch(err) { prContactResult = {found:false,error:err.message}; }
+
+  var PROXY = "https://ddp-proxy.nicolasjuarezroldan.workers.dev";
+
+  try {
+    // STEP 1: Free web search — no JSON required, just find info
+    var searchSys = "You are an expert B2B contact finder for a logistics company. Search for the real name and LinkedIn of a specific executive. Search thoroughly using multiple queries. Report everything you find about this person: full name, title, LinkedIn URL, email pattern, and any alternative contacts at the company. If you cannot find the person, describe what action plan you would recommend (Google search string, LinkedIn search URL, relevant sites to check).";
+    var searchMsg = "Find the " + title + " at " + company + ". Search LinkedIn, company website, DatacenterDynamics, conference speakers, press releases. Report all findings.";
+
+    var body1 = {
+      model: "claude-sonnet-4-5",
+      max_tokens: 1500,
+      system: searchSys,
+      messages: [{ role: "user", content: searchMsg }],
+      tools: [{ type: "web_search_20250305", name: "web_search" }]
+    };
+    var r1 = await fetch(PROXY, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body1) });
+    var d1 = await r1.json();
+
+    // Collect all text from the search response (handle multi-turn automatically)
+    var searchText = "";
+    var content1 = d1.content || [];
+    for (var i = 0; i < content1.length; i++) {
+      if (content1[i].type === "text") searchText += content1[i].text;
+    }
+
+    // If tool_use, do one more round to get the final answer
+    if (d1.stop_reason === "tool_use") {
+      var tr1 = content1.filter(function(b) { return b.type === "tool_use"; })
+                        .map(function(b) { return { type: "tool_result", tool_use_id: b.id, content: "Search completed, please summarize findings." }; });
+      var msgs1b = [
+        { role: "user", content: searchMsg },
+        { role: "assistant", content: content1 },
+        { role: "user", content: tr1 }
+      ];
+      var r1b = await fetch(PROXY, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model: body1.model, max_tokens: body1.max_tokens, system: searchSys, tools: body1.tools, messages: msgs1b }) });
+      var d1b = await r1b.json();
+      for (var j = 0; j < (d1b.content || []).length; j++) {
+        if (d1b.content[j].type === "text") searchText += d1b.content[j].text;
+      }
+    }
+
+    if (!searchText.trim()) throw new Error("Sin respuesta del buscador");
+
+    // STEP 2: Convert search findings to JSON — NO web search tool
+    var jsonSys = "You are a data formatter. Convert research findings into a strict JSON object. Output ONLY the JSON, no other text, no markdown.";
+    var jsonMsg = "Convert these research findings about finding " + title + " at " + company + " into this exact JSON format:\n"
+      + '{"found":true,"name":"full name or null","title":"job title or null","linkedinUrl":"url or null","emailPattern":"pattern or null","source":"where found","confidence":"High or Medium or Low","alternativeContacts":[{"name":"name","title":"title","linkedinUrl":"url or null"}],"actionPlan":{"googleSearch":"suggested google search","linkedinSearch":"linkedin search url","suggestedSites":["site1"],"tip":"tip text"}}'
+      + "\n\nIf the person was NOT found, set found to false and name to null, but fill actionPlan with useful search suggestions.\n\nResearch findings:\n" + searchText;
+
+    var body2 = {
+      model: "claude-sonnet-4-5",
+      max_tokens: 800,
+      system: jsonSys,
+      messages: [{ role: "user", content: jsonMsg }]
+    };
+    var r2 = await fetch(PROXY, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body2) });
+    var d2 = await r2.json();
+
+    var jsonText = "";
+    for (var k = 0; k < (d2.content || []).length; k++) {
+      if (d2.content[k].type === "text") jsonText += d2.content[k].text;
+    }
+    var clean = jsonText.replace(/```json|```/g, "").trim();
+    var s = clean.indexOf("{"), e = clean.lastIndexOf("}");
+    if (s === -1) throw new Error("No se pudo estructurar la respuesta");
+    prContactResult = JSON.parse(clean.slice(s, e + 1));
+
+  } catch(err) {
+    prContactResult = {
+      found: false,
+      error: err.message,
+      actionPlan: {
+        googleSearch: title + " " + company + " LinkedIn",
+        linkedinSearch: "https://www.linkedin.com/search/results/people/?keywords=" + encodeURIComponent(title + " " + company),
+        suggestedSites: [company.toLowerCase().replace(/\s+/g, "") + ".com"],
+        tip: "Busca manualmente en LinkedIn con el nombre de la empresa y el cargo."
+      }
+    };
+  }
+
   prContactLoading = false;
   if (isDetail) prRenderDetail(); else prRenderResearch();
 }
