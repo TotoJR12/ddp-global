@@ -3193,7 +3193,10 @@ function doQuote(){
   document.getElementById("quoter-form").style.display="none";
   document.getElementById("quoter-result").style.display="block";
   document.getElementById("quoter-result").innerHTML=html;
-  setActiveQuote({qn,dest,product:product||'—',hs,coo:coo||'TBC',fob,lbs,cif:r.cif,tot:r.tot,tr:r.tr,country:currentCtry,lines:r.li,taxes:r.tx,flags,dv,origin:'Miami, USA (DDP Global warehouse)',type:type||'—'});
+  const _aqSnap = {qn,dest,product:product||'—',hs,coo:coo||'TBC',fob,lbs,cif:r.cif,tot:r.tot,tr:r.tr,country:currentCtry,lines:r.li,taxes:r.tx,flags,dv,origin:'Miami, USA (DDP Global warehouse)',type:type||'—'};
+  setActiveQuote(_aqSnap);
+  // AUTO-LEARN: silently add to Knowledge Base
+  addToKB(Object.assign({}, _aqSnap, { items: allItems.map(i=>Object.assign({},i,{hsCode:i.hsCode||hs})), qty: allItems.reduce((s,i)=>s+(i.quantity||1),0) }));
   window.scrollTo(0,0);
 }
 
@@ -4350,7 +4353,10 @@ function runFromAI() {
   document.getElementById("ai-input-section").style.display = "none";
   document.getElementById("ai-quote-result").style.display = "block";
   document.getElementById("ai-quote-result").innerHTML = html;
-  setActiveQuote({qn,dest,product:d.items[0].product||'—',hs:d.items[0].hsCode||'8517.62',coo:d.countryOfOrigin||'TBC',fob:totalFob,lbs:totalLbs,cif:r.cif,tot:grandTotal,tr:r.tr,country:ctry,lines:r.li,taxes:taxLines,flags,dv,origin:'Miami, USA (DDP Global warehouse)',type:d.items[0].equipmentType||'—',qty:d.items.reduce((s,i)=>s+(i.quantity||1),0)});
+  const _aiSnap = {qn,dest,product:d.items[0].product||'—',hs:d.items[0].hsCode||'8517.62',coo:d.countryOfOrigin||'TBC',fob:totalFob,lbs:totalLbs,cif:r.cif,tot:grandTotal,tr:r.tr,country:ctry,lines:r.li,taxes:taxLines,flags,dv,origin:'Miami, USA (DDP Global warehouse)',type:d.items[0].equipmentType||'—',qty:d.items.reduce((s,i)=>s+(i.quantity||1),0)};
+  setActiveQuote(_aiSnap);
+  // AUTO-LEARN: silently add ALL items to Knowledge Base
+  addToKB(Object.assign({}, _aiSnap, { items: d.items, client: d.client||'' }));
   window.scrollTo(0, 0);
 }
 
@@ -6685,27 +6691,91 @@ function getInternalCostsContext(corridor, fob, lbs, cif) {
 
 
 function addToKB(snap){
-  if(!snap||!snap.product) return;
+  if(!snap) return;
   const kb = getKB();
-  const record = {
-    id: Date.now(),
-    date: new Date().toISOString().slice(0,10),
-    product: snap.product||'',
-    type: snap.type||'',
-    hs: snap.hs||'',
-    coo: snap.coo||'',
-    dest: snap.dest||'',
-    lbs: snap.lbs||0,
-    fob: snap.fob||0,
-    cif: snap.cif||0,
-    tot: snap.tot||0,
-    qn: snap.qn||''
-  };
-  // Avoid exact duplicate (same qn)
-  if(kb.find(x=>x.qn===record.qn)) return;
-  kb.unshift(record);
-  // Keep max 500 records
-  if(kb.length>500) kb.pop();
+
+  // Support multi-item quotes — process each item
+  const items = snap.items && snap.items.length
+    ? snap.items
+    : [{ product: snap.product||'', hs: snap.hs||'', type: snap.type||'', fob: snap.fob||0, lbs: snap.lbs||0, quantity: snap.qty||1 }];
+
+  items.forEach(function(item) {
+    if (!item.product && !item.fob) return;
+    const record = {
+      id: Date.now() + Math.random(),
+      date: new Date().toISOString().slice(0,10),
+      product: (item.product||snap.product||'').trim(),
+      type: item.type||item.equipmentType||snap.type||'',
+      hs: (item.hsCode||item.hs||snap.hs||'').trim(),
+      coo: (snap.coo||'').trim(),
+      dest: (snap.dest||'').trim(),
+      country: snap.country||'',
+      lbs: item.weightLbs||item.lbs||snap.lbs||0,
+      fob: item.fobValue||item.fob||snap.fob||0,
+      fobPerUnit: item.quantity > 1 ? Math.round((item.fobValue||item.fob||0) / (item.quantity||1)) : (item.fobValue||item.fob||0),
+      qty: item.quantity||1,
+      cif: snap.cif||0,
+      tot: snap.tot||0,
+      qn: snap.qn||''
+    };
+
+    if (!record.product && record.fob === 0) return;
+    // Avoid duplicate qn + product combo
+    if (record.qn && kb.find(x => x.qn === record.qn && x.product === record.product)) return;
+
+    // ── ANOMALY DETECTION ────────────────────────────────
+    const term = record.product.toLowerCase().split(' ')[0];
+    const related = kb.filter(x => x.product && (
+      x.product.toLowerCase().includes(term) ||
+      term.includes(x.product.toLowerCase().split(' ')[0])
+    ));
+
+    const anomalies = [];
+
+    // 1. HS Code conflict
+    if (record.hs && related.length) {
+      const prevHS = related.filter(x => x.hs && x.hs !== record.hs).map(x => x.hs);
+      const uniquePrevHS = [...new Set(prevHS)];
+      if (uniquePrevHS.length) {
+        anomalies.push({
+          type: 'hs_conflict',
+          msg: 'HS Code ' + record.hs + ' difiere del histórico: ' + uniquePrevHS.join(', '),
+          level: 'medium'
+        });
+      }
+    }
+
+    // 2. Value anomaly
+    if (record.fobPerUnit > 0 && related.length >= 2) {
+      const prevFobs = related.map(x => x.fobPerUnit||x.fob).filter(x => x > 0);
+      if (prevFobs.length >= 2) {
+        const avg = prevFobs.reduce((a,b)=>a+b,0) / prevFobs.length;
+        const pct = (record.fobPerUnit - avg) / avg;
+        if (pct < -0.45) {
+          anomalies.push({ type: 'value_low', msg: 'Valor $' + record.fobPerUnit.toLocaleString() + '/u es ' + Math.round(Math.abs(pct)*100) + '% menor al histórico ($' + Math.round(avg).toLocaleString() + '). ¿Usado/refurbished? Confirmar.', level: 'high' });
+        } else if (pct > 0.6) {
+          anomalies.push({ type: 'value_high', msg: 'Valor $' + record.fobPerUnit.toLocaleString() + '/u es ' + Math.round(pct*100) + '% mayor al histórico ($' + Math.round(avg).toLocaleString() + '). ¿Configuración especial?', level: 'medium' });
+        }
+      }
+    }
+
+    // 3. New product — never seen before
+    if (related.length === 0 && record.product) {
+      anomalies.push({ type: 'new_product', msg: 'Producto nuevo en la base: ' + record.product + (record.hs ? ' (HS ' + record.hs + ')' : ''), level: 'info' });
+    }
+
+    record.anomalies = anomalies;
+
+    // Log anomalies to console for visibility (silent, no UI interruption)
+    if (anomalies.length) {
+      console.log('[KB]', record.date, record.product, '—', anomalies.map(a=>a.msg).join(' | '));
+    }
+
+    kb.unshift(record);
+  });
+
+  // Keep max 1000 records
+  if (kb.length > 1000) kb.splice(1000);
   saveKB(kb);
 }
 
@@ -6747,23 +6817,64 @@ function getKBInsights(product, fob, dest){
 }
 
 function getKBContext(){
-  // Returns a text summary of the KB for the chat system prompt
   const kb = getKB();
   if(!kb.length) return '';
-  let ctx = '\n\nHISTORIAL DE OPERACIONES DDP GLOBAL ('+kb.length+' envíos):\n';
-  // Group by product
+  let ctx = '\n\n=== BASE DE CONOCIMIENTO DDP GLOBAL (' + kb.length + ' registros) ===\n';
+
+  // Group by product family
   const byProduct = {};
-  kb.forEach(x=>{
-    const key = x.product.split(' ').slice(0,3).join(' ');
-    if(!byProduct[key]) byProduct[key]={count:0,fobs:[],dests:new Set(),hs:x.hs};
+  kb.forEach(x => {
+    if (!x.product) return;
+    const key = x.product.split(' ').slice(0,3).join(' ').toLowerCase();
+    if (!byProduct[key]) byProduct[key] = { product: x.product, count:0, fobs:[], fobsPerUnit:[], lbs:[], dests:new Set(), hs:new Set(), coos:new Set(), anomalies:[] };
     byProduct[key].count++;
-    if(x.fob>0) byProduct[key].fobs.push(x.fob);
-    if(x.dest) byProduct[key].dests.add(x.dest.replace(/[^a-zA-Z]/g,'').trim());
+    if (x.fob > 0) byProduct[key].fobs.push(x.fob);
+    if (x.fobPerUnit > 0) byProduct[key].fobsPerUnit.push(x.fobPerUnit);
+    if (x.lbs > 0) byProduct[key].lbs.push(x.lbs);
+    if (x.dest) byProduct[key].dests.add(x.dest.split(' ')[0]);
+    if (x.hs) byProduct[key].hs.add(x.hs);
+    if (x.coo) byProduct[key].coos.add(x.coo);
+    if (x.anomalies && x.anomalies.length) byProduct[key].anomalies.push(...x.anomalies.map(a=>a.msg));
   });
-  Object.entries(byProduct).slice(0,10).forEach(([prod,data])=>{
-    const avgFob = data.fobs.length ? Math.round(data.fobs.reduce((a,b)=>a+b,0)/data.fobs.length) : 0;
-    ctx += `  - ${prod}: ${data.count} envíos, FOB prom $${avgFob.toLocaleString()}, destinos: ${[...data.dests].join('/')}, HS: ${data.hs}\n`;
+
+  ctx += '\nPRODUCTOS COTIZADOS (más frecuentes primero):\n';
+  Object.values(byProduct)
+    .sort((a,b) => b.count - a.count)
+    .slice(0, 20)
+    .forEach(data => {
+      const avg = data.fobs.length ? Math.round(data.fobs.reduce((a,b)=>a+b,0)/data.fobs.length) : 0;
+      const avgU = data.fobsPerUnit.length ? Math.round(data.fobsPerUnit.reduce((a,b)=>a+b,0)/data.fobsPerUnit.length) : avg;
+      const minF = data.fobs.length ? Math.min(...data.fobs) : 0;
+      const maxF = data.fobs.length ? Math.max(...data.fobs) : 0;
+      const avgW = data.lbs.length ? Math.round(data.lbs.reduce((a,b)=>a+b,0)/data.lbs.length) : 0;
+      ctx += '  • ' + data.product + ' [' + data.count + 'x]';
+      ctx += ' | FOB: $' + avgU.toLocaleString() + '/u (rango $' + minF.toLocaleString() + '–$' + maxF.toLocaleString() + ')';
+      ctx += ' | Peso prom: ' + avgW + ' lbs';
+      ctx += ' | HS: ' + [...data.hs].join('/');
+      ctx += ' | COO: ' + [...data.coos].join('/');
+      ctx += ' | Destinos: ' + [...data.dests].join('/');
+      if (data.anomalies.length) ctx += ' | ⚠ ' + [...new Set(data.anomalies)].slice(0,2).join('; ');
+      ctx += '\n';
+    });
+
+  // Anomalies summary
+  const allAnomalies = kb.filter(x=>x.anomalies&&x.anomalies.length);
+  if (allAnomalies.length) {
+    ctx += '\nALERTAS DETECTADAS EN LA BASE:\n';
+    allAnomalies.slice(0,5).forEach(x => {
+      x.anomalies.forEach(a => {
+        ctx += '  ⚠ [' + x.date + '] ' + x.product + ': ' + a.msg + '\n';
+      });
+    });
+  }
+
+  // Recent operations
+  ctx += '\nÚLTIMOS 5 REGISTROS:\n';
+  kb.slice(0,5).forEach(x => {
+    ctx += '  ' + x.date + ' | ' + x.product + ' | $' + (x.fob||0).toLocaleString() + ' FOB | ' + (x.dest||'') + ' | HS ' + (x.hs||'') + '\n';
   });
+
+  ctx += '=== FIN BASE DE CONOCIMIENTO ===\n';
   return ctx;
 }
 
