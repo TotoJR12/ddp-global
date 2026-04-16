@@ -7336,10 +7336,27 @@ async function prGenerateMail(prospectId, isDetail) {
 function prSaveProspect() {
   if (!prResearchResult || prResearchResult.error) return;
   var r = prResearchResult;
-  var newP = { id:Date.now(), companyName:r.companyName, industry:r.industry, headquarters:r.headquarters, regions:r.regions, signals:r.signals, suggestedContact:r.suggestedContact, ddpAngle:r.ddpAngle, mailHook:r.mailHook, priority:r.priority, priorityReason:r.priorityReason, savedContact:(prContactResult&&prContactResult.found)?prContactResult:null, status:"Investigado", notes:"", activity:[{date:new Date().toISOString(),type:"Research",note:"Prospecto investigado y agregado al CRM"}], createdAt:new Date().toISOString(), updatedAt:new Date().toISOString() };
-  prProspects = [newP].concat(prProspects); prSave();
-  var btn=document.getElementById("pr-save-btn");
-  if(btn){var o=btn.textContent;btn.textContent="GUARDADO";setTimeout(function(){btn.textContent=o;},2500);}
+  // Check if already saved (avoid duplicates)
+  var alreadySaved = prProspects.find(function(p){ return p.companyName === r.companyName; });
+  if (alreadySaved) {
+    // Update contact if we now have one
+    if (prContactResult && prContactResult.found) {
+      alreadySaved.savedContact = prContactResult;
+      alreadySaved.updatedAt = new Date().toISOString();
+      alreadySaved.activity = (alreadySaved.activity||[]).concat([{date:new Date().toISOString(),type:"Contacto",note:"Contacto actualizado: "+(prContactResult.name||"")}]);
+      prSave();
+    }
+    // Navigate to CRM and highlight this prospect
+    prSelectedId = alreadySaved.id;
+    prSetView("crm");
+    return;
+  }
+  var newP = { id:Date.now(), companyName:r.companyName, industry:r.industry, headquarters:r.headquarters, regions:r.regions, signals:r.signals, suggestedContact:r.suggestedContact, ddpAngle:r.ddpAngle, mailHook:r.mailHook, priority:r.priority, priorityReason:r.priorityReason, savedContact:(prContactResult&&prContactResult.found)?prContactResult:null, status:"Investigado", notes:"", activity:[{date:new Date().toISOString(),type:"Research",note:"Prospecto investigado y agregado al CRM"+(prContactResult&&prContactResult.found?" + contacto: "+(prContactResult.name||""):"")  }], createdAt:new Date().toISOString(), updatedAt:new Date().toISOString() };
+  prProspects = [newP].concat(prProspects);
+  prSave();
+  // Navigate to CRM immediately so user can see it saved
+  prSelectedId = newP.id;
+  prSetView("crm");
 }
 
 function prUpdateStatus(id, status) {
@@ -7445,7 +7462,11 @@ function prRenderResearch(){
     h+="<div class='pr-section'><button class='btn btn-ghost btn-full' onclick='prGenerateMail(0,false)'"+(prMailLoading?" disabled":"")+">"+(prMailLoading?"<span class='pr-pulse'>GENERANDO MAIL...</span>":"GENERAR MAIL COMPLETO")+"</button>";
     if(prMailDraft&&prMailDraft.error) h+="<div class='flag flag-yellow' style='margin-top:8px'>"+prH(prMailDraft.error)+"</div>";
     if(prMailDraft&&!prMailDraft.error) h+=prMailWidget(prMailDraft);
-    h+="</div><button id='pr-save-btn' class='btn btn-primary btn-full' style='font-size:13px;padding:13px' onclick='prSaveProspect()'>GUARDAR EN CRM</button></div>";
+    // Check if already in CRM
+    var alreadyInCRM = prProspects.find(function(p){ return p.companyName === d.companyName; });
+    var saveLabel = alreadyInCRM ? "✓ YA EN CRM — ACTUALIZAR CONTACTO" : "GUARDAR EN CRM";
+    var saveBtnStyle = alreadyInCRM ? "font-size:13px;padding:13px;background:var(--greenbg);border:1px solid var(--green);color:var(--green)" : "font-size:13px;padding:13px";
+    h+="</div><button id='pr-save-btn' class='btn btn-primary btn-full' style='"+saveBtnStyle+"' onclick='prSaveProspect()'>"+saveLabel+"</button></div>";
   }
   h+="</div>"; el.innerHTML=h;
 }
