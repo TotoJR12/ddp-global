@@ -7247,13 +7247,34 @@ async function prCallClaude(system, userMsg, useSearch) {
   if (!r.ok) throw new Error("Error del servidor (" + r.status + ") — reintenta");
   var d = await r.json();
   if (d.error) throw new Error(d.error.message || "Error de API");
-  // Extract text from all content blocks
+  // Extract ONLY text blocks (skip tool_use, tool_result, web search blocks)
   var txt = "";
-  for (var i = 0; i < (d.content||[]).length; i++) { if (d.content[i].type==="text") txt += d.content[i].text; }
-  var clean = txt.replace(/```json|```/g,"").trim();
-  var s = clean.indexOf("{"), e = clean.lastIndexOf("}");
+  for (var i = 0; i < (d.content||[]).length; i++) {
+    if (d.content[i].type === "text") txt += d.content[i].text;
+  }
+  // Clean markdown fences
+  var clean = txt.replace(/```json[\s\S]*?```/g, function(m){ return m.replace(/```json|```/g,""); })
+                 .replace(/```/g,"").trim();
+  // Find the outermost JSON object robustly
+  var s = clean.indexOf("{");
   if (s === -1) throw new Error("Respuesta sin JSON — reintenta");
-  return JSON.parse(clean.slice(s, e+1));
+  // Walk to find the matching closing brace
+  var depth = 0, e = -1;
+  for (var i = s; i < clean.length; i++) {
+    if (clean[i] === "{") depth++;
+    else if (clean[i] === "}") { depth--; if (depth === 0) { e = i; break; } }
+  }
+  if (e === -1) throw new Error("JSON incompleto en la respuesta — reintenta");
+  try {
+    return JSON.parse(clean.slice(s, e+1));
+  } catch(parseErr) {
+    // Last resort: try to find any valid JSON object in the text
+    var match = clean.match(/\{[\s\S]*\}/);
+    if (match) {
+      try { return JSON.parse(match[0]); } catch(e2) {}
+    }
+    throw new Error("No se pudo parsear la respuesta de Claude — reintenta");
+  }
 }
 
 async function prRunResearch() {
