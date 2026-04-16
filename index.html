@@ -3180,12 +3180,13 @@ function doQuote(){
       <!-- Intelligence Report (internal only) -->
       ${buildIntelligenceReport(product,hs,coo,fob,lbs,currentCtry,type)}
 
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><div style="font-size:9px;color:var(--tx5);letter-spacing:2px;white-space:nowrap">CLIENTE</div><input id="save-client-name" type="text" placeholder="Nombre del cliente (opcional)" style="flex:1;background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px 10px;font-size:12px;font-family:'DM Mono',monospace"/></div>
       <!-- Actions -->
       <div style="display:flex;gap:8px">
         <button class="btn btn-primary" style="flex:1;padding:12px" onclick="downloadQuotePDF()">⬇ DESCARGAR PDF</button>
         <button class="btn btn-ghost" style="padding:12px" onclick="openQuoterChat()">💬 CHAT</button>
         <button class="btn btn-ghost" style="padding:12px" onclick="copyQuote('${qn}','${dest}','${product||"—"}','${hs}','${coo||"TBC"}',${fob},${lbs},${r.cif},${r.tot},'${r.tr}')">COPY TEXT</button>
-        <button class="btn btn-ghost" style="padding:12px 18px" onclick="saveQuoteToLog('${qn}','${dest}','${product||"—"}',${fob},${r.tot},${r.cif})">📋 LOG</button>
+        <button class="btn btn-ghost" style="padding:12px 18px;background:var(--greenbg);border-color:var(--green);color:var(--green);font-weight:800" id="save-log-btn" onclick="saveQuoteNow()">💾 GUARDAR</button>
         <button class="btn btn-ghost" style="padding:12px 18px" onclick="resetQuote()">NEW</button>
       </div>
     </div>`;
@@ -6891,22 +6892,31 @@ function openLogQuote(id){
     window.scrollTo(0,0);
   }catch(err){alert('Error al abrir la cotización: '+err.message);}
 }
-function saveQuoteToLog(qn,dest,product,fob,total,cif){
-  const client=prompt('Nombre del cliente (opcional):','');
-  // Use activeQuoteData values (always up-to-date, includes multi-item and chat adjustments)
-  const lbs = activeQuoteData ? (activeQuoteData.lbs||0) : (parseFloat(document.getElementById('q-wt')?.value)||0);
-  const coo = activeQuoteData ? (activeQuoteData.coo||'') : (document.getElementById('q-coo')?.value||'');
-  const realFob = activeQuoteData ? (activeQuoteData.fob||fob) : fob;
-  const realTotal = activeQuoteData ? (activeQuoteData.tot||total) : total;
-  const realCif = activeQuoteData ? (activeQuoteData.cif||cif) : cif;
-  const entry={qn,client:client||'—',dest,product,fob:realFob,total:realTotal,cif:realCif,lbs,coo,origin:'Miami, USA',status:'quote',notes:'',source:'quoter'};
-  if(activeQuoteData){
-    entry.quoteSnapshot=JSON.stringify(activeQuoteData);
-    addToKB(activeQuoteData);
-  }
+function saveQuoteNow(){
+  if(!activeQuoteData){ alert('No hay cotización activa.'); return; }
+  const q = activeQuoteData;
+  // Get client name from inline input field if present, else empty
+  const clientEl = document.getElementById('save-client-name');
+  const client = clientEl ? clientEl.value.trim() : '';
+  const entry={
+    qn:q.qn, client:client||'—', dest:q.dest, product:q.product,
+    fob:q.fob, total:q.tot, cif:q.cif, lbs:q.lbs, coo:q.coo,
+    origin:'Miami, USA', status:'quote', notes:'', source:'quoter',
+    quoteSnapshot:JSON.stringify(q)
+  };
+  addToKB(q);
   addToLog(entry);
-  alert('✓ Cotización guardada en el LOG y en la Knowledge Base');
-  showPage('log');
+  // Visual feedback on button
+  const btn = document.getElementById('save-log-btn');
+  if(btn){ btn.textContent='✓ GUARDADO'; btn.style.background='var(--green)'; btn.disabled=true;
+    setTimeout(()=>{ btn.textContent='💾 GUARDAR'; btn.style.background='var(--greenbg)'; btn.disabled=false; },2500); }
+  // Show in log after short delay
+  setTimeout(()=>showPage('log'), 800);
+}
+
+function saveQuoteToLog(qn,dest,product,fob,total,cif){
+  // Legacy wrapper — calls saveQuoteNow
+  saveQuoteNow();
 }
 
 function updateLogStatus(id,newStatus){
