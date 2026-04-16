@@ -3193,10 +3193,7 @@ function doQuote(){
   document.getElementById("quoter-form").style.display="none";
   document.getElementById("quoter-result").style.display="block";
   document.getElementById("quoter-result").innerHTML=html;
-  const _aqSnap = {qn,dest,product:product||'—',hs,coo:coo||'TBC',fob,lbs,cif:r.cif,tot:r.tot,tr:r.tr,country:currentCtry,lines:r.li,taxes:r.tx,flags,dv,origin:'Miami, USA (DDP Global warehouse)',type:type||'—'};
-  setActiveQuote(_aqSnap);
-  // AUTO-LEARN: silently add to Knowledge Base
-  addToKB(Object.assign({}, _aqSnap, { items: allItems.map(i=>Object.assign({},i,{hsCode:i.hsCode||hs})), qty: allItems.reduce((s,i)=>s+(i.quantity||1),0) }));
+  setActiveQuote({qn,dest,product:product||'—',hs,coo:coo||'TBC',fob:totalFob,lbs:totalLbs,cif:r.cif,tot:grandTotal,tr:r.tr,country:currentCtry,lines:r.li,taxes:taxLines,flags,dv,origin:'Miami, USA (DDP Global warehouse)',type:type||'—',allItems:allItems});
   window.scrollTo(0,0);
 }
 
@@ -4353,10 +4350,7 @@ function runFromAI() {
   document.getElementById("ai-input-section").style.display = "none";
   document.getElementById("ai-quote-result").style.display = "block";
   document.getElementById("ai-quote-result").innerHTML = html;
-  const _aiSnap = {qn,dest,product:d.items[0].product||'—',hs:d.items[0].hsCode||'8517.62',coo:d.countryOfOrigin||'TBC',fob:totalFob,lbs:totalLbs,cif:r.cif,tot:grandTotal,tr:r.tr,country:ctry,lines:r.li,taxes:taxLines,flags,dv,origin:'Miami, USA (DDP Global warehouse)',type:d.items[0].equipmentType||'—',qty:d.items.reduce((s,i)=>s+(i.quantity||1),0)};
-  setActiveQuote(_aiSnap);
-  // AUTO-LEARN: silently add ALL items to Knowledge Base
-  addToKB(Object.assign({}, _aiSnap, { items: d.items, client: d.client||'' }));
+  setActiveQuote({qn,dest,product:d.items[0].product||'—',hs:d.items[0].hsCode||'8517.62',coo:d.countryOfOrigin||'TBC',fob:totalFob,lbs:totalLbs,cif:r.cif,tot:grandTotal,tr:r.tr,country:ctry,lines:r.li,taxes:taxLines,flags,dv,origin:'Miami, USA (DDP Global warehouse)',type:d.items[0].equipmentType||'—',qty:d.items.reduce((s,i)=>s+(i.quantity||1),0)});
   window.scrollTo(0, 0);
 }
 
@@ -4493,7 +4487,19 @@ async function parseVisionFile(file, ext, ctx) {
   document.getElementById('ai-status-text').textContent = 'Enviando a Claude Vision...';
   const b64 = await new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result.split(',')[1]); r.onerror=rej; r.readAsDataURL(file); });
   const mime = {pdf:'application/pdf',png:'image/png',webp:'image/webp',jpg:'image/jpeg',jpeg:'image/jpeg'}[ext]||'image/jpeg';
-  const prompt = (ctx?'Context: '+ctx+'\n\n':'') + 'Extract ALL shipment details from this document and return ONLY raw JSON (no markdown): {product, equipmentType, quantity, fobValue, weightLbs, countryOfOrigin, destination, hsCode, notes, confidence, missingFields}. destination must be one of the country ids like: brazil, mexico, colombia, usa, uk, france, germany, dubai, etc.';
+  const VISION_PROMPT = 'You are a logistics data extractor for DDP Global LLC. Extract ALL shipment details from this document and return ONLY a raw JSON object - no markdown, no explanation, no backticks.\n\n' +
+    'CRITICAL RULES:\n' +
+    '1. If the document has MULTIPLE different products (table, list, invoice), extract EACH as a separate entry in the items array.\n' +
+    '2. fobValue for each item = unit price x quantity. NEVER use unit price alone. If the doc shows a table with Amount/Total column, use that column value directly.\n' +
+    '3. The subtotal/total at the bottom of a table confirms the sum - your items fobValues should add up to it.\n' +
+    '4. Weight: if given in kg convert to lbs (x 2.205). If only total shipment weight, distribute proportionally or set weightLbs:0 per item.\n' +
+    '5. If items are described as refurbished or used, set equipmentType to Refurbished Hardware.\n' +
+    '6. destination must be one of: brazil,mexico,argentina,colombia,chile,peru,ecuador,costarica,panama,domrep,guatemala,honduras,bolivia,paraguay,uruguay,dubai,qatar,saudiarabia,bahrain,israel,uk,spain,france,germany,netherlands,turkey,india,singapore,japan,australia,canada,usa\n\n' +
+    'Return this exact JSON structure: {destination, countryOfOrigin, notes, confidence, missingFields, items:[{product, equipmentType, quantity, fobValue, weightLbs, hsCode}]}\n\n' +
+    'equipmentType: Switch / Router | Server | GPU / AI Hardware | Storage | Cable / Accessory | Refurbished Hardware | Laptop / Notebook | Other\n' +
+    'hsCode: switch/router=8517.62, server=8471.49 or 8471.50, storage=8471.70, gpu=8473.30, cable=8544.42, laptop=8471.30, optics/fiber=8517.62, power cords=8544.42\n' +
+    'Return ONLY the JSON object, nothing else.';
+  const prompt = (ctx ? 'Context: ' + ctx + '\n\n' : '') + VISION_PROMPT;
   const content = ext==='pdf'
     ? [{type:'document',source:{type:'base64',media_type:mime,data:b64}},{type:'text',text:prompt}]
     : [{type:'image',source:{type:'base64',media_type:mime,data:b64}},{type:'text',text:prompt}];
@@ -4502,7 +4508,28 @@ async function parseVisionFile(file, ext, ctx) {
     body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1200,messages:[{role:'user',content}]})});
   if(!r.ok) throw new Error('API error '+r.status);
   const d = await r.json();
-  const p = JSON.parse((d.content?.[0]?.text||'').replace(/```json|```/g,'').trim());
+  const rawText = (d.content?.[0]?.text||'').replace(/```json|```/g,'').trim();
+  let p;
+  try {
+    p = JSON.parse(rawText);
+  } catch(e) {
+    // Claude returned plain text instead of JSON — re-ask with stricter prompt
+    const retry = await fetch('https://ddp-proxy.nicolasjuarezroldan.workers.dev',{method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1200,
+        system:'You are a logistics data extractor. You MUST respond with ONLY a valid JSON object, nothing else. No explanations, no markdown.',
+        messages:[
+          {role:'user',content},
+          {role:'assistant',content:rawText},
+          {role:'user',content:'Return ONLY the JSON object now, no text, no explanation. Start with { and end with }'}
+        ]})});
+    if(!retry.ok) throw new Error('No se pudo extraer JSON del documento. Verificá que el archivo sea legible.');
+    const d2 = await retry.json();
+    const rawText2 = (d2.content?.[0]?.text||'').replace(/```json|```/g,'').trim();
+    try { p = JSON.parse(rawText2); } catch(e2) {
+      throw new Error('El documento no contiene datos de envío reconocibles. Probá pegando el texto directamente en la pestaña EMAIL / TEXTO.');
+    }
+  }
   p._source='ai-vision'; return p;
 }
 
@@ -5565,8 +5592,8 @@ function applyAdjustment(qn, confirm){
   const tel = document.getElementById('qtotal-'+qn);
   if(tel) tel.textContent = '$'+fmt(grandTotal);
 
-  // Si confirma → actualizar activeQuoteData para que el PDF tome los nuevos valores
-  if(confirm && activeQuoteData){
+  // Siempre actualizar activeQuoteData — tanto en RECALCULAR como en CONFIRMAR
+  if(activeQuoteData){
     const svcLabels = activeQuoteData.lines ? activeQuoteData.lines.map(([l,b])=>[l,b]) : [];
     const newLines = [fc,fr,ins,ds,ior].map((v,i)=>{
       const lb = svcLabels[i]||['',''];
@@ -6691,91 +6718,27 @@ function getInternalCostsContext(corridor, fob, lbs, cif) {
 
 
 function addToKB(snap){
-  if(!snap) return;
+  if(!snap||!snap.product) return;
   const kb = getKB();
-
-  // Support multi-item quotes — process each item
-  const items = snap.items && snap.items.length
-    ? snap.items
-    : [{ product: snap.product||'', hs: snap.hs||'', type: snap.type||'', fob: snap.fob||0, lbs: snap.lbs||0, quantity: snap.qty||1 }];
-
-  items.forEach(function(item) {
-    if (!item.product && !item.fob) return;
-    const record = {
-      id: Date.now() + Math.random(),
-      date: new Date().toISOString().slice(0,10),
-      product: (item.product||snap.product||'').trim(),
-      type: item.type||item.equipmentType||snap.type||'',
-      hs: (item.hsCode||item.hs||snap.hs||'').trim(),
-      coo: (snap.coo||'').trim(),
-      dest: (snap.dest||'').trim(),
-      country: snap.country||'',
-      lbs: item.weightLbs||item.lbs||snap.lbs||0,
-      fob: item.fobValue||item.fob||snap.fob||0,
-      fobPerUnit: item.quantity > 1 ? Math.round((item.fobValue||item.fob||0) / (item.quantity||1)) : (item.fobValue||item.fob||0),
-      qty: item.quantity||1,
-      cif: snap.cif||0,
-      tot: snap.tot||0,
-      qn: snap.qn||''
-    };
-
-    if (!record.product && record.fob === 0) return;
-    // Avoid duplicate qn + product combo
-    if (record.qn && kb.find(x => x.qn === record.qn && x.product === record.product)) return;
-
-    // ── ANOMALY DETECTION ────────────────────────────────
-    const term = record.product.toLowerCase().split(' ')[0];
-    const related = kb.filter(x => x.product && (
-      x.product.toLowerCase().includes(term) ||
-      term.includes(x.product.toLowerCase().split(' ')[0])
-    ));
-
-    const anomalies = [];
-
-    // 1. HS Code conflict
-    if (record.hs && related.length) {
-      const prevHS = related.filter(x => x.hs && x.hs !== record.hs).map(x => x.hs);
-      const uniquePrevHS = [...new Set(prevHS)];
-      if (uniquePrevHS.length) {
-        anomalies.push({
-          type: 'hs_conflict',
-          msg: 'HS Code ' + record.hs + ' difiere del histórico: ' + uniquePrevHS.join(', '),
-          level: 'medium'
-        });
-      }
-    }
-
-    // 2. Value anomaly
-    if (record.fobPerUnit > 0 && related.length >= 2) {
-      const prevFobs = related.map(x => x.fobPerUnit||x.fob).filter(x => x > 0);
-      if (prevFobs.length >= 2) {
-        const avg = prevFobs.reduce((a,b)=>a+b,0) / prevFobs.length;
-        const pct = (record.fobPerUnit - avg) / avg;
-        if (pct < -0.45) {
-          anomalies.push({ type: 'value_low', msg: 'Valor $' + record.fobPerUnit.toLocaleString() + '/u es ' + Math.round(Math.abs(pct)*100) + '% menor al histórico ($' + Math.round(avg).toLocaleString() + '). ¿Usado/refurbished? Confirmar.', level: 'high' });
-        } else if (pct > 0.6) {
-          anomalies.push({ type: 'value_high', msg: 'Valor $' + record.fobPerUnit.toLocaleString() + '/u es ' + Math.round(pct*100) + '% mayor al histórico ($' + Math.round(avg).toLocaleString() + '). ¿Configuración especial?', level: 'medium' });
-        }
-      }
-    }
-
-    // 3. New product — never seen before
-    if (related.length === 0 && record.product) {
-      anomalies.push({ type: 'new_product', msg: 'Producto nuevo en la base: ' + record.product + (record.hs ? ' (HS ' + record.hs + ')' : ''), level: 'info' });
-    }
-
-    record.anomalies = anomalies;
-
-    // Log anomalies to console for visibility (silent, no UI interruption)
-    if (anomalies.length) {
-      console.log('[KB]', record.date, record.product, '—', anomalies.map(a=>a.msg).join(' | '));
-    }
-
-    kb.unshift(record);
-  });
-
-  // Keep max 1000 records
-  if (kb.length > 1000) kb.splice(1000);
+  const record = {
+    id: Date.now(),
+    date: new Date().toISOString().slice(0,10),
+    product: snap.product||'',
+    type: snap.type||'',
+    hs: snap.hs||'',
+    coo: snap.coo||'',
+    dest: snap.dest||'',
+    lbs: snap.lbs||0,
+    fob: snap.fob||0,
+    cif: snap.cif||0,
+    tot: snap.tot||0,
+    qn: snap.qn||''
+  };
+  // Avoid exact duplicate (same qn)
+  if(kb.find(x=>x.qn===record.qn)) return;
+  kb.unshift(record);
+  // Keep max 500 records
+  if(kb.length>500) kb.pop();
   saveKB(kb);
 }
 
@@ -6817,64 +6780,23 @@ function getKBInsights(product, fob, dest){
 }
 
 function getKBContext(){
+  // Returns a text summary of the KB for the chat system prompt
   const kb = getKB();
   if(!kb.length) return '';
-  let ctx = '\n\n=== BASE DE CONOCIMIENTO DDP GLOBAL (' + kb.length + ' registros) ===\n';
-
-  // Group by product family
+  let ctx = '\n\nHISTORIAL DE OPERACIONES DDP GLOBAL ('+kb.length+' envíos):\n';
+  // Group by product
   const byProduct = {};
-  kb.forEach(x => {
-    if (!x.product) return;
-    const key = x.product.split(' ').slice(0,3).join(' ').toLowerCase();
-    if (!byProduct[key]) byProduct[key] = { product: x.product, count:0, fobs:[], fobsPerUnit:[], lbs:[], dests:new Set(), hs:new Set(), coos:new Set(), anomalies:[] };
+  kb.forEach(x=>{
+    const key = x.product.split(' ').slice(0,3).join(' ');
+    if(!byProduct[key]) byProduct[key]={count:0,fobs:[],dests:new Set(),hs:x.hs};
     byProduct[key].count++;
-    if (x.fob > 0) byProduct[key].fobs.push(x.fob);
-    if (x.fobPerUnit > 0) byProduct[key].fobsPerUnit.push(x.fobPerUnit);
-    if (x.lbs > 0) byProduct[key].lbs.push(x.lbs);
-    if (x.dest) byProduct[key].dests.add(x.dest.split(' ')[0]);
-    if (x.hs) byProduct[key].hs.add(x.hs);
-    if (x.coo) byProduct[key].coos.add(x.coo);
-    if (x.anomalies && x.anomalies.length) byProduct[key].anomalies.push(...x.anomalies.map(a=>a.msg));
+    if(x.fob>0) byProduct[key].fobs.push(x.fob);
+    if(x.dest) byProduct[key].dests.add(x.dest.replace(/[^a-zA-Z]/g,'').trim());
   });
-
-  ctx += '\nPRODUCTOS COTIZADOS (más frecuentes primero):\n';
-  Object.values(byProduct)
-    .sort((a,b) => b.count - a.count)
-    .slice(0, 20)
-    .forEach(data => {
-      const avg = data.fobs.length ? Math.round(data.fobs.reduce((a,b)=>a+b,0)/data.fobs.length) : 0;
-      const avgU = data.fobsPerUnit.length ? Math.round(data.fobsPerUnit.reduce((a,b)=>a+b,0)/data.fobsPerUnit.length) : avg;
-      const minF = data.fobs.length ? Math.min(...data.fobs) : 0;
-      const maxF = data.fobs.length ? Math.max(...data.fobs) : 0;
-      const avgW = data.lbs.length ? Math.round(data.lbs.reduce((a,b)=>a+b,0)/data.lbs.length) : 0;
-      ctx += '  • ' + data.product + ' [' + data.count + 'x]';
-      ctx += ' | FOB: $' + avgU.toLocaleString() + '/u (rango $' + minF.toLocaleString() + '–$' + maxF.toLocaleString() + ')';
-      ctx += ' | Peso prom: ' + avgW + ' lbs';
-      ctx += ' | HS: ' + [...data.hs].join('/');
-      ctx += ' | COO: ' + [...data.coos].join('/');
-      ctx += ' | Destinos: ' + [...data.dests].join('/');
-      if (data.anomalies.length) ctx += ' | ⚠ ' + [...new Set(data.anomalies)].slice(0,2).join('; ');
-      ctx += '\n';
-    });
-
-  // Anomalies summary
-  const allAnomalies = kb.filter(x=>x.anomalies&&x.anomalies.length);
-  if (allAnomalies.length) {
-    ctx += '\nALERTAS DETECTADAS EN LA BASE:\n';
-    allAnomalies.slice(0,5).forEach(x => {
-      x.anomalies.forEach(a => {
-        ctx += '  ⚠ [' + x.date + '] ' + x.product + ': ' + a.msg + '\n';
-      });
-    });
-  }
-
-  // Recent operations
-  ctx += '\nÚLTIMOS 5 REGISTROS:\n';
-  kb.slice(0,5).forEach(x => {
-    ctx += '  ' + x.date + ' | ' + x.product + ' | $' + (x.fob||0).toLocaleString() + ' FOB | ' + (x.dest||'') + ' | HS ' + (x.hs||'') + '\n';
+  Object.entries(byProduct).slice(0,10).forEach(([prod,data])=>{
+    const avgFob = data.fobs.length ? Math.round(data.fobs.reduce((a,b)=>a+b,0)/data.fobs.length) : 0;
+    ctx += `  - ${prod}: ${data.count} envíos, FOB prom $${avgFob.toLocaleString()}, destinos: ${[...data.dests].join('/')}, HS: ${data.hs}\n`;
   });
-
-  ctx += '=== FIN BASE DE CONOCIMIENTO ===\n';
   return ctx;
 }
 
@@ -6971,9 +6893,13 @@ function openLogQuote(id){
 }
 function saveQuoteToLog(qn,dest,product,fob,total,cif){
   const client=prompt('Nombre del cliente (opcional):','');
-  const lbs=parseFloat(document.getElementById('q-wt')?.value)||0;
-  const coo=document.getElementById('q-coo')?.value||'';
-  const entry={qn,client:client||'—',dest,product,fob,total,cif,lbs,coo,origin:'Miami, USA',status:'quote',notes:'',source:'quoter'};
+  // Use activeQuoteData values (always up-to-date, includes multi-item and chat adjustments)
+  const lbs = activeQuoteData ? (activeQuoteData.lbs||0) : (parseFloat(document.getElementById('q-wt')?.value)||0);
+  const coo = activeQuoteData ? (activeQuoteData.coo||'') : (document.getElementById('q-coo')?.value||'');
+  const realFob = activeQuoteData ? (activeQuoteData.fob||fob) : fob;
+  const realTotal = activeQuoteData ? (activeQuoteData.tot||total) : total;
+  const realCif = activeQuoteData ? (activeQuoteData.cif||cif) : cif;
+  const entry={qn,client:client||'—',dest,product,fob:realFob,total:realTotal,cif:realCif,lbs,coo,origin:'Miami, USA',status:'quote',notes:'',source:'quoter'};
   if(activeQuoteData){
     entry.quoteSnapshot=JSON.stringify(activeQuoteData);
     addToKB(activeQuoteData);
