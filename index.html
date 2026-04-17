@@ -5170,24 +5170,33 @@ function renderStatusTimeline(s){
   `;
   
   // Historia de estados
-  // Guard para shipments viejos sin statusHistory
   if(!s.statusHistory || !Array.isArray(s.statusHistory)) s.statusHistory = [];
   const hist = s.statusHistory;
   if(hist.length > 0){
     timelineHTML += `
       <div style="margin-top:12px">
-        <div style="font-size:9px;color:var(--tx5);letter-spacing:2px;font-family:Barlow,sans-serif;margin-bottom:8px">HISTORIAL DE ESTADOS</div>
-        ${hist.slice().reverse().map(h=>`
-          <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--bd2)">
-            <div style="width:8px;height:8px;border-radius:50%;background:${(SHIP_STATUS[h.status]||{}).color||'var(--teal)'};flex-shrink:0"></div>
-            <div style="flex:1">
-              <div style="font-size:11px;color:var(--tx2)">${(SHIP_STATUS[h.status]||{}).label||h.status}</div>
-              ${h.note?`<div style="font-size:10px;color:var(--tx5)">${h.note}</div>`:''}
+        <div style="font-size:9px;color:var(--tx5);letter-spacing:2px;font-family:Barlow,sans-serif;margin-bottom:8px">HISTORIAL DE ESTADOS <span style="color:var(--teal);font-size:8px">— click en una entrada para editar o eliminar</span></div>
+        ${hist.slice().reverse().map((h,revIdx)=>{
+          const realIdx = hist.length - 1 - revIdx;
+          const stColor = (SHIP_STATUS[h.status]||{}).color||'var(--teal)';
+          const stLabel = (SHIP_STATUS[h.status]||{}).label||h.status;
+          const dateDisp = (h.date||'').slice(0,16).replace('T',' ');
+          return `
+          <div style="display:flex;align-items:center;gap:10px;padding:7px 10px;border-bottom:1px solid var(--bd2);border-radius:2px;cursor:pointer;transition:background .1s"
+            onmouseover="this.style.background='rgba(14,165,201,.06)'"
+            onmouseout="this.style.background=''"
+            onclick="editStatusHistoryEntry(${s.id},${realIdx})">
+            <div style="width:8px;height:8px;border-radius:50%;background:${stColor};flex-shrink:0"></div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:11px;color:var(--tx2)">${stLabel}</div>
+              ${h.note?`<div style="font-size:10px;color:var(--tx5);font-style:italic">${h.note}</div>`:''}
             </div>
-            <div style="font-size:10px;color:var(--tx5)">${h.date.slice(0,16).replace('T',' ')}</div>
-          </div>
-        `).join('')}
+            <div style="font-size:10px;color:var(--tx5);flex-shrink:0">${dateDisp}</div>
+            <div style="font-size:10px;color:var(--tx4);flex-shrink:0;opacity:.5">✎</div>
+          </div>`;
+        }).join('')}
       </div>`;
+  }
   }
   
   return timelineHTML;
@@ -5265,6 +5274,104 @@ If a field is not found, use empty string or 0 for numbers.`,
     statusEl.textContent='Error: '+err.message;
     statusEl.style.color='var(--red)';
   }
+}
+
+function editStatusHistoryEntry(shipId, entryIdx){
+  const arr = getShipments();
+  const s = arr.find(x=>x.id===shipId);
+  if(!s||!s.statusHistory) return;
+  const entry = s.statusHistory[entryIdx];
+  if(!entry) return;
+
+  // Build options for all known statuses — avoid nested template literals
+  let opts = '';
+  Object.entries(SHIP_STATUS).forEach(function(kv){
+    const v=kv[0], d=kv[1];
+    const sel = v===entry.status ? ' selected' : '';
+    opts += '<option value="'+v+'"'+sel+'>'+d.label+'</option>';
+  });
+
+  const currentDate = (entry.date||'').slice(0,10);
+  const currentNote = (entry.note||'').replace(/"/g,'&quot;');
+
+  const existingPanel = document.getElementById('hist-edit-panel');
+  if(existingPanel) existingPanel.remove();
+
+  const panel = document.createElement('div');
+  panel.id = 'hist-edit-panel';
+  panel.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#0c1a2e;border:1px solid var(--teal);border-left:4px solid var(--teal);padding:20px;z-index:10000;width:380px;box-shadow:0 8px 32px rgba(0,0,0,.6);border-radius:3px';
+  panel.innerHTML =
+    '<div style="font-family:Barlow,sans-serif;font-weight:800;font-size:11px;color:var(--teal);letter-spacing:3px;margin-bottom:14px">&#9998; EDITAR ENTRADA DE HISTORIAL</div>'+
+    '<div style="display:flex;flex-direction:column;gap:10px">'+
+      '<div class="field"><div class="field-label">Estado</div>'+
+        '<select id="hist-edit-status" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:9px 10px;font-size:12px;width:100%;font-family:\'DM Mono\',monospace">'+opts+'</select>'+
+      '</div>'+
+      '<div class="field"><div class="field-label">Nota</div>'+
+        '<input id="hist-edit-note" type="text" value="'+currentNote+'" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:9px 10px;font-size:12px;width:100%;font-family:\'DM Mono\',monospace" placeholder="Nota opcional..."/>'+
+      '</div>'+
+      '<div class="field"><div class="field-label">Fecha</div>'+
+        '<input id="hist-edit-date" type="date" value="'+currentDate+'" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:9px 10px;font-size:12px;width:100%;font-family:\'DM Mono\',monospace"/>'+
+      '</div>'+
+    '</div>'+
+    '<div style="display:flex;gap:8px;margin-top:16px">'+
+      '<button onclick="saveStatusHistoryEntry('+shipId+','+entryIdx+')" class="btn btn-primary" style="flex:1;padding:10px;background:var(--teal)">&#10003; GUARDAR</button>'+
+      '<button onclick="deleteStatusHistoryEntry('+shipId+','+entryIdx+')" class="btn btn-ghost" style="padding:10px 14px;border-color:var(--red);color:var(--red)">&#128465; ELIMINAR</button>'+
+      '<button onclick="document.getElementById(\'hist-edit-panel\').remove()" class="btn btn-ghost" style="padding:10px 14px">CANCELAR</button>'+
+    '</div>';
+  document.body.appendChild(panel);
+}
+
+function saveStatusHistoryEntry(shipId, entryIdx){
+  const arr = getShipments();
+  const s = arr.find(x=>x.id===shipId);
+  if(!s||!s.statusHistory) return;
+  const newStatus = document.getElementById('hist-edit-status').value;
+  const newNote   = document.getElementById('hist-edit-note').value;
+  const newDate   = document.getElementById('hist-edit-date').value;
+  // Update the entry
+  s.statusHistory[entryIdx].status = newStatus;
+  s.statusHistory[entryIdx].label  = (SHIP_STATUS[newStatus]||{}).label||newStatus;
+  s.statusHistory[entryIdx].note   = newNote;
+  s.statusHistory[entryIdx].date   = newDate ? new Date(newDate+'T12:00:00').toISOString() : s.statusHistory[entryIdx].date;
+  // Also update the main shipment status to the latest entry
+  if(s.statusHistory.length > 0){
+    const latest = s.statusHistory[s.statusHistory.length-1];
+    s.status = latest.status;
+  }
+  saveShipments(arr);
+  document.getElementById('hist-edit-panel').remove();
+  renderShipments();
+  renderShipmentsStats();
+  openShipmentModal(shipId);
+  // Confirmation toast
+  const toast = document.createElement('div');
+  toast.style.cssText='position:fixed;top:20px;left:50%;transform:translateX(-50%);background:var(--greenbg);border:1px solid var(--green);color:var(--green);padding:10px 20px;font-family:Barlow,sans-serif;font-weight:700;font-size:12px;z-index:10001;border-radius:3px';
+  toast.textContent='✓ Entrada actualizada';
+  document.body.appendChild(toast);
+  setTimeout(()=>{ if(toast.parentNode) toast.parentNode.removeChild(toast); },2000);
+}
+
+function deleteStatusHistoryEntry(shipId, entryIdx){
+  if(!confirm('¿Eliminar esta entrada del historial?')) return;
+  const arr = getShipments();
+  const s = arr.find(x=>x.id===shipId);
+  if(!s||!s.statusHistory) return;
+  s.statusHistory.splice(entryIdx, 1);
+  // Update main status to latest remaining entry
+  if(s.statusHistory.length > 0){
+    const latest = s.statusHistory[s.statusHistory.length-1];
+    s.status = latest.status;
+  }
+  saveShipments(arr);
+  document.getElementById('hist-edit-panel').remove();
+  renderShipments();
+  renderShipmentsStats();
+  openShipmentModal(shipId);
+  const toast = document.createElement('div');
+  toast.style.cssText='position:fixed;top:20px;left:50%;transform:translateX(-50%);background:var(--redbg);border:1px solid var(--red);color:#fca5a5;padding:10px 20px;font-family:Barlow,sans-serif;font-weight:700;font-size:12px;z-index:10001;border-radius:3px';
+  toast.textContent='✓ Entrada eliminada';
+  document.body.appendChild(toast);
+  setTimeout(()=>{ if(toast.parentNode) toast.parentNode.removeChild(toast); },2000);
 }
 
 function updateShipmentStatus(id, newStatus, note='', customDate=''){
