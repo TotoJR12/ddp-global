@@ -1644,13 +1644,26 @@ let aiExtracted = null;
 function setActiveQuote(data) { activeQuoteData = data; }
 
 function nextQN(code){
-  const n=new Date(),d=String(n.getDate()).padStart(2,"0"),mo=String(n.getMonth()+1).padStart(2,"0");
-  // Use sessionStorage so counter persists in session but resets on reload
-  const key='ddp_seq_'+code;
-  const cur=parseInt(sessionStorage.getItem(key)||'0')+1;
-  sessionStorage.setItem(key,cur);
-  const s=String(cur).padStart(2,"0");
-  return `${code}-2026-${d}${mo}${s}`;
+  const n=new Date();
+  const yr=n.getFullYear();
+  const mo=String(n.getMonth()+1).padStart(2,"0");
+  const dy=String(n.getDate()).padStart(2,"0");
+  // Persistent counter in localStorage — NEVER resets, never repeats
+  const key='ddp_qseq_'+code;
+  const cur=parseInt(localStorage.getItem(key)||'0')+1;
+  localStorage.setItem(key,String(cur));
+  const s=String(cur).padStart(3,"0");
+  return `${code}-${yr}${mo}${dy}-${s}`;
+}
+// Peek at next QN without incrementing (for display only)
+function peekQN(code){
+  const n=new Date();
+  const yr=n.getFullYear();
+  const mo=String(n.getMonth()+1).padStart(2,"0");
+  const dy=String(n.getDate()).padStart(2,"0");
+  const key='ddp_qseq_'+code;
+  const cur=parseInt(localStorage.getItem(key)||'0')+1;
+  return `${code}-${yr}${mo}${dy}-${String(cur).padStart(3,"0")}`;
 }
 
 function bTax(cif){
@@ -1678,7 +1691,16 @@ function aTax(cif){
   const d=cif*.16,e=cif*.025,v=(cif+d+e)*.21,g=(cif+d+e)*.06,i=(cif+d+e)*.03,a=(cif+d+e)*.10;
   return{d,e,v,g,i,a,t:d+e+v+g+i+a};
 }
-function cTax(cif){const d=cif*.05,v=(cif+d)*.19;return{d,v,t:d+v};}
+function cTax(cif, product, type, hs){
+  // Servers/Storage Colombia: 0% duties + IVA 19% (Confirmado en operaciones)
+  const isServerCol = /server|proliant|poweredge|supermicro/i.test(product||'') ||
+                      /8471\.(49|70)/i.test(hs||'') ||
+                      (type||'').toLowerCase().includes('server') ||
+                      (type||'').toLowerCase().includes('storage');
+  const d = isServerCol ? 0 : cif*.05;
+  const v=(cif+d)*.19;
+  return{d,v,t:d+v};
+}
 // Chile: 6% duties + 19% VAT on CIF+duties
 function chlTax(cif){const d=cif*.06,v=(cif+d)*.19;return{d,v,t:d+v};}
 // Peru: 5% duties + 18% VAT on CIF+duties
@@ -1838,10 +1860,19 @@ function calcItemTax(ct, cifItem, product, hs, type){
 
   // ── COLOMBIA ────────────────────────────────────────────────────
   if(ct === 'colombia'){
-    const dp = hsRates?.dutyPct ?? 0.05;
+    // REGLA CONFIRMADA EN OPERACIONES: Servers/Storage (HS 8471.xx) = 0% duties + IVA 19%
+    // Electrónica general (HS 8517.xx, 8473.xx) = 5% duties + IVA 19%
+    const isServerCol = /server|proliant|poweredge|supermicro|dl\d{2,3}|r\d{3}|blade/i.test(product||'') ||
+                        /^8471\.(4|5|6|7|8|9)/i.test(hs||'') ||
+                        /^8471\.49/i.test(hs||'') ||
+                        (type||'').toLowerCase().includes('server');
+    const isStorageCol = /^8471\.7/i.test(hs||'') || /netapp|pure.?storage|flasharray|san\b|nas\b/i.test(product||'') ||
+                         (type||'').toLowerCase().includes('storage');
+    const dpOverride = hsRates?.dutyPct;
+    const dp = dpOverride != null ? dpOverride : (isServerCol || isStorageCol) ? 0 : 0.05;
     const d=cifItem*dp, v=(cifItem+d)*.19;
     return { t:d+v, dutyPct:dp, note:hsRates?.note,
-             label:`Arancel ${(dp*100).toFixed(0)}% + IVA 19%${dp===0?' (0% — exento)':''}` };
+             label:`Arancel ${(dp*100).toFixed(0)}% + IVA 19%${dp===0?' (0% Servers/Storage — Confirmado)':''}` };
   }
 
   // ── CHILE ───────────────────────────────────────────────────────
@@ -2106,9 +2137,10 @@ function calcQuote(ct, fob, lbs, coo, fo, product, hs, type){
   }
   if(ct==="colombia"){
     const fc=mx(fob*.015,270),fr=mx(lbs*1.84,350),ins=mx((fob+fr)*.01,80),cif=fob+fr+ins;
-    const ds=mx(cif*.02,700),ior=mx(cif*.03,650),tx=cTax(cif);
+    const ds=mx(cif*.02,700),ior=mx(cif*.03,650),tx=cTax(cif,product,type,hs);
+    const isServerCol = /server|proliant|poweredge|supermicro/i.test(product||'')||/8471\.(49|70)/i.test(hs||'')||(type||'').toLowerCase().includes('server')||(type||'').toLowerCase().includes('storage');
     return{li:[["FOB Charges","1.5% / min $270",fc],["Freight (Air Miami→BOG)","$1.84/lb / min $350",fr],["Insurance","1% CIF",ins],["Destination Services","2% CIF / min $700",ds],["Import License (IOR)","3% CIF / min $650",ior]],
-      tx:[["Duties (5%)",tx.d],["VAT (19%)",tx.v]],tt:tx.t,tot:fc+fr+ins+ds+ior+tx.t,cif,tr:"10 Days"};
+      tx:isServerCol?[["Arancel (0% — Servers/Storage)",tx.d],["IVA (19%)",tx.v]]:[["Duties (5%)",tx.d],["VAT (19%)",tx.v]],tt:tx.t,tot:fc+fr+ins+ds+ior+tx.t,cif,tr:"10 Days"};
   }
   if(ct==="chile"){
     const fc=mx(fob*.015,270),fr=mx(lbs*1.92,350),ins=mx((fob+fr)*.01,80),cif=fob+fr+ins;
@@ -3180,13 +3212,22 @@ function doQuote(){
       <!-- Intelligence Report (internal only) -->
       ${buildIntelligenceReport(product,hs,coo,fob,lbs,currentCtry,type)}
 
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><div style="font-size:9px;color:var(--tx5);letter-spacing:2px;white-space:nowrap">CLIENTE</div><input id="save-client-name" type="text" placeholder="Nombre del cliente (opcional)" style="flex:1;background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px 10px;font-size:12px;font-family:'DM Mono',monospace"/></div>
+      <!-- AI REVIEW — análisis automático de consistencia -->
+      <div id="ai-review-block-q" style="margin-top:14px">
+        <div style="background:var(--bg3);border:1px solid var(--bd);border-left:3px solid #7c3aed;padding:12px 16px">
+          <div style="font-size:9px;color:#a78bfa;letter-spacing:3px;font-family:Barlow,sans-serif;font-weight:700;margin-bottom:8px">🤖 AI REVIEW — ANÁLISIS DE CONSISTENCIA</div>
+          <div id="ai-review-content-q" style="font-size:11px;color:var(--tx4)">
+            <div style="display:flex;align-items:center;gap:8px"><div class="dot-pulse"><span></span><span></span><span></span></div><span>Analizando cotización...</span></div>
+          </div>
+        </div>
+      </div>
+
       <!-- Actions -->
-      <div style="display:flex;gap:8px">
+      <div style="display:flex;gap:8px;margin-top:14px">
         <button class="btn btn-primary" style="flex:1;padding:12px" onclick="downloadQuotePDF()">⬇ DESCARGAR PDF</button>
         <button class="btn btn-ghost" style="padding:12px" onclick="openQuoterChat()">💬 CHAT</button>
         <button class="btn btn-ghost" style="padding:12px" onclick="copyQuote('${qn}','${dest}','${product||"—"}','${hs}','${coo||"TBC"}',${fob},${lbs},${r.cif},${r.tot},'${r.tr}')">COPY TEXT</button>
-        <button class="btn btn-ghost" style="padding:12px 18px;background:var(--greenbg);border-color:var(--green);color:var(--green);font-weight:800" id="save-log-btn" onclick="saveQuoteNow()">💾 GUARDAR</button>
+        <button class="btn btn-ghost" style="padding:12px 18px" onclick="saveQuoteToLog('${qn}','${dest}','${product||"—"}',${fob},${r.tot},${r.cif})">📋 LOG</button>
         <button class="btn btn-ghost" style="padding:12px 18px" onclick="resetQuote()">NEW</button>
       </div>
     </div>`;
@@ -3196,6 +3237,8 @@ function doQuote(){
   document.getElementById("quoter-result").innerHTML=html;
   setActiveQuote({qn,dest,product:product||'—',hs,coo:coo||'TBC',fob:totalFob,lbs:totalLbs,cif:r.cif,tot:grandTotal,tr:r.tr,country:currentCtry,lines:r.li,taxes:taxLines,flags,dv,origin:'Miami, USA (DDP Global warehouse)',type:type||'—',allItems:allItems});
   window.scrollTo(0,0);
+  // Auto-run AI review
+  setTimeout(()=>runAIReview('ai-review-content-q', qn, product, dest, r.tr, r.cif, grandTotal, totalFob, totalLbs, hs, coo, taxLines), 600);
 }
 
 function resetQuote(){
@@ -3203,6 +3246,65 @@ function resetQuote(){
   document.getElementById("quoter-result").style.display="none";
   document.getElementById("extra-items-list").innerHTML="";
   extraItemCount=0;
+  const banner=document.getElementById('edit-mode-banner');
+  if(banner) banner.remove();
+}
+
+// ════════════════════════════════════════════════════════
+// AI REVIEW — Analiza consistencia de la cotización generada
+// Detecta errores, inconsistencias y alertas antes de enviar al cliente
+// ════════════════════════════════════════════════════════
+async function runAIReview(containerId, qn, product, dest, transit, cif, total, fob, lbs, hs, coo, taxLines){
+  const el = document.getElementById(containerId);
+  if(!el) return;
+  try {
+    const taxSummary = (taxLines||[]).map(([l,v])=>`${l}: $${fmt(v)}`).join(', ');
+    const prompt = `Sos el revisor interno de DDP Global LLC. Revisá esta cotización y detectá cualquier inconsistencia, error o alerta ANTES de que se envíe al cliente.
+
+COTIZACIÓN: ${qn}
+Producto: ${product||'—'}
+Destino: ${dest}
+COO: ${coo||'TBC'}
+HS Code: ${hs||'—'}
+FOB: $${fob}
+Peso: ${lbs} lbs
+CIF: $${cif}
+Total DDP: $${total}
+Transit time: ${transit}
+Impuestos: ${taxSummary||'—'}
+
+Revisá específicamente:
+1. ¿El transit time tiene sentido para este destino? (Ej: Brasil debería ser ~21 días, no 37)
+2. ¿El total DDP parece razonable para este FOB y destino?
+3. ¿El HS code encaja con el producto?
+4. ¿Hay algo que el operador debería verificar antes de enviar?
+
+Respondé en máximo 3-4 bullets concisos. Si todo está bien, decí "✅ Cotización consistente". Si hay problemas, marcalos con ⚠ o 🔴. Sé directo, sin preamble.`;
+
+    const res = await fetch('https://ddp-proxy.nicolasjuarezroldan.workers.dev',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:400,
+        messages:[{role:'user',content:prompt}]
+      })
+    });
+    const d = await res.json();
+    const reply = d.content?.[0]?.text||'Sin respuesta.';
+    // Format reply
+    const lines = reply.split('\n').filter(l=>l.trim());
+    const formatted = lines.map(l=>{
+      const isOk = l.includes('✅');
+      const isWarn = l.includes('⚠');
+      const isErr = l.includes('🔴');
+      const color = isErr?'var(--red)':isWarn?'var(--yellow)':isOk?'var(--green)':'var(--tx3)';
+      return `<div style="padding:4px 0;color:${color};line-height:1.6">${l.replace(/^[-•]\s*/,'')}</div>`;
+    }).join('');
+    if(el) el.innerHTML = formatted || reply;
+  } catch(e){
+    if(el) el.innerHTML = '<span style="color:var(--tx5)">Review no disponible.</span>';
+  }
 }
 
 function copyQuote(qn,dest,product,hs,coo,fob,lbs,cif,tot,tr){
@@ -6880,6 +6982,7 @@ function openLogQuote(id){
         </div>
         <div style="display:flex;gap:8px;margin-top:14px">
           <button class="btn btn-primary" style="flex:1;padding:12px" onclick="downloadQuotePDF()">⬇ DESCARGAR PDF</button>
+          <button class="btn btn-ghost" style="padding:12px 18px" onclick="editLogQuote(${entry.id})">✎ EDITAR</button>
           <button class="btn btn-ghost" style="padding:12px 18px" onclick="openAIChat()">💬 CHAT</button>
           <button class="btn btn-ghost" style="padding:12px 18px" onclick="showPage('log')">← VOLVER AL LOG</button>
         </div>
@@ -6892,31 +6995,61 @@ function openLogQuote(id){
     window.scrollTo(0,0);
   }catch(err){alert('Error al abrir la cotización: '+err.message);}
 }
-function saveQuoteNow(){
-  if(!activeQuoteData){ alert('No hay cotización activa.'); return; }
-  const q = activeQuoteData;
-  // Get client name from inline input field if present, else empty
-  const clientEl = document.getElementById('save-client-name');
-  const client = clientEl ? clientEl.value.trim() : '';
-  const entry={
-    qn:q.qn, client:client||'—', dest:q.dest, product:q.product,
-    fob:q.fob, total:q.tot, cif:q.cif, lbs:q.lbs, coo:q.coo,
-    origin:'Miami, USA', status:'quote', notes:'', source:'quoter',
-    quoteSnapshot:JSON.stringify(q)
-  };
-  addToKB(q);
-  addToLog(entry);
-  // Visual feedback on button
-  const btn = document.getElementById('save-log-btn');
-  if(btn){ btn.textContent='✓ GUARDADO'; btn.style.background='var(--green)'; btn.disabled=true;
-    setTimeout(()=>{ btn.textContent='💾 GUARDAR'; btn.style.background='var(--greenbg)'; btn.disabled=false; },2500); }
-  // Show in log after short delay
-  setTimeout(()=>showPage('log'), 800);
+
+function editLogQuote(id){
+  const arr=getLog();
+  const entry=arr.find(x=>x.id===id);
+  if(!entry){alert('No se encontró la cotización.');return;}
+  showPage('quoter');
+  document.getElementById('quoter-form').style.display='block';
+  document.getElementById('quoter-result').style.display='none';
+  let snap=null;
+  try{ if(entry.quoteSnapshot) snap=JSON.parse(entry.quoteSnapshot); }catch(e){}
+  if(snap){
+    document.getElementById('q-product').value=snap.product||entry.product||'';
+    document.getElementById('q-fob').value=snap.fob||entry.fob||'';
+    document.getElementById('q-wt').value=snap.lbs||entry.lbs||'';
+    document.getElementById('q-coo').value=snap.coo||entry.coo||'';
+    document.getElementById('q-hs').value=snap.hs||'8517.62';
+    if(snap.type) document.getElementById('q-type').value=snap.type;
+    if(snap.qty) document.getElementById('q-qty').value=snap.qty||1;
+    const ctry=snap.country||'brazil';
+    currentCtry=ctry;
+    selectCtry(ctry);
+  } else {
+    document.getElementById('q-product').value=entry.product||'';
+    document.getElementById('q-fob').value=entry.fob||'';
+  }
+  // Remove previous edit banner if any
+  const old=document.getElementById('edit-mode-banner');
+  if(old) old.remove();
+  const banner=document.createElement('div');
+  banner.id='edit-mode-banner';
+  banner.className='flag flag-blue';
+  banner.style.cssText='margin-bottom:14px;display:flex;justify-content:space-between;align-items:center';
+  banner.innerHTML='<span>✎ <strong>MODO EDICIÓN</strong> — '+entry.qn+' · Modificá y recalculá para generar nueva versión</span><button onclick="document.getElementById(\'edit-mode-banner\').remove()" style="background:none;border:none;color:var(--tx4);cursor:pointer;font-size:16px">✕</button>';
+  const form=document.getElementById('quoter-form');
+  form.insertBefore(banner,form.firstChild);
+  updateInlineChecks();
+  window.scrollTo(0,0);
 }
 
 function saveQuoteToLog(qn,dest,product,fob,total,cif){
-  // Legacy wrapper — calls saveQuoteNow
-  saveQuoteNow();
+  const client=prompt('Nombre del cliente (opcional):','');
+  // Use activeQuoteData values (always up-to-date, includes multi-item and chat adjustments)
+  const lbs = activeQuoteData ? (activeQuoteData.lbs||0) : (parseFloat(document.getElementById('q-wt')?.value)||0);
+  const coo = activeQuoteData ? (activeQuoteData.coo||'') : (document.getElementById('q-coo')?.value||'');
+  const realFob = activeQuoteData ? (activeQuoteData.fob||fob) : fob;
+  const realTotal = activeQuoteData ? (activeQuoteData.tot||total) : total;
+  const realCif = activeQuoteData ? (activeQuoteData.cif||cif) : cif;
+  const entry={qn,client:client||'—',dest,product,fob:realFob,total:realTotal,cif:realCif,lbs,coo,origin:'Miami, USA',status:'quote',notes:'',source:'quoter'};
+  if(activeQuoteData){
+    entry.quoteSnapshot=JSON.stringify(activeQuoteData);
+    addToKB(activeQuoteData);
+  }
+  addToLog(entry);
+  alert('✓ Cotización guardada en el LOG y en la Knowledge Base');
+  showPage('log');
 }
 
 function updateLogStatus(id,newStatus){
@@ -7009,52 +7142,75 @@ function renderLog(){
   }
 
   const SL = {
-    quote:   {label:'ENVIADA',  bg:'#0c1a2e', color:'#7dd3fc', dot:'#3b82f6'},
-    won:     {label:'GANADA',   bg:'var(--greenbg)', color:'var(--green)', dot:'var(--green)'},
-    lost:    {label:'PERDIDA',  bg:'var(--redbg)', color:'var(--red)', dot:'var(--red)'},
-    pending: {label:'EN PROCESO', bg:'var(--yellowbg)', color:'var(--yellow)', dot:'var(--yellow)'},
-    delivered:{label:'ENTREGADA', bg:'var(--greenbg)', color:'#86efac', dot:'var(--green)'},
+    quote:   {label:'ENVIADA',    color:'#3b82f6', bg:'rgba(59,130,246,.12)'},
+    won:     {label:'GANADA',     color:'var(--green)', bg:'var(--greenbg)'},
+    lost:    {label:'PERDIDA',    color:'var(--red)', bg:'var(--redbg)'},
+    pending: {label:'EN PROCESO', color:'var(--yellow)', bg:'var(--yellowbg)'},
+    delivered:{label:'ENTREGADA', color:'#86efac', bg:'var(--greenbg)'},
   };
 
   el.innerHTML=arr.map(e=>{
-    const s = SL[e.status] || {label:e.status||'—', bg:'var(--bg3)', color:'var(--tx4)', dot:'var(--bd)'};
+    const s = SL[e.status] || {label:e.status||'—', color:'var(--tx4)', bg:'var(--bg3)'};
     const hasClient = e.client && e.client !== '—' && e.client !== '';
+    const fobPct = e.total>0 ? Math.round((e.total-e.fob)/e.total*100) : 0;
+    // Destination flag emoji
+    const destFlag = (e.dest||'').includes('Brazil')?'🇧🇷':(e.dest||'').includes('Mexico')?'🇲🇽':(e.dest||'').includes('Argentina')?'🇦🇷':(e.dest||'').includes('Colombia')?'🇨🇴':(e.dest||'').includes('USA')?'🇺🇸':(e.dest||'').includes('Chile')?'🇨🇱':'🌎';
+
     return `
-    <div style="background:var(--bg2);border:1px solid var(--bd);border-left:4px solid ${s.dot};margin-bottom:8px;display:flex;align-items:stretch;overflow:hidden">
-      <!-- Lado izquierdo — info principal -->
-      <div style="flex:1;padding:12px 16px;min-width:0">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap">
-          <span style="font-family:Barlow,sans-serif;font-weight:800;font-size:13px;color:#fff">${e.qn}</span>
-          <span style="font-size:9px;color:${s.color};font-weight:700;letter-spacing:1px;background:${s.bg};padding:2px 8px">${s.label}</span>
-          <span style="font-size:10px;color:var(--teal);margin-left:auto">${e.dest||'—'}</span>
-          ${hasClient?`<span style="font-size:10px;color:var(--tx4)">${e.client}</span>`:''}
+    <div style="background:var(--bg2);border:1px solid var(--bd);border-left:4px solid ${s.color};margin-bottom:8px;border-radius:3px;overflow:hidden;transition:border-color .15s">
+
+      <!-- Header row -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px 8px;border-bottom:1px solid var(--bd2);gap:8px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:10px;min-width:0">
+          <span style="font-family:Barlow,sans-serif;font-weight:800;font-size:13px;color:#fff;white-space:nowrap">${e.qn}</span>
+          <span style="font-size:9px;font-weight:700;letter-spacing:1px;padding:2px 8px;background:${s.bg};color:${s.color};white-space:nowrap">${s.label}</span>
+          ${e.source==='ai-email'?`<span style="font-size:9px;color:var(--teal);background:rgba(14,165,201,.1);padding:2px 7px">✦ AI</span>`:''}
         </div>
-        <div style="font-size:11px;color:var(--tx4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:6px">${e.product||'—'}</div>
-        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:8px;font-size:10px">
-          ${e.origin?`<span style="color:var(--tx5)">📦 ${e.origin}</span>`:''}
-          ${e.dest?`<span style="color:var(--tx5)">→ ${e.dest}</span>`:''}
-          ${e.lbs?`<span style="color:var(--tx5)">⚖️ ${e.lbs} lbs</span>`:''}
-          ${e.coo?`<span style="color:var(--tx5)">🏭 COO: ${e.coo}</span>`:''}
-          ${e.cif?`<span style="color:var(--tx5)">CIF $${fmt(e.cif)}</span>`:''}
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-          <select onchange="updateLogStatus(${e.id},this.value)" style="background:var(--bg3);border:1px solid var(--bd);color:var(--tx3);padding:4px 8px;font-size:10px;font-family:'DM Mono',monospace">
-            ${Object.entries(STATUS_LABELS).map(([v,l])=>`<option value="${v}"${v===e.status?' selected':''}>${l}</option>`).join('')}
-          </select>
-          <span style="font-size:9px;color:var(--tx5)">${e.date||'—'}</span>
-          ${e.notes?`<span style="font-size:10px;color:var(--tx5)">📝 ${e.notes.slice(0,40)}${e.notes.length>40?'…':''}</span>`:''}
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+          <span style="font-size:9px;color:var(--tx5)">${e.date||''}</span>
+          <span style="font-family:Barlow,sans-serif;font-weight:800;font-size:16px;color:var(--teal)">$${fmt(e.total||0)}</span>
         </div>
       </div>
-      <!-- Lado derecho — total + acciones -->
-      <div style="display:flex;flex-direction:column;align-items:flex-end;justify-content:space-between;padding:12px 14px;border-left:1px solid var(--bd2);background:var(--bg3);min-width:130px;flex-shrink:0">
-        <div style="text-align:right">
-          <div style="font-family:Barlow,sans-serif;font-weight:800;font-size:17px;color:var(--teal)">$${fmt(e.total||0)}</div>
-          <div style="font-size:9px;color:var(--tx5)">FOB $${fmt(e.fob||0)}</div>
+
+      <!-- Body row -->
+      <div style="display:flex;align-items:stretch;min-height:56px">
+
+        <!-- Left: shipment info -->
+        <div style="flex:1;padding:10px 14px;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;flex-wrap:wrap">
+            <span style="font-size:15px">${destFlag}</span>
+            <span style="font-size:12px;color:var(--tx2);font-weight:600;white-space:nowrap">${(e.dest||'').replace(/[🇧🇷🇲🇽🇦🇷🇨🇴🇺🇸🇨🇱🌎]/g,'').trim()}</span>
+            ${hasClient?`<span style="font-size:10px;color:var(--teal)">· ${e.client}</span>`:''}
+          </div>
+          <div style="font-size:11px;color:var(--tx4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:360px;margin-bottom:6px">${e.product||'—'}</div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:10px;color:var(--tx5)">
+            ${e.fob?`<span>FOB <strong style="color:var(--tx3)">$${fmt(e.fob)}</strong></span>`:''}
+            ${e.cif?`<span>CIF <strong style="color:var(--tx3)">$${fmt(e.cif)}</strong></span>`:''}
+            ${e.lbs?`<span>⚖ ${e.lbs} lbs</span>`:''}
+            ${e.coo?`<span>🏭 ${e.coo}</span>`:''}
+          </div>
+          ${e.notes?`<div style="font-size:10px;color:var(--tx5);margin-top:4px;font-style:italic">📝 ${e.notes.slice(0,60)}${e.notes.length>60?'…':''}</div>`:''}
         </div>
-        <div style="display:flex;gap:6px;margin-top:8px">
-          ${e.quoteSnapshot?`<button onclick="openLogQuote(${e.id})" style="background:var(--teal);border:none;color:var(--bg);padding:5px 12px;font-size:10px;font-family:Barlow,sans-serif;font-weight:800;cursor:pointer">📄</button>`:''}
-          <button onclick="deleteLogEntry(${e.id})" style="background:none;border:1px solid var(--bd);color:var(--tx5);padding:5px 10px;font-size:10px;cursor:pointer">✕</button>
+
+        <!-- Right: status + actions -->
+        <div style="display:flex;flex-direction:column;align-items:flex-end;justify-content:space-between;padding:10px 12px;border-left:1px solid var(--bd2);background:rgba(0,0,0,.15);min-width:120px;flex-shrink:0">
+          <div style="text-align:right;margin-bottom:8px">
+            <div style="font-size:9px;color:var(--tx5);margin-bottom:2px">FOB $${fmt(e.fob||0)}</div>
+            <div style="font-size:8px;color:var(--tx5)">DDP markup ~${fobPct}%</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end">
+            <select onchange="updateLogStatus(${e.id},this.value)"
+              style="background:var(--bg3);border:1px solid var(--bd);color:var(--tx3);padding:4px 6px;font-size:9px;font-family:'DM Mono',monospace;cursor:pointer;width:100%">
+              ${Object.entries(STATUS_LABELS).map(([v,l])=>`<option value="${v}"${v===e.status?' selected':''}>${l}</option>`).join('')}
+            </select>
+            <div style="display:flex;gap:4px">
+              ${e.quoteSnapshot?`<button onclick="openLogQuote(${e.id})" title="Ver cotización" style="background:var(--teal);border:none;color:var(--bg);padding:4px 10px;font-size:10px;font-family:Barlow,sans-serif;font-weight:800;cursor:pointer;border-radius:2px">📄</button>`:''}
+              ${e.quoteSnapshot?`<button onclick="editLogQuote(${e.id})" title="Editar" style="background:none;border:1px solid var(--teal);color:var(--teal);padding:4px 9px;font-size:10px;cursor:pointer;border-radius:2px">✎</button>`:''}
+              <button onclick="deleteLogEntry(${e.id})" title="Eliminar" style="background:none;border:1px solid var(--bd);color:var(--tx5);padding:4px 8px;font-size:10px;cursor:pointer;border-radius:2px">✕</button>
+            </div>
+          </div>
         </div>
+
       </div>
     </div>`
   }).join('');
