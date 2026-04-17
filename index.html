@@ -5272,6 +5272,7 @@ function updateShipmentStatus(id, newStatus, note='', customDate=''){
   const arr = getShipments();
   const s = arr.find(x=>x.id===id);
   if(!s) return;
+  const prevStatus = s.status;
   s.status = newStatus;
   if(!s.statusHistory) s.statusHistory = [];
   const dateStr = customDate || new Date().toISOString().slice(0,10);
@@ -5287,6 +5288,14 @@ function updateShipmentStatus(id, newStatus, note='', customDate=''){
   renderShipments();
   renderShipmentsStats();
   openShipmentModal(id);
+  // Flash confirmation banner at top of modal
+  const newLabel = (SHIP_STATUS[newStatus]||{}).label||newStatus;
+  const prevLabel = (SHIP_STATUS[prevStatus]||{}).label||prevStatus;
+  const banner = document.createElement('div');
+  banner.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:var(--greenbg);border:1px solid var(--green);color:var(--green);padding:12px 24px;font-family:Barlow,sans-serif;font-weight:700;font-size:13px;z-index:9999;border-radius:3px;letter-spacing:1px;box-shadow:0 4px 20px rgba(0,0,0,.4)';
+  banner.textContent = '✓ STATUS ACTUALIZADO: '+prevLabel+' → '+newLabel+(note?' · '+note:'');
+  document.body.appendChild(banner);
+  setTimeout(()=>{ if(banner.parentNode) banner.parentNode.removeChild(banner); }, 3000);
 }
 
 function updateShipmentField(id, field, value){
@@ -6047,8 +6056,19 @@ function openShipmentModal(id){
         </div>
         <div style="display:flex;flex-direction:column;gap:6px;justify-content:flex-end">
           <div style="font-size:9px;color:transparent">.</div>
-          <button class="btn btn-primary btn-sm" style="white-space:nowrap" onclick="updateShipmentStatus(${id}, document.getElementById('modal-status-select-${id}').value==='custom'?document.getElementById('modal-custom-status-${id}').value:document.getElementById('modal-status-select-${id}').value, document.getElementById('modal-status-note-${id}').value, document.getElementById('modal-status-date-${id}').value);renderShipments();renderShipmentsStats()">
-            ACTUALIZAR →
+          <button class="btn btn-primary" style="white-space:nowrap;background:#22c55e;font-size:12px;padding:10px 16px;letter-spacing:1px"
+            onclick="
+              const sel=document.getElementById('modal-status-select-${id}');
+              const customInp=document.getElementById('modal-custom-status-${id}');
+              const note=document.getElementById('modal-status-note-${id}').value;
+              const date=document.getElementById('modal-status-date-${id}').value;
+              const val=sel.value==='custom'?(customInp?customInp.value:''):sel.value;
+              this.textContent='✓ GUARDADO!';
+              this.style.background='var(--green)';
+              updateShipmentStatus(${id},val,note,date);
+              renderShipments();renderShipmentsStats();
+            ">
+            ✓ ACTUALIZAR →
           </button>
         </div>
       </div>
