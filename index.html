@@ -6343,7 +6343,7 @@ function openShipmentModal(id){
         <div style="font-family:Barlow,sans-serif;font-weight:700;font-size:9px;color:var(--green);letter-spacing:2px;margin-bottom:8px">📋 INVOICE 2 — SERVICIO DDP (cobrar al entregar)</div>
         <div class="grid3" style="gap:8px">
           <div class="field"><div class="field-label">Monto DDP (USD)</div>
-            <input type="number" value="${s.ddpQuoted||''}" disabled style="background:var(--bg3);border:1px solid #0d2b1a;color:var(--green);padding:8px;font-size:12px;width:100%;opacity:0.8"/></div>
+            <input type="number" value="${s.ddpQuoted||''}" onchange="updateShipmentField(${id},'ddpQuoted',this.value)" style="background:var(--bg);border:1px solid #1a5c36;color:var(--green);padding:8px;font-size:12px;width:100%"/></div>
           <div class="field"><div class="field-label"># Invoice Servicio</div>${_inp('clientInvoice',s.clientInvoice)}</div>
           <div class="field"><div class="field-label">Fecha Invoice</div>${_inp('clientInvoiceDate',s.clientInvoiceDate,'date')}</div>
           <div class="field"><div class="field-label">Cobrado</div>${_sel('clientPaid',_svcPaid)}</div>
