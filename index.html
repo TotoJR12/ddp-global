@@ -138,6 +138,43 @@ a{color:var(--teal);text-decoration:none}
 .radar-footer{font-family:'Geist Mono',monospace;font-size:8px;color:var(--tx4);text-align:center;padding:7px;flex-shrink:0;border-top:1px solid var(--bd)}
 @media(max-width:700px){.radar-panel{display:none}}
 
+/* ── RADAR DETAIL MODAL ── */
+.radar-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px}
+.radar-modal{background:var(--bg2);border:1px solid var(--bd2);border-radius:10px;width:100%;max-width:640px;max-height:85vh;display:flex;flex-direction:column;overflow:hidden}
+.radar-modal-header{padding:16px 20px;border-bottom:1px solid var(--bd);display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-shrink:0}
+.radar-modal-title{font-size:14px;font-weight:600;color:var(--tx);line-height:1.3}
+.radar-modal-meta{font-family:'Geist Mono',monospace;font-size:9px;color:var(--tx4);margin-top:4px;display:flex;gap:10px;flex-wrap:wrap}
+.radar-modal-close{background:transparent;border:1px solid var(--bd);border-radius:4px;color:var(--tx3);width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:14px;transition:all .15s}
+.radar-modal-close:hover{border-color:var(--red);color:var(--red)}
+.radar-modal-body{flex:1;overflow-y:auto;padding:20px}
+.radar-modal-body::-webkit-scrollbar{width:3px}
+.radar-modal-body::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:2px}
+.radar-modal-footer{padding:14px 20px;border-top:1px solid var(--bd);display:flex;gap:8px;flex-shrink:0}
+.radar-modal-apply{flex:1;padding:10px;background:var(--teal);border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s}
+.radar-modal-apply:hover{opacity:.9;box-shadow:0 4px 14px rgba(6,182,212,.25)}
+.radar-modal-apply:disabled{opacity:.4;cursor:not-allowed}
+.radar-modal-cancel{padding:10px 18px;background:transparent;border:1px solid var(--bd2);border-radius:6px;color:var(--tx3);font-size:12px;cursor:pointer;transition:all .15s}
+.radar-modal-cancel:hover{border-color:var(--bd3);color:var(--tx2)}
+
+.rdm-section{margin-bottom:16px}
+.rdm-section-label{font-family:'Geist Mono',monospace;font-size:9px;color:var(--tx4);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--bd)}
+.rdm-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.rdm-kv{background:var(--bg3);border:1px solid var(--bd);border-radius:5px;padding:10px 12px}
+.rdm-kv-label{font-family:'Geist Mono',monospace;font-size:8px;color:var(--tx4);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px}
+.rdm-kv-val{font-size:12px;color:var(--tx);font-weight:500}
+.rdm-kv-val.red{color:var(--red)}
+.rdm-kv-val.amber{color:var(--yellow)}
+.rdm-kv-val.green{color:var(--green)}
+.rdm-kv-val.teal{color:var(--teal)}
+.rdm-text{font-size:12px;color:var(--tx2);line-height:1.7}
+.rdm-impact-item{display:flex;gap:8px;padding:8px 10px;background:var(--bg3);border:1px solid var(--bd);border-radius:5px;margin-bottom:6px;font-size:11px;color:var(--tx2);line-height:1.5}
+.rdm-impact-icon{font-size:13px;flex-shrink:0}
+.rdm-hs-tag{display:inline-block;background:var(--bg4);border:1px solid var(--bd2);color:var(--tx3);padding:3px 8px;border-radius:4px;font-family:'Geist Mono',monospace;font-size:10px;margin:2px}
+.rdm-loading{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;gap:12px}
+.rdm-loading-text{font-family:'Geist Mono',monospace;font-size:10px;color:var(--tx4);letter-spacing:1px}
+.rdm-warning{background:var(--yellowbg);border:1px solid var(--yel-bd);border-left:2px solid var(--yellow);border-radius:0 5px 5px 0;padding:10px 13px;font-size:11px;color:#fde68a;line-height:1.6;margin-bottom:10px}
+.rdm-confirmed{background:var(--redbg);border:1px solid var(--red-bd);border-left:2px solid var(--red);border-radius:0 5px 5px 0;padding:10px 13px;font-size:11px;color:#fca5a5;line-height:1.6;margin-bottom:10px}
+
 /* ── RADAR ALERT WARNING in quotes ── */
 .radar-quote-warning{background:var(--yellowbg);border:1px solid var(--yel-bd);border-left:2px solid var(--yellow);border-radius:4px;padding:10px 13px;margin-bottom:10px;font-size:11px;color:#fde68a;line-height:1.6}
 .radar-quote-warning strong{color:var(--yellow);font-weight:600}
@@ -426,18 +463,24 @@ a{color:var(--teal);text-decoration:none}
 
     <!-- EMAIL TAB -->
     <div id="aitab-email">
-    <div class="card" style="border-color:var(--teal-bd);border-left:2px solid var(--teal)">
-      <div class="card-title">⚙ ANTHROPIC API KEY</div>
-      <div class="field" style="margin-bottom:8px">
-        <div class="field-label">API Key</div>
-        <div style="display:flex;gap:8px;align-items:center">
-          <input id="ai-api-key" type="password" placeholder="sk-ant-api-03-..." 
-            style="flex:1;background:var(--bg3);border:1px solid var(--bd2);color:var(--tx);padding:10px 12px;font-size:12px;font-family:'Geist Mono',monospace;border-radius:6px"
-            oninput="saveApiKey(this.value)"/>
-          <div id="api-key-status" style="font-size:11px;color:var(--tx5);white-space:nowrap;min-width:120px;text-align:right">—</div>
-        </div>
-        <div style="font-size:10px;color:var(--tx4);margin-top:6px;font-family:'Geist Mono',monospace">Se guarda localmente en tu browser. Nunca se envía a terceros.</div>
+    <div id="apikey-card" style="display:none;background:var(--bg2);border:1px solid var(--teal-bd);border-left:2px solid var(--teal);border-radius:8px;padding:16px;margin-bottom:14px">
+      <div style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--teal);margin-bottom:12px;text-transform:uppercase">⚙ Anthropic API Key</div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+        <input id="ai-api-key" type="password" placeholder="sk-ant-api-03-..."
+          style="flex:1;background:var(--bg3);border:1px solid var(--bd2);color:var(--tx);padding:10px 12px;font-size:12px;font-family:'Geist Mono',monospace;border-radius:6px"
+          oninput="saveApiKey(this.value)"/>
+        <div id="api-key-status" style="font-size:11px;color:var(--tx5);white-space:nowrap;min-width:110px;text-align:right">—</div>
       </div>
+      <div style="font-size:10px;color:var(--tx4);font-family:'Geist Mono',monospace">Se guarda localmente en tu browser. Nunca se envía a terceros.</div>
+    </div>
+
+    <!-- API key status pill — shown when key is loaded -->
+    <div id="apikey-pill" style="display:none;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;background:var(--greenbg);border:1px solid var(--grn-bd);border-radius:6px;padding:8px 14px">
+      <div style="display:flex;align-items:center;gap:7px;font-size:11px;color:var(--green)">
+        <div style="width:7px;height:7px;border-radius:50%;background:var(--green)"></div>
+        API Key configurada
+      </div>
+      <button onclick="showApiKeyCard()" style="background:transparent;border:1px solid var(--grn-bd);border-radius:4px;color:var(--green);font-size:9px;font-family:'Geist Mono',monospace;padding:3px 8px;cursor:pointer;letter-spacing:1px;opacity:.7">CAMBIAR</button>
     </div>
     <div class="card">
       <div class="card-title">PASTE CLIENT EMAIL</div>
@@ -1306,6 +1349,36 @@ Please advise on DDP cost and transit time. Thanks"></textarea>
 </div>
 
 </div><!-- end app-shell -->
+
+<!-- RADAR DETAIL MODAL -->
+<div class="radar-modal-overlay" id="radar-detail-overlay" style="display:none" onclick="if(event.target===this)closeRadarDetail()">
+  <div class="radar-modal">
+    <div class="radar-modal-header">
+      <div>
+        <div class="radar-modal-title" id="rdm-title">—</div>
+        <div class="radar-modal-meta">
+          <span id="rdm-country">—</span>
+          <span id="rdm-date">—</span>
+          <span id="rdm-badge">—</span>
+        </div>
+      </div>
+      <button class="radar-modal-close" onclick="closeRadarDetail()">✕</button>
+    </div>
+    <div class="radar-modal-body" id="rdm-body">
+      <div class="rdm-loading">
+        <div class="dot-pulse"><span></span><span></span><span></span></div>
+        <div class="rdm-loading-text">Analizando evento con web search...</div>
+      </div>
+    </div>
+    <div class="radar-modal-footer">
+      <button class="radar-modal-cancel" onclick="closeRadarDetail()">Cancelar</button>
+      <button class="radar-modal-apply" id="rdm-apply-btn" onclick="confirmApplyToSystem()" disabled>
+        ⚡ Aplicar al sistema
+      </button>
+    </div>
+  </div>
+</div>
+
 </div><!-- end .app -->
 
 <script>
@@ -6913,6 +6986,8 @@ function saveApiKey(val) {
     document.getElementById('api-key-status').textContent = '✓ KEY GUARDADA';
     document.getElementById('api-key-status').style.color = 'var(--green)';
     const b=document.getElementById('apikey-banner');if(b)b.style.display='none';
+    // Switch to pill after short delay
+    setTimeout(()=>{ const c=document.getElementById('apikey-card');const p=document.getElementById('apikey-pill');if(c)c.style.display='none';if(p)p.style.display='flex'; },1000);
   } else if (val.length > 5) {
     document.getElementById('api-key-status').textContent = '⚠ Formato inválido';
     document.getElementById('api-key-status').style.color = 'var(--yellow)';
@@ -6922,11 +6997,22 @@ function saveApiKey(val) {
   }
 }
 
+function showApiKeyCard(){
+  document.getElementById('apikey-card').style.display='block';
+  document.getElementById('apikey-pill').style.display='none';
+  document.getElementById('ai-api-key').focus();
+}
+
 function loadApiKey() {
   const k = localStorage.getItem('ddp_api_key') || '';
   // Show/hide missing key banner
   const banner = document.getElementById('apikey-banner');
   if(banner) banner.style.display = k ? 'none' : 'flex';
+  // Show pill if key loaded, card if not
+  const card = document.getElementById('apikey-card');
+  const pill = document.getElementById('apikey-pill');
+  if(card) card.style.display = k ? 'none' : 'block';
+  if(pill) pill.style.display = k ? 'flex' : 'none';
   const inp = document.getElementById('ai-api-key');
   const st = document.getElementById('api-key-status');
   if (!inp) return;
@@ -8215,47 +8301,104 @@ function toggleRadar(){
 }
 
 // ── APPLY TO SYSTEM ────────────────────────────────────
+let radarDetailAlertId = null;
+let radarDetailAnalysis = null;
+
 function radarApplyToSystem(id){
-  const alert = radarAlerts.find(a => a.id === id);
-  if(!alert) return;
-
+  const a = radarAlerts.find(x => x.id === id);
+  if(!a) return;
   const kb = JSON.parse(localStorage.getItem(RADAR_KB_KEY)||"[]");
-  const already = kb.find(k => k.id === id);
-  if(already){ radarRender(); return; }
+  if(kb.find(k => k.id === id)){ radarRender(); return; }
+  openRadarDetail(id);
+}
 
-  // Ask for confirmation
-  const dateStr = new Date(alert.date).toLocaleDateString("es-AR",{day:"numeric",month:"long",year:"numeric"});
-  const confirm = window.confirm(
-    `Aplicar alerta al sistema?
+function openRadarDetail(id){
+  const a = radarAlerts.find(x => x.id === id);
+  if(!a) return;
+  radarDetailAlertId = id;
+  radarDetailAnalysis = null;
+  document.getElementById("rdm-title").textContent = a.title;
+  document.getElementById("rdm-country").textContent = a.country;
+  document.getElementById("rdm-date").textContent = new Date(a.date).toLocaleDateString("es-AR",{day:"numeric",month:"long",year:"numeric"});
+  const lc = {critical:"var(--red)",high:"var(--orange)",medium:"var(--yellow)",low:"var(--green)"};
+  document.getElementById("rdm-badge").innerHTML = '<span style="color:'+( lc[a.level]||"var(--teal)")+';font-weight:600">'+a.level.toUpperCase()+'</span>';
+  document.getElementById("rdm-apply-btn").disabled = true;
+  document.getElementById("rdm-body").innerHTML = '<div class="rdm-loading"><div class="dot-pulse"><span></span><span></span><span></span></div><div class="rdm-loading-text">Analizando con web search...</div><div style="font-family:'Geist Mono',monospace;font-size:9px;color:var(--tx5);margin-top:4px">Buscando: % tarifas · países · HS codes · estado actual</div></div>';
+  document.getElementById("radar-detail-overlay").style.display = "flex";
+  radarFetchDetailAnalysis(a);
+}
 
-` +
-    `"${alert.title}"
-` +
-    `${alert.country} — vigente desde ${dateStr}
+async function radarFetchDetailAnalysis(alert){
+  const apiKey = localStorage.getItem("ddp_api_key");
+  if(!apiKey){
+    document.getElementById("rdm-body").innerHTML = '<div class="rdm-warning">No hay API key configurada. Podés aplicar igual con la información disponible.</div><div class="rdm-section"><div class="rdm-section-label">Info disponible</div><div class="rdm-text">'+alert.desc+'<br/><br/>'+alert.meta+'</div></div>';
+    document.getElementById("rdm-apply-btn").disabled = false;
+    return;
+  }
+  try {
+    const today = new Date().toLocaleDateString("es-AR",{day:"numeric",month:"long",year:"numeric"});
+    const dateStr = new Date(alert.date).toLocaleDateString("es-AR",{day:"numeric",month:"long",year:"numeric"});
+    const prompt = 'Hoy es '+today+'. Análisis detallado del evento regulatorio:\n\nEVENTO: "'+alert.title+'"\nPAÍS: '+alert.country+'\nFECHA: '+dateStr+'\nDESCRIPCIÓN: '+alert.desc+'\n\nBuscá información actualizada. Respondé SOLO con JSON sin markdown:\n{"confirmed":true/false,"status":"confirmado|probable|en_negociacion|cancelado","tariff_pct":"ej: 25% adicional","affected_countries":["país"],"affected_products":["producto"],"hs_codes":["8471.49"],"impact_importers":"texto","impact_exporters":"texto","action_required":"texto","sources":["fuente"],"confidence":0-100,"notes":"texto"}\n\nSolo HS codes IT hardware. null si no hay info confirmada.';
+    const PROXY = "https://ddp-proxy.nicolasjuarezroldan.workers.dev";
+    const resp = await fetch(PROXY,{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:2000,tools:[{"type":"web_search_20250305","name":"web_search"}],messages:[{role:"user",content:prompt}]})});
+    const data = await resp.json();
+    let text = "";
+    (data.content||[]).forEach(b => { if(b.type==="text") text += b.text; });
+    const match = text.match(/\{[\s\S]*\}/);
+    if(!match) throw new Error("parse error");
+    const analysis = JSON.parse(match[0]);
+    radarDetailAnalysis = analysis;
+    renderRadarDetail(alert, analysis);
+    document.getElementById("rdm-apply-btn").disabled = false;
+  } catch(err){
+    document.getElementById("rdm-body").innerHTML = '<div class="rdm-warning">No se pudo obtener análisis detallado. Podés aplicar igual.</div><div class="rdm-section"><div class="rdm-section-label">Info disponible</div><div class="rdm-text">'+alert.desc+'<br/><br/>'+alert.meta+'</div></div>';
+    document.getElementById("rdm-apply-btn").disabled = false;
+  }
+}
 
-` +
-    `Las cotizaciones con fecha posterior mostrarán un warning con esta alerta.`
-  );
-  if(!confirm) return;
+function renderRadarDetail(alert, a){
+  const sc = {confirmado:"red",probable:"amber",en_negociacion:"amber",cancelado:"green"};
+  let html = a.confirmed
+    ? '<div class="rdm-confirmed">🔴 <strong>EVENTO CONFIRMADO</strong> — '+(a.status||"").toUpperCase()+' · Confianza: '+(a.confidence||"—")+'%</div>'
+    : '<div class="rdm-warning">⚠ <strong>ESTADO: '+(a.status||"EN ANÁLISIS").toUpperCase()+'</strong> · Confianza: '+(a.confidence||"—")+'%</div>';
+  html += '<div class="rdm-grid"><div class="rdm-kv"><div class="rdm-kv-label">Tarifa / Cambio</div><div class="rdm-kv-val '+(a.tariff_pct&&a.tariff_pct!=="Sin cambio"?"red":"green")+'">'+(a.tariff_pct||"—")+'</div></div><div class="rdm-kv"><div class="rdm-kv-label">Estado</div><div class="rdm-kv-val '+(sc[a.status]||"teal")+'">'+(a.status||"—")+'</div></div></div>';
+  if(a.affected_countries?.length) html += '<div class="rdm-section"><div class="rdm-section-label">Países afectados</div><div>'+a.affected_countries.map(c=>'<span class="rdm-hs-tag">'+c+'</span>').join("")+'</div></div>';
+  if(a.hs_codes?.length) html += '<div class="rdm-section"><div class="rdm-section-label">HS Codes IT Hardware</div><div>'+a.hs_codes.map(h=>'<span class="rdm-hs-tag">'+h+'</span>').join("")+'</div></div>';
+  if(a.affected_products?.length) html += '<div class="rdm-section"><div class="rdm-section-label">Productos afectados</div>'+a.affected_products.map(p=>'<div class="rdm-impact-item"><span class="rdm-impact-icon">📦</span><span>'+p+'</span></div>').join("")+'</div>';
+  if(a.impact_importers||a.impact_exporters) html += '<div class="rdm-section"><div class="rdm-section-label">Impacto operacional</div>'+(a.impact_importers?'<div class="rdm-impact-item"><span class="rdm-impact-icon">📥</span><span><strong>Importadores:</strong> '+a.impact_importers+'</span></div>':"")+(a.impact_exporters?'<div class="rdm-impact-item"><span class="rdm-impact-icon">📤</span><span><strong>Exportadores:</strong> '+a.impact_exporters+'</span></div>':"")+'</div>';
+  if(a.action_required) html += '<div class="rdm-section"><div class="rdm-section-label">Acción requerida — DDP Global</div><div class="rdm-impact-item"><span class="rdm-impact-icon">⚡</span><span>'+a.action_required+'</span></div></div>';
+  if(a.notes) html += '<div class="rdm-section"><div class="rdm-section-label">Notas adicionales</div><div class="rdm-text">'+a.notes+'</div></div>';
+  if(a.sources?.length) html += '<div class="rdm-section"><div class="rdm-section-label">Fuentes</div><div style="font-family:'Geist Mono',monospace;font-size:9px;color:var(--tx4);line-height:1.8">'+a.sources.join("<br/>")+'</div></div>';
+  document.getElementById("rdm-body").innerHTML = html;
+}
 
+function closeRadarDetail(){
+  document.getElementById("radar-detail-overlay").style.display = "none";
+  radarDetailAlertId = null;
+  radarDetailAnalysis = null;
+}
+
+function confirmApplyToSystem(){
+  const id = radarDetailAlertId;
+  if(!id) return;
+  const alert = radarAlerts.find(x => x.id === id);
+  if(!alert) return;
+  const kb = JSON.parse(localStorage.getItem(RADAR_KB_KEY)||"[]");
+  if(kb.find(k => k.id === id)){ closeRadarDetail(); radarRender(); return; }
   kb.push({
-    id: alert.id,
-    title: alert.title,
-    country: alert.country,
-    date: alert.date,
-    level: alert.level,
-    category: alert.category,
-    desc: alert.desc,
-    meta: alert.meta,
-    appliedAt: new Date().toISOString()
+    id:alert.id, title:alert.title, country:alert.country, date:alert.date,
+    level:alert.level, category:alert.category, desc:alert.desc, meta:alert.meta,
+    tariff_pct:radarDetailAnalysis?.tariff_pct||null,
+    affected_countries:radarDetailAnalysis?.affected_countries||[],
+    hs_codes:radarDetailAnalysis?.hs_codes||[],
+    action_required:radarDetailAnalysis?.action_required||null,
+    appliedAt:new Date().toISOString()
   });
   localStorage.setItem(RADAR_KB_KEY, JSON.stringify(kb));
+  closeRadarDetail();
   radarRender();
-
-  // Show feedback
-  const btn = document.querySelector(`[onclick="radarApplyToSystem('${id}')"]`);
-  if(btn){ btn.textContent = "✓ Aplicado al sistema"; btn.classList.add("applied"); btn.disabled=true; }
 }
+
 
 // ── GET ACTIVE RADAR WARNINGS for a quote ─────────────
 function getRadarWarnings(country, shipDate){
