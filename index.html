@@ -71,6 +71,71 @@ a{color:var(--teal);text-decoration:none}
 .page{display:none;flex:1;padding:24px 28px;max-width:960px;width:100%}
 .page.active{display:block}
 
+/* ── REGULATORY RADAR PANEL ── */
+.radar-panel{width:280px;flex-shrink:0;background:var(--bg2);border-left:1px solid var(--bd);display:flex;flex-direction:column;height:calc(100vh - 48px);position:sticky;top:48px;overflow:hidden;transition:width .2s ease}
+.radar-panel.collapsed{width:34px}
+.radar-panel.collapsed .radar-inner{display:none}
+.radar-panel.collapsed .radar-collapsed-label{display:flex}
+.radar-collapsed-label{display:none;writing-mode:vertical-rl;font-family:'Geist Mono',monospace;font-size:8px;color:var(--tx4);letter-spacing:2px;text-transform:uppercase;cursor:pointer;align-items:center;justify-content:center;height:100%;padding:16px 0}
+.radar-collapse-btn{width:20px;height:20px;border-radius:50%;background:var(--bg2);border:1px solid var(--bd2);color:var(--tx4);font-size:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;flex-shrink:0}
+.radar-collapse-btn:hover{border-color:var(--teal);color:var(--teal)}
+.radar-inner{display:flex;flex-direction:column;height:100%;overflow:hidden}
+.radar-header{padding:11px 13px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.radar-title-row{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:500;color:var(--tx)}
+.radar-live-dot{width:6px;height:6px;border-radius:50%;background:var(--red);flex-shrink:0;animation:radarblink 2s infinite}
+@keyframes radarblink{0%,100%{opacity:1}50%{opacity:.25}}
+.radar-alert-count{font-family:'Geist Mono',monospace;font-size:9px;color:var(--red);background:var(--redbg);border:1px solid var(--red-bd);padding:2px 6px;border-radius:4px}
+.radar-update-btn{width:100%;padding:8px;background:var(--teal-dim);border:none;border-bottom:1px solid var(--bd);color:var(--teal);font-family:'Geist Mono',monospace;font-size:9px;font-weight:500;letter-spacing:1.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .15s;flex-shrink:0}
+.radar-update-btn:hover{background:rgba(6,182,212,.15)}
+.radar-update-btn:disabled{opacity:.5;cursor:not-allowed}
+.radar-filters{display:flex;border-bottom:1px solid var(--bd);flex-shrink:0}
+.rfilter{flex:1;padding:6px 0;background:transparent;border:none;font-family:'Geist Mono',monospace;font-size:8px;font-weight:500;letter-spacing:1px;color:var(--tx4);cursor:pointer;transition:all .15s;text-transform:uppercase;border-bottom:1px solid transparent}
+.rfilter.active{color:var(--teal);border-bottom-color:var(--teal)}
+.rfilter:hover:not(.active){color:var(--tx2)}
+.radar-next{margin:8px 10px 4px;background:var(--redbg);border:1px solid var(--red-bd);border-left:2px solid var(--red);border-radius:0 5px 5px 0;padding:8px 10px;flex-shrink:0}
+.rn-label{font-family:'Geist Mono',monospace;font-size:8px;color:var(--red);letter-spacing:2px;text-transform:uppercase;margin-bottom:3px}
+.rn-text{font-size:10px;color:#fca5a5;line-height:1.4;margin-bottom:4px}
+.rn-days{font-family:'Geist Mono',monospace;font-size:15px;font-weight:500;color:var(--red);line-height:1}
+.rn-sub{font-family:'Geist Mono',monospace;font-size:8px;color:var(--tx4);margin-top:2px}
+.radar-timeline{flex:1;overflow-y:auto;padding:10px}
+.radar-timeline::-webkit-scrollbar{width:3px}
+.radar-timeline::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:2px}
+.rtl-month{font-family:'Geist Mono',monospace;font-size:8px;color:var(--tx5);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.rtl-month::after{content:'';flex:1;height:1px;background:var(--bd)}
+.rtl-group{margin-bottom:12px}
+.rtl-item{display:flex;gap:8px;margin-bottom:4px;padding:8px;border-radius:5px;border:1px solid transparent;transition:all .15s;position:relative}
+.rtl-item:hover{background:var(--bg3);border-color:var(--bd)}
+.rtl-item::before{content:'';position:absolute;left:19px;top:30px;width:1px;height:calc(100% + 4px);background:var(--bd);pointer-events:none}
+.rtl-item:last-child::before{display:none}
+.rtl-date{display:flex;flex-direction:column;align-items:center;flex-shrink:0;width:24px}
+.rtl-day{font-family:'Geist Mono',monospace;font-size:11px;font-weight:500;color:var(--tx);line-height:1}
+.rtl-mon{font-family:'Geist Mono',monospace;font-size:7px;color:var(--tx4);letter-spacing:1px;margin-top:1px}
+.rtl-dot{width:6px;height:6px;border-radius:50%;margin-top:5px;flex-shrink:0}
+.rtl-dot.critical{background:var(--red);box-shadow:0 0 4px rgba(239,68,68,.5)}
+.rtl-dot.high{background:var(--orange)}
+.rtl-dot.medium{background:var(--yellow)}
+.rtl-dot.low{background:var(--green)}
+.rtl-body{flex:1;min-width:0}
+.rtl-top{display:flex;align-items:center;gap:4px;margin-bottom:2px;flex-wrap:wrap}
+.rtl-country{font-size:9px;color:var(--tx3)}
+.rtl-badge{font-size:7px;font-weight:500;letter-spacing:.5px;padding:1px 5px;border-radius:3px}
+.rtl-badge.critical{background:var(--redbg);color:var(--red);border:1px solid var(--red-bd)}
+.rtl-badge.high{background:var(--orangebg);color:var(--orange);border:1px solid rgba(249,115,22,.2)}
+.rtl-badge.medium{background:var(--yellowbg);color:var(--yellow);border:1px solid var(--yel-bd)}
+.rtl-badge.low{background:var(--greenbg);color:var(--green);border:1px solid var(--grn-bd)}
+.rtl-title{font-size:10px;color:var(--tx2);line-height:1.4;margin-bottom:2px}
+.rtl-title strong{color:var(--tx);font-weight:500}
+.rtl-meta{font-family:'Geist Mono',monospace;font-size:8px;color:var(--tx4);line-height:1.4}
+.rtl-apply-btn{margin-top:5px;padding:4px 8px;background:rgba(6,182,212,.08);border:1px solid var(--teal-bd);border-radius:4px;color:var(--teal);font-family:'Geist Mono',monospace;font-size:8px;font-weight:500;letter-spacing:1px;cursor:pointer;transition:all .15s;width:100%}
+.rtl-apply-btn:hover{background:rgba(6,182,212,.18)}
+.rtl-apply-btn.applied{background:var(--greenbg);border-color:var(--grn-bd);color:var(--green);cursor:default}
+.radar-footer{font-family:'Geist Mono',monospace;font-size:8px;color:var(--tx4);text-align:center;padding:7px;flex-shrink:0;border-top:1px solid var(--bd)}
+@media(max-width:700px){.radar-panel{display:none}}
+
+/* ── RADAR ALERT WARNING in quotes ── */
+.radar-quote-warning{background:var(--yellowbg);border:1px solid var(--yel-bd);border-left:2px solid var(--yellow);border-radius:4px;padding:10px 13px;margin-bottom:10px;font-size:11px;color:#fde68a;line-height:1.6}
+.radar-quote-warning strong{color:var(--yellow);font-weight:600}
+
 /* ── COMPONENTS ── */
 .card{background:var(--bg2);border:1px solid var(--bd);border-radius:8px;padding:20px;margin-bottom:14px;overflow:hidden}
 .card-title{font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--teal);margin-bottom:14px;text-transform:uppercase}
@@ -1193,6 +1258,41 @@ Please advise on DDP cost and transit time. Thanks"></textarea>
 </div>
 
 </div><!-- end page-wrap -->
+
+<!-- ══ REGULATORY RADAR PANEL ══ -->
+<div class="radar-panel" id="radar-panel">
+  <div class="radar-collapsed-label" onclick="toggleRadar()">REGULATORY RADAR</div>
+  <div class="radar-inner">
+    <div class="radar-header">
+      <div class="radar-title-row">
+        <div class="radar-live-dot"></div>
+        REGULATORY RADAR
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <div class="radar-alert-count" id="radar-count">0</div>
+        <button class="radar-collapse-btn" onclick="toggleRadar()">&#8249;</button>
+      </div>
+    </div>
+    <button class="radar-update-btn" id="radar-update-btn" onclick="radarFetchUpdates()">
+      <span id="radar-btn-label">&#8635;&nbsp; BUSCAR ACTUALIZACIONES</span>
+    </button>
+    <div class="radar-filters">
+      <button class="rfilter active" onclick="radarSetFilter(this,'all')">Todo</button>
+      <button class="rfilter" onclick="radarSetFilter(this,'critical')">Crítico</button>
+      <button class="rfilter" onclick="radarSetFilter(this,'tariff')">Tarifas</button>
+      <button class="rfilter" onclick="radarSetFilter(this,'sanction')">Sanciones</button>
+    </div>
+    <div class="radar-next" id="radar-next-banner" style="display:none"></div>
+    <div class="radar-timeline" id="radar-timeline">
+      <div style="padding:24px 12px;text-align:center">
+        <div style="font-size:22px;margin-bottom:10px">📡</div>
+        <div style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--tx4);line-height:1.7">Sin alertas verificadas.<br/>Apretá el botón para buscar<br/>eventos reales con web search.</div>
+      </div>
+    </div>
+    <div class="radar-footer" id="radar-footer">Sin datos — apretá Buscar actualizaciones</div>
+  </div>
+</div>
+
 </div><!-- end app-shell -->
 </div><!-- end .app -->
 
@@ -3174,6 +3274,13 @@ function doQuote(){
         <div class="meta-item"><div class="ml">WEIGHT</div><div class="mv">${lbs} lbs</div></div>
         <div class="meta-item"><div class="ml">CIF</div><div class="mv">$${fmt(r.cif)}</div></div>
       </div>
+
+      <!-- Radar KB Warnings -->
+      ${(()=>{
+        const warns = typeof getRadarWarnings==="function" ? getRadarWarnings(COUNTRIES.find(c=>c.id===currentCtry)?.lb||"","") : [];
+        if(!warns.length) return "";
+        return warns.map(w=>`<div class="radar-quote-warning">⚠ <strong>Alerta Regulatoria Aplicada — ${w.id}:</strong> ${w.title} (${w.country}) — vigente desde ${new Date(w.date).toLocaleDateString("es-AR",{day:"numeric",month:"short",year:"numeric"})}. ${w.meta}</div>`).join("");
+      })()}
 
       <!-- Regulatory Flags -->
       ${flags.length?`<div style="margin-bottom:14px">${flags.map(f=>`<div class="flag ${flagColors[f.level]||"flag-blue"}">⚠ ${f.msg}</div>`).join("")}</div>`:""}
@@ -7965,5 +8072,269 @@ function mobNav(page) {
   showPage(page);
 }
 </script>
+
+<script>
+// ════════════════════════════════════════════════════════
+// REGULATORY RADAR + APPLY TO SYSTEM
+// ════════════════════════════════════════════════════════
+const RADAR_ALERTS_KEY  = "ddp_radar_alerts";
+const RADAR_UPDATED_KEY = "ddp_radar_updated";
+const RADAR_KB_KEY      = "ddp_radar_kb"; // applied alerts that affect quotes
+
+let radarAlerts    = [];
+let radarFilter    = "all";
+let radarCollapsed = false;
+
+function radarInit(){
+  // Clear old fake data if present
+  const version = localStorage.getItem("ddp_radar_version");
+  if(version !== "real-only-v2"){
+    localStorage.removeItem(RADAR_ALERTS_KEY);
+    localStorage.removeItem(RADAR_UPDATED_KEY);
+    localStorage.setItem("ddp_radar_version","real-only-v2");
+  }
+  const saved = localStorage.getItem(RADAR_ALERTS_KEY);
+  radarAlerts = saved ? JSON.parse(saved) : [];
+  const updated = localStorage.getItem(RADAR_UPDATED_KEY);
+  document.getElementById("radar-footer").textContent = updated
+    ? "Actualizado: " + updated
+    : "Sin datos — apretá Buscar actualizaciones";
+  radarRender();
+}
+
+function radarRender(){
+  let alerts = [...radarAlerts];
+  if(radarFilter === "critical") alerts = alerts.filter(a => a.level === "critical");
+  else if(radarFilter === "tariff") alerts = alerts.filter(a => a.category === "tariff");
+  else if(radarFilter === "sanction") alerts = alerts.filter(a => a.category === "sanction");
+  alerts.sort((a,b) => new Date(a.date) - new Date(b.date));
+  const future = alerts.filter(a => new Date(a.date) >= new Date());
+  document.getElementById("radar-count").textContent = future.length;
+
+  // Applied KB alerts
+  const appliedKB = JSON.parse(localStorage.getItem(RADAR_KB_KEY)||"[]");
+  const appliedIds = appliedKB.map(k => k.id);
+
+  // Next critical banner
+  const nextCrit = future.find(a => a.level === "critical" || a.level === "high");
+  const bannerEl = document.getElementById("radar-next-banner");
+  if(nextCrit){
+    const days = Math.ceil((new Date(nextCrit.date) - new Date()) / 86400000);
+    const dateStr = new Date(nextCrit.date).toLocaleDateString("es-AR",{day:"numeric",month:"short",year:"numeric"});
+    bannerEl.innerHTML = `
+      <div class="rn-label">Próximo evento ${nextCrit.level==="critical"?"crítico":"importante"}</div>
+      <div class="rn-text">${nextCrit.title} — ${nextCrit.country}</div>
+      <div class="rn-days">En ${days} día${days!==1?"s":""}</div>
+      <div class="rn-sub">${dateStr}</div>`;
+    bannerEl.style.display = "block";
+  } else {
+    bannerEl.style.display = "none";
+  }
+
+  if(alerts.length === 0){
+    document.getElementById("radar-timeline").innerHTML = `
+      <div style="padding:24px 12px;text-align:center">
+        <div style="font-size:22px;margin-bottom:10px">📡</div>
+        <div style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--tx4);line-height:1.7">Sin alertas verificadas.<br/>Apretá el botón para buscar<br/>eventos reales con web search.</div>
+      </div>`;
+    return;
+  }
+
+  // Group by month
+  const groups = {};
+  const MONTHS = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+  alerts.forEach(a => {
+    const d = new Date(a.date);
+    const key = MONTHS[d.getMonth()] + " " + d.getFullYear();
+    if(!groups[key]) groups[key] = [];
+    groups[key].push(a);
+  });
+
+  const tlEl = document.getElementById("radar-timeline");
+  tlEl.innerHTML = Object.entries(groups).map(([month, items]) => `
+    <div class="rtl-group">
+      <div class="rtl-month">${month}</div>
+      ${items.map(a => {
+        const d = new Date(a.date);
+        const isPast = d < new Date();
+        const isApplied = appliedIds.includes(a.id);
+        return `<div class="rtl-item" style="${isPast?"opacity:.4":""}">
+          <div class="rtl-date">
+            <div class="rtl-day">${String(d.getDate()).padStart(2,"0")}</div>
+            <div class="rtl-mon">${MONTHS[d.getMonth()].toUpperCase()}</div>
+            <div class="rtl-dot ${a.level}"></div>
+          </div>
+          <div class="rtl-body">
+            <div class="rtl-top">
+              <span class="rtl-country">${a.country}</span>
+              <span class="rtl-badge ${a.level}">${a.level.toUpperCase()}</span>
+            </div>
+            <div class="rtl-title"><strong>${a.title}</strong></div>
+            <div class="rtl-meta">${a.meta||a.desc||""}</div>
+            ${!isPast ? `<button class="rtl-apply-btn ${isApplied?"applied":""}"
+              onclick="radarApplyToSystem('${a.id}')"
+              ${isApplied?"disabled":""}>
+              ${isApplied ? "✓ Aplicado al sistema" : "⚡ Aplicar al sistema"}
+            </button>` : ""}
+          </div>
+        </div>`;
+      }).join("")}
+    </div>
+  `).join("");
+}
+
+function radarSetFilter(btn, filter){
+  document.querySelectorAll(".rfilter").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  radarFilter = filter;
+  radarRender();
+}
+
+function toggleRadar(){
+  radarCollapsed = !radarCollapsed;
+  const panel = document.getElementById("radar-panel");
+  panel.classList.toggle("collapsed", radarCollapsed);
+  const btn = panel.querySelector(".radar-collapse-btn");
+  if(btn) btn.innerHTML = radarCollapsed ? "&#8250;" : "&#8249;";
+}
+
+// ── APPLY TO SYSTEM ────────────────────────────────────
+function radarApplyToSystem(id){
+  const alert = radarAlerts.find(a => a.id === id);
+  if(!alert) return;
+
+  const kb = JSON.parse(localStorage.getItem(RADAR_KB_KEY)||"[]");
+  const already = kb.find(k => k.id === id);
+  if(already){ radarRender(); return; }
+
+  // Ask for confirmation
+  const dateStr = new Date(alert.date).toLocaleDateString("es-AR",{day:"numeric",month:"long",year:"numeric"});
+  const confirm = window.confirm(
+    `Aplicar alerta al sistema?
+
+` +
+    `"${alert.title}"
+` +
+    `${alert.country} — vigente desde ${dateStr}
+
+` +
+    `Las cotizaciones con fecha posterior mostrarán un warning con esta alerta.`
+  );
+  if(!confirm) return;
+
+  kb.push({
+    id: alert.id,
+    title: alert.title,
+    country: alert.country,
+    date: alert.date,
+    level: alert.level,
+    category: alert.category,
+    desc: alert.desc,
+    meta: alert.meta,
+    appliedAt: new Date().toISOString()
+  });
+  localStorage.setItem(RADAR_KB_KEY, JSON.stringify(kb));
+  radarRender();
+
+  // Show feedback
+  const btn = document.querySelector(`[onclick="radarApplyToSystem('${id}')"]`);
+  if(btn){ btn.textContent = "✓ Aplicado al sistema"; btn.classList.add("applied"); btn.disabled=true; }
+}
+
+// ── GET ACTIVE RADAR WARNINGS for a quote ─────────────
+function getRadarWarnings(country, shipDate){
+  const kb = JSON.parse(localStorage.getItem(RADAR_KB_KEY)||"[]");
+  if(!kb.length) return [];
+  const qDate = shipDate ? new Date(shipDate) : new Date();
+  return kb.filter(k => {
+    const vigDate = new Date(k.date);
+    if(qDate < vigDate) return false; // not yet in effect
+    // Match by country keyword or global
+    const kCountry = k.country.toLowerCase();
+    const qCountry = (country||"").toLowerCase();
+    if(kCountry.includes("global") || kCountry.includes("usa → global")) return true;
+    if(qCountry && kCountry.includes(qCountry.split(" ")[0])) return true;
+    if(kCountry.includes("ofac") || kCountry.includes("bis")) return true;
+    return false;
+  });
+}
+
+// ── FETCH REAL UPDATES via web search ─────────────────
+async function radarFetchUpdates(){
+  const btn  = document.getElementById("radar-update-btn");
+  const lbl  = document.getElementById("radar-btn-label");
+  const apiKey = localStorage.getItem("ddp_api_key");
+  if(!apiKey){ alert("Configurá tu API key en el sistema primero."); return; }
+
+  btn.disabled = true;
+  lbl.textContent = "Buscando...";
+
+  try {
+    const today = new Date().toLocaleDateString("es-AR",{day:"numeric",month:"long",year:"numeric"});
+    const prompt = `Hoy es ${today}. Sos experto en comercio internacional y logística de IT hardware (servidores, GPUs, equipos de data center).
+
+Buscá en internet los eventos regulatorios REALES Y CONFIRMADOS más importantes próximos que afectan importación/exportación de IT hardware hacia/desde LATAM (Brazil, Mexico, Argentina, Colombia, Chile), USA y Middle East.
+
+SOLO incluí eventos con fecha confirmada o altamente probable. NO inventes fechas. Incluí: cambios de tarifas Trump confirmados, actualizaciones BIS/OFAC programadas, cambios regulatorios en aduanas LATAM confirmados, restricciones de exportación GPU/AI hardware confirmadas.
+
+Respondé SOLO con un JSON array, sin explicación ni markdown:
+[{"date":"YYYY-MM-DD","country":"emoji + país","level":"critical|high|medium|low","category":"tariff|sanction|regulatory","title":"Título corto","desc":"Una oración","meta":"Impacto operacional concreto"}]
+
+Máximo 10 eventos futuros reales, ordenados por fecha. Si no encontrás eventos con fecha confirmada, devolvé array vacío [].`;
+
+    const PROXY = "https://ddp-proxy.nicolasjuarezroldan.workers.dev";
+    const resp = await fetch(PROXY, {
+      method:"POST",
+      headers:{"Content-Type":"application/json","x-api-key":apiKey},
+      body: JSON.stringify({
+        model:"claude-sonnet-4-20250514",
+        max_tokens:2000,
+        tools:[{"type":"web_search_20250305","name":"web_search"}],
+        messages:[{role:"user",content:prompt}]
+      })
+    });
+
+    const data = await resp.json();
+    let text = "";
+    (data.content||[]).forEach(b => { if(b.type==="text") text += b.text; });
+
+    const match = text.match(/\[[\s\S]*?\]/);
+    if(match){
+      const newAlerts = JSON.parse(match[0]);
+      let counter = radarAlerts.length + 1;
+      newAlerts.forEach(a => {
+        if(!a.id) a.id = "AI" + String(counter++).padStart(3,"0");
+        const dup = radarAlerts.find(x => x.title === a.title && x.date === a.date);
+        if(!dup) radarAlerts.push(a);
+      });
+      localStorage.setItem(RADAR_ALERTS_KEY, JSON.stringify(radarAlerts));
+      const now = new Date().toLocaleString("es-AR");
+      localStorage.setItem(RADAR_UPDATED_KEY, now);
+      document.getElementById("radar-footer").textContent = "Actualizado: " + now;
+      radarRender();
+      lbl.innerHTML = "✓&nbsp; Actualizado — " + newAlerts.length + " eventos encontrados";
+      btn.style.color = "var(--green)";
+      btn.style.background = "var(--greenbg)";
+    } else {
+      lbl.innerHTML = "✓&nbsp; Sin nuevos eventos confirmados";
+      btn.style.color = "var(--yellow)";
+    }
+    setTimeout(()=>{
+      lbl.innerHTML = "&#8635;&nbsp; BUSCAR ACTUALIZACIONES";
+      btn.style.color=""; btn.style.background=""; btn.disabled=false;
+    },3000);
+
+  } catch(err){
+    lbl.textContent = "Error — intentá de nuevo";
+    btn.style.color = "var(--red)";
+    setTimeout(()=>{ lbl.innerHTML="&#8635;&nbsp; BUSCAR ACTUALIZACIONES"; btn.style.color=""; btn.disabled=false; },3000);
+  }
+}
+
+// Init
+document.addEventListener("DOMContentLoaded", radarInit);
+setTimeout(radarInit, 400);
+</script>
+
 </body>
 </html>
