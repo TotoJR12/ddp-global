@@ -24,7 +24,7 @@
   --orange:#f97316;--orangebg:rgba(249,115,22,.08);
 }
 body{background:var(--bg);color:var(--tx);font-family:'Geist','Geist Mono',-apple-system,sans-serif;min-height:100vh;font-size:14px;-webkit-font-smoothing:antialiased}
-input,select,textarea{outline:none;font-family:'Geist Mono',monospace}
+input,select,textarea{outline:none;font-family:monospace}
 input:focus,select:focus,textarea:focus{border-color:var(--teal-bd)!important;box-shadow:0 0 0 3px var(--teal-dim)}
 button{cursor:pointer;font-family:'Geist',sans-serif}
 a{color:var(--teal);text-decoration:none}
@@ -37,14 +37,14 @@ a{color:var(--teal);text-decoration:none}
 .logo-mark svg{width:13px;height:13px}
 .logo-text{}
 .logo-name{font-size:13px;font-weight:600;color:var(--tx);letter-spacing:.3px;line-height:1}
-.logo-sub{font-family:'Geist Mono',monospace;font-size:9px;color:var(--tx5);letter-spacing:1px;margin-top:2px}
+.logo-sub{font-family:monospace;font-size:9px;color:var(--tx5);letter-spacing:1px;margin-top:2px}
 .nav{display:flex;align-items:center;gap:0;padding:0 8px;flex:1;overflow-x:auto}
 .nav::-webkit-scrollbar{display:none}
 .nav-btn{height:48px;padding:0 12px;background:transparent;border:none;color:var(--tx4);font-size:11px;font-weight:500;letter-spacing:.2px;cursor:pointer;transition:color .15s;position:relative;display:flex;align-items:center;gap:5px;white-space:nowrap;font-family:'Geist',sans-serif}
 .nav-btn:hover{color:var(--tx2)}
 .nav-btn.active{color:var(--tx)}
 .nav-btn.active::after{content:'';position:absolute;bottom:0;left:6px;right:6px;height:1px;background:var(--teal)}
-.version{margin-left:auto;font-family:'Geist Mono',monospace;font-size:10px;color:var(--tx4);background:var(--bg3);border:1px solid var(--bd);padding:3px 8px;border-radius:4px;flex-shrink:0;margin-right:12px}
+.version{margin-left:auto;font-family:monospace;font-size:10px;color:var(--tx4);background:var(--bg3);border:1px solid var(--bd);padding:3px 8px;border-radius:4px;flex-shrink:0;margin-right:12px}
 
 /* ── SHELL with sidebar ── */
 .app-shell{display:flex;flex:1;min-height:calc(100vh - 48px)}
@@ -52,10 +52,10 @@ a{color:var(--teal);text-decoration:none}
 .sidebar::-webkit-scrollbar{width:3px}
 .sidebar::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:2px}
 .sb-section{padding:0 12px 12px}
-.sb-label{font-family:'Geist Mono',monospace;font-size:9px;color:var(--tx5);letter-spacing:2px;text-transform:uppercase;padding:0 4px;margin-bottom:8px}
+.sb-label{font-family:monospace;font-size:9px;color:var(--tx5);letter-spacing:2px;text-transform:uppercase;padding:0 4px;margin-bottom:8px}
 .sb-stat{display:flex;justify-content:space-between;align-items:center;padding:5px 4px;border-radius:4px}
 .sb-stat-key{font-size:11px;color:var(--tx4)}
-.sb-stat-val{font-family:'Geist Mono',monospace;font-size:12px;font-weight:500;color:var(--tx)}
+.sb-stat-val{font-family:monospace;font-size:12px;font-weight:500;color:var(--tx)}
 .sb-stat-val.g{color:var(--green)}
 .sb-stat-val.a{color:var(--yellow)}
 .sb-stat-val.r{color:var(--red)}
@@ -63,7 +63,7 @@ a{color:var(--teal);text-decoration:none}
 .sb-quote{padding:8px;border-radius:5px;cursor:pointer;transition:background .1s;margin-bottom:2px}
 .sb-quote:hover{background:var(--bg3)}
 .sb-quote.active{background:var(--bg3);border:1px solid var(--bd2)}
-.sb-q-ref{font-family:'Geist Mono',monospace;font-size:10px;color:var(--teal);margin-bottom:2px}
+.sb-q-ref{font-family:monospace;font-size:10px;color:var(--teal);margin-bottom:2px}
 .sb-q-name{font-size:10px;color:var(--tx4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px}
 .sb-q-amt{font-size:11px;font-weight:600;color:var(--tx)}
 
@@ -73,7 +73,7 @@ a{color:var(--teal);text-decoration:none}
 
 /* ── API KEY BANNER ── */
 .apikey-banner{background:var(--yellowbg);border-bottom:1px solid var(--yel-bd);padding:9px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-shrink:0}
-.apikey-banner-text{font-size:11px;color:#fde68a;font-family:'Geist Mono',monospace}
+.apikey-banner-text{font-size:11px;color:#fde68a;font-family:monospace}
 .apikey-banner-btn{background:var(--yellow);border:none;color:#0a0a0b;padding:5px 14px;font-size:10px;font-weight:600;border-radius:4px;cursor:pointer;white-space:nowrap;font-family:'Geist',sans-serif}
 .apikey-banner-btn:hover{opacity:.9}
 
@@ -82,7 +82,7 @@ a{color:var(--teal);text-decoration:none}
 .radar-panel.collapsed{width:34px}
 .radar-panel.collapsed .radar-inner{display:none}
 .radar-panel.collapsed .radar-collapsed-label{display:flex}
-.radar-collapsed-label{display:none;writing-mode:vertical-rl;font-family:'Geist Mono',monospace;font-size:8px;color:var(--tx4);letter-spacing:2px;text-transform:uppercase;cursor:pointer;align-items:center;justify-content:center;height:100%;padding:16px 0}
+.radar-collapsed-label{display:none;writing-mode:vertical-rl;font-family:monospace;font-size:8px;color:var(--tx4);letter-spacing:2px;text-transform:uppercase;cursor:pointer;align-items:center;justify-content:center;height:100%;padding:16px 0}
 .radar-collapse-btn{width:20px;height:20px;border-radius:50%;background:var(--bg2);border:1px solid var(--bd2);color:var(--tx4);font-size:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;flex-shrink:0}
 .radar-collapse-btn:hover{border-color:var(--teal);color:var(--teal)}
 .radar-inner{display:flex;flex-direction:column;height:100%;overflow:hidden}
@@ -90,23 +90,23 @@ a{color:var(--teal);text-decoration:none}
 .radar-title-row{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:500;color:var(--tx)}
 .radar-live-dot{width:6px;height:6px;border-radius:50%;background:var(--red);flex-shrink:0;animation:radarblink 2s infinite}
 @keyframes radarblink{0%,100%{opacity:1}50%{opacity:.25}}
-.radar-alert-count{font-family:'Geist Mono',monospace;font-size:9px;color:var(--red);background:var(--redbg);border:1px solid var(--red-bd);padding:2px 6px;border-radius:4px}
-.radar-update-btn{width:100%;padding:8px;background:var(--teal-dim);border:none;border-bottom:1px solid var(--bd);color:var(--teal);font-family:'Geist Mono',monospace;font-size:9px;font-weight:500;letter-spacing:1.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .15s;flex-shrink:0}
+.radar-alert-count{font-family:monospace;font-size:9px;color:var(--red);background:var(--redbg);border:1px solid var(--red-bd);padding:2px 6px;border-radius:4px}
+.radar-update-btn{width:100%;padding:8px;background:var(--teal-dim);border:none;border-bottom:1px solid var(--bd);color:var(--teal);font-family:monospace;font-size:9px;font-weight:500;letter-spacing:1.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .15s;flex-shrink:0}
 .radar-update-btn:hover{background:rgba(6,182,212,.15)}
 .radar-update-btn:disabled{opacity:.5;cursor:not-allowed}
 .radar-filters{display:flex;border-bottom:1px solid var(--bd);flex-shrink:0}
-.rfilter{flex:1;padding:6px 0;background:transparent;border:none;font-family:'Geist Mono',monospace;font-size:8px;font-weight:500;letter-spacing:1px;color:var(--tx4);cursor:pointer;transition:all .15s;text-transform:uppercase;border-bottom:1px solid transparent}
+.rfilter{flex:1;padding:6px 0;background:transparent;border:none;font-family:monospace;font-size:8px;font-weight:500;letter-spacing:1px;color:var(--tx4);cursor:pointer;transition:all .15s;text-transform:uppercase;border-bottom:1px solid transparent}
 .rfilter.active{color:var(--teal);border-bottom-color:var(--teal)}
 .rfilter:hover:not(.active){color:var(--tx2)}
 .radar-next{margin:8px 10px 4px;background:var(--redbg);border:1px solid var(--red-bd);border-left:2px solid var(--red);border-radius:0 5px 5px 0;padding:8px 10px;flex-shrink:0}
-.rn-label{font-family:'Geist Mono',monospace;font-size:8px;color:var(--red);letter-spacing:2px;text-transform:uppercase;margin-bottom:3px}
+.rn-label{font-family:monospace;font-size:8px;color:var(--red);letter-spacing:2px;text-transform:uppercase;margin-bottom:3px}
 .rn-text{font-size:10px;color:#fca5a5;line-height:1.4;margin-bottom:4px}
-.rn-days{font-family:'Geist Mono',monospace;font-size:15px;font-weight:500;color:var(--red);line-height:1}
-.rn-sub{font-family:'Geist Mono',monospace;font-size:8px;color:var(--tx4);margin-top:2px}
+.rn-days{font-family:monospace;font-size:15px;font-weight:500;color:var(--red);line-height:1}
+.rn-sub{font-family:monospace;font-size:8px;color:var(--tx4);margin-top:2px}
 .radar-timeline{flex:1;overflow-y:auto;padding:10px}
 .radar-timeline::-webkit-scrollbar{width:3px}
 .radar-timeline::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:2px}
-.rtl-month{font-family:'Geist Mono',monospace;font-size:8px;color:var(--tx5);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.rtl-month{font-family:monospace;font-size:8px;color:var(--tx5);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:6px}
 .rtl-month::after{content:'';flex:1;height:1px;background:var(--bd)}
 .rtl-group{margin-bottom:12px}
 .rtl-item{display:flex;gap:8px;margin-bottom:4px;padding:8px;border-radius:5px;border:1px solid transparent;transition:all .15s;position:relative}
@@ -114,8 +114,8 @@ a{color:var(--teal);text-decoration:none}
 .rtl-item::before{content:'';position:absolute;left:19px;top:30px;width:1px;height:calc(100% + 4px);background:var(--bd);pointer-events:none}
 .rtl-item:last-child::before{display:none}
 .rtl-date{display:flex;flex-direction:column;align-items:center;flex-shrink:0;width:24px}
-.rtl-day{font-family:'Geist Mono',monospace;font-size:11px;font-weight:500;color:var(--tx);line-height:1}
-.rtl-mon{font-family:'Geist Mono',monospace;font-size:7px;color:var(--tx4);letter-spacing:1px;margin-top:1px}
+.rtl-day{font-family:monospace;font-size:11px;font-weight:500;color:var(--tx);line-height:1}
+.rtl-mon{font-family:monospace;font-size:7px;color:var(--tx4);letter-spacing:1px;margin-top:1px}
 .rtl-dot{width:6px;height:6px;border-radius:50%;margin-top:5px;flex-shrink:0}
 .rtl-dot.critical{background:var(--red);box-shadow:0 0 4px rgba(239,68,68,.5)}
 .rtl-dot.high{background:var(--orange)}
@@ -131,11 +131,11 @@ a{color:var(--teal);text-decoration:none}
 .rtl-badge.low{background:var(--greenbg);color:var(--green);border:1px solid var(--grn-bd)}
 .rtl-title{font-size:10px;color:var(--tx2);line-height:1.4;margin-bottom:2px}
 .rtl-title strong{color:var(--tx);font-weight:500}
-.rtl-meta{font-family:'Geist Mono',monospace;font-size:8px;color:var(--tx4);line-height:1.4}
-.rtl-apply-btn{margin-top:5px;padding:4px 8px;background:rgba(6,182,212,.08);border:1px solid var(--teal-bd);border-radius:4px;color:var(--teal);font-family:'Geist Mono',monospace;font-size:8px;font-weight:500;letter-spacing:1px;cursor:pointer;transition:all .15s;width:100%}
+.rtl-meta{font-family:monospace;font-size:8px;color:var(--tx4);line-height:1.4}
+.rtl-apply-btn{margin-top:5px;padding:4px 8px;background:rgba(6,182,212,.08);border:1px solid var(--teal-bd);border-radius:4px;color:var(--teal);font-family:monospace;font-size:8px;font-weight:500;letter-spacing:1px;cursor:pointer;transition:all .15s;width:100%}
 .rtl-apply-btn:hover{background:rgba(6,182,212,.18)}
 .rtl-apply-btn.applied{background:var(--greenbg);border-color:var(--grn-bd);color:var(--green);cursor:default}
-.radar-footer{font-family:'Geist Mono',monospace;font-size:8px;color:var(--tx4);text-align:center;padding:7px;flex-shrink:0;border-top:1px solid var(--bd)}
+.radar-footer{font-family:monospace;font-size:8px;color:var(--tx4);text-align:center;padding:7px;flex-shrink:0;border-top:1px solid var(--bd)}
 @media(max-width:700px){.radar-panel{display:none}}
 
 /* ── RADAR DETAIL MODAL ── */
@@ -143,7 +143,7 @@ a{color:var(--teal);text-decoration:none}
 .radar-modal{background:var(--bg2);border:1px solid var(--bd2);border-radius:10px;width:100%;max-width:640px;max-height:85vh;display:flex;flex-direction:column;overflow:hidden}
 .radar-modal-header{padding:16px 20px;border-bottom:1px solid var(--bd);display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-shrink:0}
 .radar-modal-title{font-size:14px;font-weight:600;color:var(--tx);line-height:1.3}
-.radar-modal-meta{font-family:'Geist Mono',monospace;font-size:9px;color:var(--tx4);margin-top:4px;display:flex;gap:10px;flex-wrap:wrap}
+.radar-modal-meta{font-family:monospace;font-size:9px;color:var(--tx4);margin-top:4px;display:flex;gap:10px;flex-wrap:wrap}
 .radar-modal-close{background:transparent;border:1px solid var(--bd);border-radius:4px;color:var(--tx3);width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:14px;transition:all .15s}
 .radar-modal-close:hover{border-color:var(--red);color:var(--red)}
 .radar-modal-body{flex:1;overflow-y:auto;padding:20px}
@@ -157,10 +157,10 @@ a{color:var(--teal);text-decoration:none}
 .radar-modal-cancel:hover{border-color:var(--bd3);color:var(--tx2)}
 
 .rdm-section{margin-bottom:16px}
-.rdm-section-label{font-family:'Geist Mono',monospace;font-size:9px;color:var(--tx4);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--bd)}
+.rdm-section-label{font-family:monospace;font-size:9px;color:var(--tx4);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--bd)}
 .rdm-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
 .rdm-kv{background:var(--bg3);border:1px solid var(--bd);border-radius:5px;padding:10px 12px}
-.rdm-kv-label{font-family:'Geist Mono',monospace;font-size:8px;color:var(--tx4);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px}
+.rdm-kv-label{font-family:monospace;font-size:8px;color:var(--tx4);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px}
 .rdm-kv-val{font-size:12px;color:var(--tx);font-weight:500}
 .rdm-kv-val.red{color:var(--red)}
 .rdm-kv-val.amber{color:var(--yellow)}
@@ -169,9 +169,9 @@ a{color:var(--teal);text-decoration:none}
 .rdm-text{font-size:12px;color:var(--tx2);line-height:1.7}
 .rdm-impact-item{display:flex;gap:8px;padding:8px 10px;background:var(--bg3);border:1px solid var(--bd);border-radius:5px;margin-bottom:6px;font-size:11px;color:var(--tx2);line-height:1.5}
 .rdm-impact-icon{font-size:13px;flex-shrink:0}
-.rdm-hs-tag{display:inline-block;background:var(--bg4);border:1px solid var(--bd2);color:var(--tx3);padding:3px 8px;border-radius:4px;font-family:'Geist Mono',monospace;font-size:10px;margin:2px}
+.rdm-hs-tag{display:inline-block;background:var(--bg4);border:1px solid var(--bd2);color:var(--tx3);padding:3px 8px;border-radius:4px;font-family:monospace;font-size:10px;margin:2px}
 .rdm-loading{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;gap:12px}
-.rdm-loading-text{font-family:'Geist Mono',monospace;font-size:10px;color:var(--tx4);letter-spacing:1px}
+.rdm-loading-text{font-family:monospace;font-size:10px;color:var(--tx4);letter-spacing:1px}
 .rdm-warning{background:var(--yellowbg);border:1px solid var(--yel-bd);border-left:2px solid var(--yellow);border-radius:0 5px 5px 0;padding:10px 13px;font-size:11px;color:#fde68a;line-height:1.6;margin-bottom:10px}
 .rdm-confirmed{background:var(--redbg);border:1px solid var(--red-bd);border-left:2px solid var(--red);border-radius:0 5px 5px 0;padding:10px 13px;font-size:11px;color:#fca5a5;line-height:1.6;margin-bottom:10px}
 
@@ -181,13 +181,13 @@ a{color:var(--teal);text-decoration:none}
 
 /* ── COMPONENTS ── */
 .card{background:var(--bg2);border:1px solid var(--bd);border-radius:8px;padding:20px;margin-bottom:14px;overflow:hidden}
-.card-title{font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--teal);margin-bottom:14px;text-transform:uppercase}
+.card-title{font-family:monospace;font-size:10px;letter-spacing:2px;color:var(--teal);margin-bottom:14px;text-transform:uppercase}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
 
 .field{display:flex;flex-direction:column;gap:4px}
-.field-label{font-family:'Geist Mono',monospace;font-size:9px;color:var(--tx4);letter-spacing:1.5px;text-transform:uppercase}
-.field input,.field select,.field textarea{background:var(--bg3);border:1px solid var(--bd);color:var(--tx);padding:8px 10px;font-size:12px;width:100%;border-radius:6px;font-family:'Geist Mono',monospace;transition:border-color .15s}
+.field-label{font-family:monospace;font-size:9px;color:var(--tx4);letter-spacing:1.5px;text-transform:uppercase}
+.field input,.field select,.field textarea{background:var(--bg3);border:1px solid var(--bd);color:var(--tx);padding:8px 10px;font-size:12px;width:100%;border-radius:6px;font-family:monospace;transition:border-color .15s}
 .field textarea{resize:vertical;min-height:60px;font-size:11px;line-height:1.6}
 .field select option{background:var(--bg3)}
 
@@ -207,16 +207,16 @@ a{color:var(--teal);text-decoration:none}
 .flag-blue{background:var(--teal-dim);border:1px solid var(--teal-bd);border-left:2px solid var(--teal);color:#7dd3fc}
 
 .table-wrap{border:1px solid var(--bd);margin-bottom:4px;border-radius:6px;overflow:hidden}
-.table-head{background:var(--bg3);padding:7px 14px;display:grid;gap:8px;font-family:'Geist Mono',monospace;font-size:9px;color:var(--tx4);letter-spacing:2px;text-transform:uppercase}
+.table-head{background:var(--bg3);padding:7px 14px;display:grid;gap:8px;font-family:monospace;font-size:9px;color:var(--tx4);letter-spacing:2px;text-transform:uppercase}
 .table-row{padding:10px 14px;display:grid;gap:8px;border-top:1px solid var(--bd);transition:background .1s}
 .table-row:hover{background:var(--bg3)}
 
 .total-bar{background:var(--teal);padding:16px 20px;display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;border-radius:6px}
-.total-lbl{font-family:'Geist Mono',monospace;font-weight:600;font-size:10px;color:rgba(255,255,255,.8);letter-spacing:2px}
+.total-lbl{font-family:monospace;font-weight:600;font-size:10px;color:rgba(255,255,255,.8);letter-spacing:2px}
 .total-val{font-family:'Geist',sans-serif;font-weight:700;font-size:28px;color:#fff;letter-spacing:-.5px}
 
 .meta-bar{background:var(--teal-dim);border:1px solid var(--teal-bd);border-left:2px solid var(--teal);padding:12px 16px;margin-bottom:12px;display:grid;gap:10px;border-radius:4px}
-.meta-item .ml{font-family:'Geist Mono',monospace;font-size:8px;color:var(--tx4);letter-spacing:2px}
+.meta-item .ml{font-family:monospace;font-size:8px;color:var(--tx4);letter-spacing:2px}
 .meta-item .mv{font-family:'Geist',sans-serif;font-weight:600;font-size:14px;color:var(--tx)}
 
 .risk-badge{display:inline-block;padding:2px 8px;font-size:9px;font-weight:600;letter-spacing:.5px;border-radius:4px;font-family:'Geist',sans-serif}
@@ -225,7 +225,7 @@ a{color:var(--teal);text-decoration:none}
 .risk-high{background:var(--redbg);color:var(--red);border:1px solid var(--red-bd)}
 .risk-critical{background:rgba(239,68,68,.15);color:#ff6b6b;border:1px solid rgba(239,68,68,.3)}
 
-.search-box{background:var(--bg3);border:1px solid var(--bd);color:var(--tx);padding:9px 12px;font-size:12px;width:100%;margin-bottom:14px;font-family:'Geist Mono',monospace;border-radius:6px;transition:border-color .15s}
+.search-box{background:var(--bg3);border:1px solid var(--bd);color:var(--tx);padding:9px 12px;font-size:12px;width:100%;margin-bottom:14px;font-family:monospace;border-radius:6px;transition:border-color .15s}
 .search-box:focus{border-color:var(--teal-bd);outline:none;box-shadow:0 0 0 3px var(--teal-dim)}
 
 .tag{display:inline-block;background:var(--bg3);border:1px solid var(--bd2);color:var(--tx4);padding:2px 8px;font-size:9px;letter-spacing:.5px;margin:2px;border-radius:4px;font-family:'Geist',sans-serif;font-weight:500}
@@ -233,7 +233,7 @@ a{color:var(--teal);text-decoration:none}
 .divider{border:none;border-top:1px solid var(--bd);margin:14px 0}
 
 .page-title{font-family:'Geist',sans-serif;font-weight:700;font-size:20px;color:var(--tx);margin-bottom:4px;letter-spacing:-.3px}
-.page-sub{font-family:'Geist Mono',monospace;font-size:10px;color:var(--tx4);margin-bottom:20px;letter-spacing:.3px}
+.page-sub{font-family:monospace;font-size:10px;color:var(--tx4);margin-bottom:20px;letter-spacing:.3px}
 
 /* ── TABS ── */
 .tab-row{display:flex;gap:4px;margin-bottom:18px;flex-wrap:wrap}
@@ -245,11 +245,11 @@ a{color:var(--teal);text-decoration:none}
 .score-meter{display:flex;align-items:center;gap:10px;margin:8px 0}
 .score-bar-bg{flex:1;height:3px;background:var(--bd2);border-radius:2px;overflow:hidden}
 .score-bar-fill{height:100%;border-radius:2px;transition:width .4s}
-.score-label{font-family:'Geist Mono',monospace;font-size:12px;font-weight:500;min-width:36px;text-align:right}
+.score-label{font-family:monospace;font-size:12px;font-weight:500;min-width:36px;text-align:right}
 
 /* ── AI ANALYSIS BOX ── */
 .ai-box{background:var(--bg3);border:1px solid var(--bd);border-left:2px solid var(--teal);padding:14px;margin-top:12px;border-radius:4px}
-.ai-box-title{font-family:'Geist Mono',monospace;font-size:9px;color:var(--teal);letter-spacing:2px;margin-bottom:10px}
+.ai-box-title{font-family:monospace;font-size:9px;color:var(--teal);letter-spacing:2px;margin-bottom:10px}
 .ai-box-content{font-size:12px;color:var(--tx2);line-height:1.8}
 .ai-thinking{display:flex;align-items:center;gap:8px;color:var(--tx4);font-size:11px}
 .dot-pulse{display:flex;gap:4px}
@@ -261,24 +261,24 @@ a{color:var(--teal);text-decoration:none}
 /* ── CASE CARD ── */
 .case-card{background:var(--bg2);border:1px solid var(--bd);border-left:2px solid var(--bd);padding:14px;margin-bottom:8px;transition:border-color .15s;border-radius:6px}
 .case-card:hover{border-color:var(--bd2);border-left-color:var(--teal)}
-.case-id{font-family:'Geist Mono',monospace;font-size:9px;color:var(--teal);letter-spacing:1.5px}
+.case-id{font-family:monospace;font-size:9px;color:var(--teal);letter-spacing:1.5px}
 .case-title{font-family:'Geist',sans-serif;font-weight:600;font-size:13px;color:var(--tx);margin:4px 0}
 .case-meta{font-size:10px;color:var(--tx4);margin-bottom:8px}
 .case-section{margin-top:8px}
-.case-section-label{font-family:'Geist Mono',monospace;font-size:8px;color:var(--tx5);letter-spacing:2px;text-transform:uppercase;margin-bottom:3px}
+.case-section-label{font-family:monospace;font-size:8px;color:var(--tx5);letter-spacing:2px;text-transform:uppercase;margin-bottom:3px}
 .case-section-text{font-size:11px;color:var(--tx2);line-height:1.7}
 .case-lesson{background:var(--yellowbg);border:1px solid var(--yel-bd);border-left:2px solid var(--yellow);padding:8px 12px;margin-top:8px;font-size:11px;color:#fde68a;line-height:1.6;border-radius:0 4px 4px 0}
 
 /* ── HW CARD ── */
 .hw-card{background:var(--bg2);border:1px solid var(--bd);padding:14px;margin-bottom:8px;border-radius:6px}
 .hw-model{font-family:'Geist',sans-serif;font-weight:600;font-size:13px;color:var(--tx)}
-.hw-mfr{font-family:'Geist Mono',monospace;font-size:10px;color:var(--teal);margin-bottom:6px}
+.hw-mfr{font-family:monospace;font-size:10px;color:var(--teal);margin-bottom:6px}
 .hw-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
-.hw-stat{font-family:'Geist Mono',monospace;font-size:9px;color:var(--tx4);letter-spacing:.5px}
+.hw-stat{font-family:monospace;font-size:9px;color:var(--tx4);letter-spacing:.5px}
 .hw-stat span{display:block;color:var(--tx2);font-size:11px;margin-top:2px;font-family:'Geist',sans-serif}
 
 /* ── NOTES ── */
-.notes-block{font-family:'Geist Mono',monospace;font-size:10px;color:var(--tx4);line-height:1.9;margin-bottom:16px}
+.notes-block{font-family:monospace;font-size:10px;color:var(--tx4);line-height:1.9;margin-bottom:16px}
 .notes-block li{margin-left:14px;margin-bottom:2px}
 
 /* ── RESPONSIVE ── */
@@ -464,23 +464,14 @@ a{color:var(--teal);text-decoration:none}
     <!-- EMAIL TAB -->
     <div id="aitab-email">
     <div id="apikey-card" style="display:none;background:var(--bg2);border:1px solid var(--teal-bd);border-left:2px solid var(--teal);border-radius:8px;padding:16px;margin-bottom:14px">
-      <div style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--teal);margin-bottom:12px;text-transform:uppercase">⚙ Anthropic API Key</div>
-      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+      <div style="font-family:monospace;font-size:10px;letter-spacing:2px;color:var(--teal);margin-bottom:12px;text-transform:uppercase">⚙ Anthropic API Key</div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
         <input id="ai-api-key" type="password" placeholder="sk-ant-api-03-..."
-          style="flex:1;background:var(--bg3);border:1px solid var(--bd2);color:var(--tx);padding:10px 12px;font-size:12px;font-family:'Geist Mono',monospace;border-radius:6px"
+          style="flex:1;background:var(--bg3);border:1px solid var(--bd2);color:var(--tx);padding:10px 12px;font-size:12px;font-family:monospace;border-radius:6px"
           oninput="saveApiKey(this.value)"/>
-        <div id="api-key-status" style="font-size:11px;color:var(--tx5);white-space:nowrap;min-width:110px;text-align:right">—</div>
+        <div id="api-key-status" style="font-size:11px;color:var(--tx5);white-space:nowrap;min-width:100px;text-align:right">—</div>
       </div>
-      <div style="font-size:10px;color:var(--tx4);font-family:'Geist Mono',monospace">Se guarda localmente en tu browser. Nunca se envía a terceros.</div>
-    </div>
-
-    <!-- API key status pill — shown when key is loaded -->
-    <div id="apikey-pill" style="display:none;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;background:var(--greenbg);border:1px solid var(--grn-bd);border-radius:6px;padding:8px 14px">
-      <div style="display:flex;align-items:center;gap:7px;font-size:11px;color:var(--green)">
-        <div style="width:7px;height:7px;border-radius:50%;background:var(--green)"></div>
-        API Key configurada
-      </div>
-      <button onclick="showApiKeyCard()" style="background:transparent;border:1px solid var(--grn-bd);border-radius:4px;color:var(--green);font-size:9px;font-family:'Geist Mono',monospace;padding:3px 8px;cursor:pointer;letter-spacing:1px;opacity:.7">CAMBIAR</button>
+      <div style="font-size:10px;color:var(--tx4);font-family:monospace">Se guarda localmente. Nunca se envía a terceros.</div>
     </div>
     <div class="card">
       <div class="card-title">PASTE CLIENT EMAIL</div>
@@ -1341,7 +1332,7 @@ Please advise on DDP cost and transit time. Thanks"></textarea>
     <div class="radar-timeline" id="radar-timeline">
       <div style="padding:24px 12px;text-align:center">
         <div style="font-size:22px;margin-bottom:10px">📡</div>
-        <div style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--tx4);line-height:1.7">Sin alertas verificadas.<br/>Apretá el botón para buscar<br/>eventos reales con web search.</div>
+        <div style="font-family:monospace;font-size:10px;color:var(--tx4);line-height:1.7">Sin alertas verificadas.<br/>Apretá el botón para buscar<br/>eventos reales con web search.</div>
       </div>
     </div>
     <div class="radar-footer" id="radar-footer">Sin datos — apretá Buscar actualizaciones</div>
@@ -6986,8 +6977,7 @@ function saveApiKey(val) {
     document.getElementById('api-key-status').textContent = '✓ KEY GUARDADA';
     document.getElementById('api-key-status').style.color = 'var(--green)';
     const b=document.getElementById('apikey-banner');if(b)b.style.display='none';
-    // Switch to pill after short delay
-    setTimeout(()=>{ const c=document.getElementById('apikey-card');const p=document.getElementById('apikey-pill');if(c)c.style.display='none';if(p)p.style.display='flex'; },1000);
+    setTimeout(()=>{const c=document.getElementById('apikey-card');if(c)c.style.display='none';},800);
   } else if (val.length > 5) {
     document.getElementById('api-key-status').textContent = '⚠ Formato inválido';
     document.getElementById('api-key-status').style.color = 'var(--yellow)';
@@ -6998,21 +6988,17 @@ function saveApiKey(val) {
 }
 
 function showApiKeyCard(){
-  document.getElementById('apikey-card').style.display='block';
-  document.getElementById('apikey-pill').style.display='none';
-  document.getElementById('ai-api-key').focus();
+  const card = document.getElementById('apikey-card');
+  if(card){ card.style.display='block'; document.getElementById('ai-api-key').focus(); }
 }
 
 function loadApiKey() {
   const k = localStorage.getItem('ddp_api_key') || '';
-  // Show/hide missing key banner
   const banner = document.getElementById('apikey-banner');
   if(banner) banner.style.display = k ? 'none' : 'flex';
-  // Show pill if key loaded, card if not
+  // Only show API key card if no key configured
   const card = document.getElementById('apikey-card');
-  const pill = document.getElementById('apikey-pill');
   if(card) card.style.display = k ? 'none' : 'block';
-  if(pill) pill.style.display = k ? 'flex' : 'none';
   const inp = document.getElementById('ai-api-key');
   const st = document.getElementById('api-key-status');
   if (!inp) return;
@@ -8237,7 +8223,7 @@ function radarRender(){
     document.getElementById("radar-timeline").innerHTML = `
       <div style="padding:24px 12px;text-align:center">
         <div style="font-size:22px;margin-bottom:10px">📡</div>
-        <div style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--tx4);line-height:1.7">Sin alertas verificadas.<br/>Apretá el botón para buscar<br/>eventos reales con web search.</div>
+        <div style="font-family:monospace;font-size:10px;color:var(--tx4);line-height:1.7">Sin alertas verificadas.<br/>Apretá el botón para buscar<br/>eventos reales con web search.</div>
       </div>`;
     return;
   }
@@ -8323,7 +8309,7 @@ function openRadarDetail(id){
   const lc = {critical:"var(--red)",high:"var(--orange)",medium:"var(--yellow)",low:"var(--green)"};
   document.getElementById("rdm-badge").innerHTML = '<span style="color:'+( lc[a.level]||"var(--teal)")+';font-weight:600">'+a.level.toUpperCase()+'</span>';
   document.getElementById("rdm-apply-btn").disabled = true;
-  document.getElementById("rdm-body").innerHTML = '<div class="rdm-loading"><div class="dot-pulse"><span></span><span></span><span></span></div><div class="rdm-loading-text">Analizando con web search...</div><div style="font-family:'Geist Mono',monospace;font-size:9px;color:var(--tx5);margin-top:4px">Buscando: % tarifas · países · HS codes · estado actual</div></div>';
+  document.getElementById("rdm-body").innerHTML = '<div class="rdm-loading"><div class="dot-pulse"><span></span><span></span><span></span></div><div class="rdm-loading-text">Analizando con web search...</div><div style="font-family:monospace;font-size:9px;color:var(--tx5);margin-top:4px">Buscando: % tarifas · países · HS codes · estado actual</div></div>';
   document.getElementById("radar-detail-overlay").style.display = "flex";
   radarFetchDetailAnalysis(a);
 }
@@ -8368,7 +8354,7 @@ function renderRadarDetail(alert, a){
   if(a.impact_importers||a.impact_exporters) html += '<div class="rdm-section"><div class="rdm-section-label">Impacto operacional</div>'+(a.impact_importers?'<div class="rdm-impact-item"><span class="rdm-impact-icon">📥</span><span><strong>Importadores:</strong> '+a.impact_importers+'</span></div>':"")+(a.impact_exporters?'<div class="rdm-impact-item"><span class="rdm-impact-icon">📤</span><span><strong>Exportadores:</strong> '+a.impact_exporters+'</span></div>':"")+'</div>';
   if(a.action_required) html += '<div class="rdm-section"><div class="rdm-section-label">Acción requerida — DDP Global</div><div class="rdm-impact-item"><span class="rdm-impact-icon">⚡</span><span>'+a.action_required+'</span></div></div>';
   if(a.notes) html += '<div class="rdm-section"><div class="rdm-section-label">Notas adicionales</div><div class="rdm-text">'+a.notes+'</div></div>';
-  if(a.sources?.length) html += '<div class="rdm-section"><div class="rdm-section-label">Fuentes</div><div style="font-family:'Geist Mono',monospace;font-size:9px;color:var(--tx4);line-height:1.8">'+a.sources.join("<br/>")+'</div></div>';
+  if(a.sources?.length) html += '<div class="rdm-section"><div class="rdm-section-label">Fuentes</div><div style="font-family:monospace;font-size:9px;color:var(--tx4);line-height:1.8">'+a.sources.join("<br/>")+'</div></div>';
   document.getElementById("rdm-body").innerHTML = html;
 }
 
