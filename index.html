@@ -71,6 +71,12 @@ a{color:var(--teal);text-decoration:none}
 .page{display:none;flex:1;padding:24px 28px;max-width:960px;width:100%}
 .page.active{display:block}
 
+/* ── API KEY BANNER ── */
+.apikey-banner{background:var(--yellowbg);border-bottom:1px solid var(--yel-bd);padding:9px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-shrink:0}
+.apikey-banner-text{font-size:11px;color:#fde68a;font-family:'Geist Mono',monospace}
+.apikey-banner-btn{background:var(--yellow);border:none;color:#0a0a0b;padding:5px 14px;font-size:10px;font-weight:600;border-radius:4px;cursor:pointer;white-space:nowrap;font-family:'Geist',sans-serif}
+.apikey-banner-btn:hover{opacity:.9}
+
 /* ── REGULATORY RADAR PANEL ── */
 .radar-panel{width:280px;flex-shrink:0;background:var(--bg2);border-left:1px solid var(--bd);display:flex;flex-direction:column;height:calc(100vh - 48px);position:sticky;top:48px;overflow:hidden;transition:width .2s ease}
 .radar-panel.collapsed{width:34px}
@@ -328,6 +334,12 @@ a{color:var(--teal);text-decoration:none}
   <div class="version">v2.3</div>
   <button class="mob-menu-btn" onclick="toggleMobNav()" id="mob-menu-btn">&#9776;</button>
 </div>
+<!-- API KEY MISSING BANNER -->
+<div class="apikey-banner" id="apikey-banner" style="display:none">
+  <div class="apikey-banner-text">⚠ API Key no configurada — el sistema de IA no funcionará hasta que la cargues</div>
+  <button class="apikey-banner-btn" onclick="showPage('ai');document.getElementById('apikey-banner').style.display='none'">Configurar API Key →</button>
+</div>
+
 <!-- MOBILE DRAWER -->
 <div class="mob-drawer" id="mob-drawer">
   <button class="mob-nav-btn" onclick="mobNav('ai')" style="color:var(--teal)">✦ AI QUOTE</button>
@@ -414,17 +426,17 @@ a{color:var(--teal);text-decoration:none}
 
     <!-- EMAIL TAB -->
     <div id="aitab-email">
-    <div class="card" style="display:none">
-      <div class="card-title">CONFIGURACIÓN IA</div>
-      <div class="field" style="margin-bottom:12px">
-        <div class="field-label">Anthropic API Key</div>
+    <div class="card" style="border-color:var(--teal-bd);border-left:2px solid var(--teal)">
+      <div class="card-title">⚙ ANTHROPIC API KEY</div>
+      <div class="field" style="margin-bottom:8px">
+        <div class="field-label">API Key</div>
         <div style="display:flex;gap:8px;align-items:center">
-          <input id="ai-api-key" type="password" placeholder="sk-ant-..." 
-            style="flex:1;background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px 10px;font-size:12px"
+          <input id="ai-api-key" type="password" placeholder="sk-ant-api-03-..." 
+            style="flex:1;background:var(--bg3);border:1px solid var(--bd2);color:var(--tx);padding:10px 12px;font-size:12px;font-family:'Geist Mono',monospace;border-radius:6px"
             oninput="saveApiKey(this.value)"/>
-          <div id="api-key-status" style="font-size:10px;color:var(--tx5);white-space:nowrap">—</div>
+          <div id="api-key-status" style="font-size:11px;color:var(--tx5);white-space:nowrap;min-width:120px;text-align:right">—</div>
         </div>
-        <div style="font-size:9px;color:var(--tx5);margin-top:4px">La key se guarda localmente. Sin key usa el parser local.</div>
+        <div style="font-size:10px;color:var(--tx4);margin-top:6px;font-family:'Geist Mono',monospace">Se guarda localmente en tu browser. Nunca se envía a terceros.</div>
       </div>
     </div>
     <div class="card">
@@ -6900,6 +6912,7 @@ function saveApiKey(val) {
     localStorage.setItem('ddp_api_key', val);
     document.getElementById('api-key-status').textContent = '✓ KEY GUARDADA';
     document.getElementById('api-key-status').style.color = 'var(--green)';
+    const b=document.getElementById('apikey-banner');if(b)b.style.display='none';
   } else if (val.length > 5) {
     document.getElementById('api-key-status').textContent = '⚠ Formato inválido';
     document.getElementById('api-key-status').style.color = 'var(--yellow)';
@@ -6911,6 +6924,9 @@ function saveApiKey(val) {
 
 function loadApiKey() {
   const k = localStorage.getItem('ddp_api_key') || '';
+  // Show/hide missing key banner
+  const banner = document.getElementById('apikey-banner');
+  if(banner) banner.style.display = k ? 'none' : 'flex';
   const inp = document.getElementById('ai-api-key');
   const st = document.getElementById('api-key-status');
   if (!inp) return;
