@@ -4024,7 +4024,7 @@ function updateSidebar(){
         <div class="sb-quote" onclick="showPage('log')">
           <div class="sb-q-ref">${q.ref||q.id||"—"}</div>
           <div class="sb-q-name">${(q.product||q.goods||"—").substring(0,28)}</div>
-          <div class="sb-q-amt">${q.total?'$'+parseFloat(q.total).toLocaleString("en-US",{minimumFractionDigits:0}):"—"}</div>
+          <div class="sb-q-amt">${getEntryTotal(q)?'$'+getEntryTotal(q).toLocaleString("en-US",{minimumFractionDigits:0}):"—"}</div>
         </div>`).join("");
     }
   }catch(e){}
@@ -4721,7 +4721,11 @@ function runFromAI() {
 
 function saveAIQuoteToLog(qn, dest, product, fob, total, cif, client) {
   const snap = activeQuoteData || {};
-  const aiEntry={qn, client: client||'—', dest, product, fob, total, cif,
+  // Always use activeQuoteData.tot as the authoritative total (matches what's shown on screen)
+  const realTotal = activeQuoteData ? (activeQuoteData.tot || total) : total;
+  const realFob   = activeQuoteData ? (activeQuoteData.fob || fob)   : fob;
+  const realCif   = activeQuoteData ? (activeQuoteData.cif || cif)   : cif;
+  const aiEntry={qn, client: client||'—', dest, product, fob:realFob, total:realTotal, cif:realCif,
     lbs: snap.lbs||0, coo: snap.coo||'', origin: snap.origin||'Miami, USA',
     status:'quote', notes:'Via AI Quote', source:'ai-email'};
   if(activeQuoteData){
@@ -6348,7 +6352,7 @@ function renderShipments(){
         <div style="text-align:right;flex-shrink:0">
           <div style="font-size:10px;color:${st.color};font-weight:700;margin-bottom:4px">${st.label}</div>
           <div style="font-size:9px;color:var(--tx5)">DDP COTIZADO</div>
-          <div style="font-family:Barlow,sans-serif;font-weight:800;font-size:16px;color:var(--teal)">$${fmt(s.ddpQuoted)}</div>
+          <div style="font-family:Barlow,sans-serif;font-weight:800;font-size:16px;color:var(--teal)">$${fmt((s.ddpQuoted||0)+(s.dtSeparate||0))}</div>
           <div style="font-size:9px;color:${profit>=0?'var(--green)':'var(--red)'};margin-top:2px">PROFIT: $${fmt(profit)}</div>
         </div>
       </div>
@@ -6579,10 +6583,12 @@ function openShipmentModal(id){
           <div class="field"><div class="field-label">D&T x Separado (USD)</div>
             <input type="number" value="${s.dtSeparate||''}" onchange="updateShipmentField(${id},'dtSeparate',this.value)" style="${_inpStyle}"/></div>
         </div>`;
+      const _totalRevenue = (s.ddpQuoted||0) + (s.dtSeparate||0);
       const _header = `
-    <div style="background:#1a0a2e;border:1px solid #a78bfa;border-left:4px solid #a78bfa;padding:10px 16px;margin-top:16px;margin-bottom:12px;display:flex;align-items:center;gap:10px">
+    <div style="background:#1a0a2e;border:1px solid #a78bfa;border-left:4px solid #a78bfa;padding:10px 16px;margin-top:16px;margin-bottom:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
       <span style="font-size:16px">🧾</span>
       <span style="font-family:Barlow,sans-serif;font-weight:800;font-size:11px;color:#a78bfa;letter-spacing:3px">FACTURACIÓN AL CLIENTE</span>
+      <span style="font-family:Barlow,sans-serif;font-weight:800;font-size:15px;color:#a78bfa;margin-left:10px">$\${fmt(_totalRevenue)}</span>
       <span style="margin-left:auto;font-size:10px;color:${_statusColor};font-family:Barlow,sans-serif;font-weight:700">${_statusLabel}</span>
     </div>`;
       if(_hasDT){
@@ -7502,12 +7508,14 @@ function toggleLogForm(){
 
 
 
+function getEntryTotal(x){ try{ if(x.quoteSnapshot){ const sn=JSON.parse(x.quoteSnapshot); if(sn.tot&&sn.tot>0) return sn.tot; } }catch(e){} return x.total||0; }
+
 function renderLogStats(){
   const arr=getLog();
   const total=arr.length;
   const won=arr.filter(x=>x.status==='won'||x.status==='delivered').length;
-  const revenue=arr.filter(x=>x.status==='won'||x.status==='delivered').reduce((s,x)=>s+(x.total||0),0);
-  const pipeline=arr.filter(x=>x.status==='quote'||x.status==='pending').reduce((s,x)=>s+(x.total||0),0);
+  const revenue=arr.filter(x=>x.status==='won'||x.status==='delivered').reduce((s,x)=>s+getEntryTotal(x),0);
+  const pipeline=arr.filter(x=>x.status==='quote'||x.status==='pending').reduce((s,x)=>s+getEntryTotal(x),0);
   const el=document.getElementById('log-stats');
   if(!el)return;
   el.innerHTML=`
@@ -7551,7 +7559,9 @@ function renderLog(){
   el.innerHTML=arr.map(e=>{
     const s = SL[e.status] || {label:e.status||'—', color:'var(--tx4)', bg:'var(--bg3)'};
     const hasClient = e.client && e.client !== '—' && e.client !== '';
-    const fobPct = e.total>0 ? Math.round((e.total-e.fob)/e.total*100) : 0;
+    // Use quoteSnapshot.tot as authoritative total if available (fixes legacy entries with wrong total)
+    const displayTotal = getEntryTotal(e);
+    const fobPct = displayTotal>0 ? Math.round((displayTotal-e.fob)/displayTotal*100) : 0;
     // Destination flag emoji
     const destFlag = (e.dest||'').includes('Brazil')?'🇧🇷':(e.dest||'').includes('Mexico')?'🇲🇽':(e.dest||'').includes('Argentina')?'🇦🇷':(e.dest||'').includes('Colombia')?'🇨🇴':(e.dest||'').includes('USA')?'🇺🇸':(e.dest||'').includes('Chile')?'🇨🇱':'🌎';
 
@@ -7567,7 +7577,7 @@ function renderLog(){
         </div>
         <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
           <span style="font-size:9px;color:var(--tx5)">${e.date||''}</span>
-          <span style="font-family:Barlow,sans-serif;font-weight:800;font-size:16px;color:var(--teal)">$${fmt(e.total||0)}</span>
+          <span style="font-family:Barlow,sans-serif;font-weight:800;font-size:16px;color:var(--teal)">$${fmt(displayTotal)}</span>
         </div>
       </div>
 
