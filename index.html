@@ -8079,10 +8079,75 @@ function prMailWidget(mail){
   h+="</div>"; return h;
 }
 
+
+function prShowManualForm() {
+  var el = document.getElementById("pr-crm"); if(!el) return;
+  var statusOpts = PR_STATUS_LABELS.map(function(s){
+    return "<option value='" + s + "'>" + s + "</option>";
+  }).join("");
+  var html = "<div class='pr-fadein'>";
+  html += "<button style='background:transparent;border:none;color:var(--tx4);cursor:pointer;font-size:12px;margin-bottom:16px;padding:0' onclick=\"prSetView('crm')\">&larr; VOLVER AL CRM</button>";
+  html += "<div style='font-family:Barlow,sans-serif;font-weight:800;font-size:18px;margin-bottom:4px'>Agregar Prospecto <span style='color:var(--teal)'>Manual</span></div>";
+  html += "<div style='font-size:11px;color:var(--tx4);margin-bottom:20px'>Sin AI — carga directa al CRM</div>";
+  html += "<div style='display:grid;gap:12px'>";
+  html += "<div class='field'><div class='field-label'>Empresa *</div><input id='pm-company' class='search-box' style='margin:0' placeholder='ej: Crane Worldwide Logistics' /></div>";
+  html += "<div class='grid2'>";
+  html += "<div class='field'><div class='field-label'>Industria</div><input id='pm-industry' class='search-box' style='margin:0' placeholder='ej: Freight Forwarding' /></div>";
+  html += "<div class='field'><div class='field-label'>Sede / País</div><input id='pm-hq' class='search-box' style='margin:0' placeholder='ej: USA' /></div>";
+  html += "</div>";
+  html += "<div class='grid2'>";
+  html += "<div class='field'><div class='field-label'>Nombre Contacto</div><input id='pm-cname' class='search-box' style='margin:0' placeholder='ej: John Smith' /></div>";
+  html += "<div class='field'><div class='field-label'>Cargo Contacto</div><input id='pm-ctitle' class='search-box' style='margin:0' placeholder='ej: VP Operations' /></div>";
+  html += "</div>";
+  html += "<div class='grid2'>";
+  html += "<div class='field'><div class='field-label'>Email Contacto</div><input id='pm-cemail' class='search-box' style='margin:0' placeholder='ej: john@company.com' /></div>";
+  html += "<div class='field'><div class='field-label'>Estado</div><select id='pm-status' style='background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:9px 10px;font-size:12px;width:100%;font-family:monospace'>" + statusOpts + "</select></div>";
+  html += "</div>";
+  html += "<div class='field'><div class='field-label'>Notas</div><textarea id='pm-notes' style='background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:9px 10px;font-size:12px;width:100%;min-height:70px;resize:vertical;font-family:monospace' placeholder='Contexto, oportunidad, próximos pasos...'></textarea></div>";
+  html += "</div>";
+  html += "<div style='display:flex;gap:8px;margin-top:16px'>";
+  html += "<button class='btn btn-primary' style='flex:1;padding:12px' onclick='prSaveManual()'>GUARDAR EN CRM</button>";
+  html += "<button class='btn btn-ghost' style='padding:12px 18px' onclick=\"prSetView('crm')\">CANCELAR</button>";
+  html += "</div></div>";
+  el.innerHTML = html;
+}
+
+function prSaveManual() {
+  var company = (document.getElementById("pm-company")||{}).value||"";
+  if (!company.trim()) { alert("El nombre de la empresa es requerido."); return; }
+  var cname  = (document.getElementById("pm-cname")||{}).value||"";
+  var ctitle = (document.getElementById("pm-ctitle")||{}).value||"";
+  var cemail = (document.getElementById("pm-cemail")||{}).value||"";
+  var status = (document.getElementById("pm-status")||{}).value||"Investigado";
+  var notes  = (document.getElementById("pm-notes")||{}).value||"";
+  var newP = {
+    id: Date.now(),
+    companyName: company.trim(),
+    industry: (document.getElementById("pm-industry")||{}).value||"",
+    headquarters: (document.getElementById("pm-hq")||{}).value||"",
+    regions: [],
+    signals: [],
+    suggestedContact: ctitle ? { title: ctitle } : null,
+    savedContact: (cname||cemail) ? { found:true, name:cname, title:ctitle, email:cemail, source:"Manual" } : null,
+    ddpAngle: "",
+    mailHook: "",
+    priority: "medium",
+    priorityReason: "Cargado manualmente",
+    status: status,
+    notes: notes,
+    activity: [{ date:new Date().toISOString(), type:"Nota", note:"Prospecto cargado manualmente" + (cname?" | Contacto: "+cname:"") }],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  prProspects = [newP].concat(prProspects);
+  prSave();
+  prSetView("crm");
+}
+
 function prRenderCRM(){
   var el=document.getElementById("pr-crm"); if(!el) return;
   var filtered=prFilterStatus==="Todos"?prProspects:prProspects.filter(function(p){return p.status===prFilterStatus;});
-  var h="<div class='pr-fadein'><div style='display:flex;align-items:center;justify-content:space-between;margin-bottom:14px'><div style='font-family:Barlow,sans-serif;font-weight:800;font-size:18px'>Pipeline <span style='color:var(--teal)'>CRM</span></div><button class='btn btn-primary btn-sm' onclick=\"prSetView('research')\">+ NUEVO</button></div>";
+  var h="<div class='pr-fadein'><div style='display:flex;align-items:center;justify-content:space-between;margin-bottom:14px'><div style='font-family:Barlow,sans-serif;font-weight:800;font-size:18px'>Pipeline <span style='color:var(--teal)'>CRM</span></div><div style='display:flex;gap:6px'><button class='btn btn-ghost btn-sm' onclick=\"prShowManualForm()\">+ MANUAL</button><button class='btn btn-primary btn-sm' onclick=\"prSetView('research')\">+ INVESTIGAR</button></div></div>";
   h+="<div style='display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px'>";
   var allSt=["Todos"].concat(PR_STATUS_LABELS);
   for(var fi=0;fi<allSt.length;fi++){var fs=allSt[fi];h+="<button class='pr-filter-btn"+(prFilterStatus===fs?" active":"")+"' onclick=\"prSetFS('"+fs+"')\">"+(fs==="Todos"?"TODOS":fs.toUpperCase())+"</button>";}
