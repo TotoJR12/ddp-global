@@ -1451,6 +1451,174 @@ function saveLog(arr){localStorage.setItem('ddp_log',JSON.stringify(arr));kvSync
 // KNOWLEDGE BASE
 // ════════════════════════════════════════════════════════
 
+
+// ── KB EXTERNA — RATES MASTER v2 ──────────────────────
+// Fuente: QT_GRAL.xlsx | Abril 2026 | 104 países
+// REGLA: No editar manualmente — actualizar desde RATES_MASTER_v2 en Drive
+const KB_EXTERNAL_RATES = `
+================================================================================
+RATES MASTER v2 — DDP Global | 104 países | Abril 2026
+================================================================================
+
+LÓGICA DE COTIZACIÓN:
+  PASO 1: FOB Charges = FOB × % (mín $XXX)
+  PASO 2: Flete = Peso × $/lbs o $/kg (mín $XXX)
+  PASO 3: EOR = FOB × % — SOLO si origen ≠ Miami/USA
+  PASO 4: CIF = FOB + Flete + Seguro (1% CIF mín $80)
+  PASO 5: Destination Services = FOB × % (mín $XXX)
+  PASO 6: Import License = FOB × % (mín $XXX)
+  PASO 7: Duties & Taxes = cascada sobre CIF
+  TIPOS: STANDARD (8517.62) / SERVER (8471) / LAPTOP (8471.30) / REDUCIDA (PKP/RAHI)
+  FALLBACK: Sin dato específico → usar STANDARD
+
+================================================================================
+SECCIÓN 1 — PAÍSES COMPLEJOS (verificados manualmente)
+================================================================================
+
+ARGENTINA — Miami→ARG: FOB 1.5% mín$270 | Flete $1.99/lbs mín$350 | Seguro 1% mín$80 | Dest 2.5% mín$700 | IOR 3% mín$750
+ARGENTINA — Europa→ARG: FOB 1.5% mín$270 | EOR 3% mín$270 | Flete $4.77/lbs mín$550 | Dest 2.5% mín$700 | IOR 3% mín$750
+ARGENTINA — China→ARG: FOB 3.5% mín$350 | EOR 3% mín$650 | Flete $7.00/lbs mín$550 | Dest 2.5% mín$700 | IOR 3% mín$750
+ARGENTINA — Taxes STANDARD: Derechos 16% | Estadística 2.5% | IVA 21% | Ganancias 6% | IIBB 3% | IVA Adicional 10%
+ARGENTINA — Taxes SERVER (HS8471): Derechos 0% FREE | IVA 21% | Ganancias 6% | IIBB 3% | IVA Adicional 10.5%
+ARGENTINA — Taxes LAPTOP: Derechos 8% | Estadística 3% | IVA 10.5% | Ganancias 6% | IIBB 2.5%
+ARGENTINA — Tarifa REDUCIDA (PKP/RAHI): FOB 1% mín$270 | Dest 2% mín$300 | IOR 2% mín$350
+ARGENTINA — NOTA: China origin +45% adicional sobre duties. Servers FREE excepto China.
+
+MEXICO — Miami→MEX: FOB 1.5% mín$270 | Flete $1.57/lbs mín$350 | Seguro 1% mín$80 | Dest 2.5% mín$700 | IOR 3% mín$860
+MEXICO — Europa→MEX: FOB 3% mín$470 | EOR 3% mín$550 | Flete $6.00/kg mín$550 | Dest 2.5% mín$700 | IOR 3% mín$860
+MEXICO — China→MEX: FOB 3.5% mín$730 | EOR 3% mín$550 | Flete $10.00/kg mín$650 | Dest 2.5% mín$700 | IOR 3% mín$860
+MEXICO — Taxes STANDARD: DTA 0.93% | IVA 16%
+MEXICO — Tarifa REDUCIDA (PKP): FOB 1% mín$270 | Dest 2% mín$250 | IOR 2% mín$250
+MEXICO — NOTA: 0% duties en IT hardware bajo ITA. Solo DTA 0.93% + IVA 16%.
+
+COLOMBIA — Miami→COL: FOB 1.5% mín$270 | Flete $1.84/lbs mín$350 | Seguro 1% mín$80 | Dest 2% mín$700 | IOR 3% mín$650
+COLOMBIA — Mexico→COL: FOB 4.5% mín$270 | Flete $1.65/lbs mín$350 | Dest 2% mín$700 | IOR 3% mín$550
+COLOMBIA — Europa→COL: FOB 1.5% mín$270 | EOR 3% mín$650 | Flete $2.40/lbs mín$350 | Dest 3% mín$700 | IOR 3% mín$650
+COLOMBIA — Taxes STANDARD: Duties 5% | VAT 19%
+COLOMBIA — Taxes SERVER (HS8471): Duties 0% FREE | VAT 19%
+COLOMBIA — Tarifa REDUCIDA (RAHI/PKP): FOB 1.5% mín$270 | Dest 2% mín$550 | IOR 0% exento
+
+BRAZIL — Miami→BRA: FOB 1.5% mín$270 | Flete $3.76/lbs mín$350 | Seguro 1% mín$80 | Dest 5% mín$700 | IOR 5% mín$1700
+BRAZIL — China→BRA (Aéreo): FOB 1% mín$530 | Flete $4.00/kg mín$650 | Dest 2% mín$400 | IOR 4% mín$860
+BRAZIL — Taxes STANDARD: II 16% | IPI 15% | PIS 2.1% | COFINS 9.65% | ICMS 18% cascada
+BRAZIL — Taxes LAPTOP (NCM 8471.30): II 10% | IPI 0% exento | PIS 2.1% | COFINS 9.65% | ICMS 18%
+BRAZIL — Tarifa REDUCIDA (RAHI): FOB 1% mín$270 | Dest 2% mín$400 | IOR 2% mín$860
+BRAZIL — NOTA: ANATEL req wireless HS8517. Servers NO ANATEL HS8471. Canal Cinza nunca -40% mercado. $100k CIF = ~$71k duties. Almacenamiento 0.3% NF + $2/SKU.
+
+CHILE — Miami→CHL: FOB 1.5% mín$270 | Flete $1.92/lbs mín$350 | Seguro 1% mín$80 | Dest 2% mín$700 | IOR 2.5% mín$650
+CHILE — Europa→CHL: FOB 1.5% mín$470 | EOR 3% mín$450 | Flete $1.92/lbs mín$450 | Dest 2% mín$700 | IOR 2.5% mín$650
+CHILE — China→CHL: FOB 1.5% mín$270 | EOR 3% mín$450 | Dest 2% mín$700 | IOR 2% sobre FOB
+CHILE — Taxes STANDARD: Duties 6% | VAT 19%
+CHILE — Tarifa REDUCIDA (PKP): FOB 1% mín$270 | Dest 2% mín$250 | IOR 2% mín$350
+
+================================================================================
+SECCIÓN 2 — RESTO DE PAÍSES (104 total — verificar vs Excel antes de cotizar)
+================================================================================
+
+ABU DHABI: FOB 1.5% mín$420 | Flete $9.02/lbs mín$550 | Dest 3% mín$600 | IOR 9% mín$860 | Duties 0% | VAT 5%
+ARUBA: FOB 1.5% mín$270 | Flete $3.34/lbs mín$350 | Dest 2.5% mín$600 | IOR 3% mín$860 | VAT 12%
+ANGOLA: FOB 1.5% mín$270 | Flete $5.85/kg mín$550 | Dest 3% mín$700 | IOR 5% mín$1700 | Duties 8% | VAT 14%
+AUSTRIA: FOB 1.5% mín$270 | Flete 3% mín$350 | Dest 3% mín$650 | IOR 3.5% mín$600 | Duties 0% | VAT 21%
+AUSTRALIA: FOB 1.5% mín$270 | Flete $12.00/lbs mín$550 | EOR 3% mín$150 | Dest 2.5% mín$750 | IOR 7% mín$850 | VAT 10%
+BARBADOS: FOB 1.5% mín$270 | Flete $1.37/lbs mín$350 | Dest 2.5% mín$600 | IOR 3% mín$700 | VAT 18%
+BANGKOK: FOB 1.5% mín$420 | Flete $9.68/lbs mín$550 | Dest 3% mín$600 | IOR 6% mín$860 | Duties 10% | VAT 7%
+BAHRAIN: FOB 1.5% mín$420 | Flete $9.02/lbs mín$550 | Dest 3% mín$600 | IOR 9% mín$860 | Duties 5% | VAT 10%
+BANGLADESH: FOB 1.5% mín$350 | Flete $10.50/kg mín$450 | Dest 5% mín$800 | IOR 8% mín$860 | Duties 10% | VAT 15%
+BAHAMAS: FOB 1.5% mín$270 | Flete $3.34/lbs mín$350 | Dest 2.5% mín$600 | IOR 3% mín$860 | VAT 10%
+BERMUDA: FOB 1.5% mín$270 | Flete $1.37/lbs mín$350 | Dest 2.5% mín$600 | IOR 3% mín$550 | VAT 0%
+BELGICA: FOB 1.5% mín$420 | Flete $8.36/lbs mín$450 | Dest 3% mín$600 | IOR 5% mín$860 | Duties 0% | VAT 21%
+BOLIVIA: FOB 1.5% mín$270 | Flete $1.85/lbs mín$350 | EOR 3% mín$550 | Dest 3% mín$700 | IOR 3% mín$650 | Duties 10% | VAT 15%
+BOTSWANA: FOB 1.5% mín$270 | Flete $3.00/lbs mín$350 | EOR 3% mín$350 | Dest 3% mín$600 | IOR 8% mín$860 | Duties 20% | VAT 14%
+CANADA: FOB 1.5% mín$270 | Flete $1.37/lbs mín$350 | EOR 3% mín$550 | Dest 2% mín$600 | IOR 2% mín$550 | VAT 5%
+CAYMAN ISLAND: FOB 1% mín$300 | Flete $2.90/lbs mín$350 | Dest 2% mín$700 | IOR 4% mín$650 | VAT 0%
+CAMBOYA: FOB 1.5% mín$420 | Flete $9.68/lbs mín$550 | Dest 3% mín$600 | IOR 15% mín$860 | Duties 15% | VAT 10%
+CHAD: FOB 1.5% mín$420 | Flete 3% mín$550 | Dest 3% mín$600 | IOR 5% mín$860 | Duties 10% | VAT 18%
+CHIPRE: FOB 1% mín$220 | Flete $7.93/lbs mín$350 | Dest 2.5% mín$550 | IOR 4% mín$600 | Duties 0% | VAT 19%
+CHINA: FOB 1.5% mín$420 | Flete 3% mín$550 | Dest 3% mín$600 | IOR 9% mín$860 | Duties 0% | VAT 13%
+COSTA RICA: FOB 1.5% mín$270 | Flete $1.71/lbs mín$350 | Dest 2% mín$700 | IOR 3% mín$650 | Duties 0% | VAT 14%
+CURACAO: FOB 1% mín$270 | Flete $2.90/lbs mín$350 | Dest 2% mín$700 | IOR 4% mín$650 | VAT 9%
+DINAMARCA: FOB 3.5% mín$450 | Flete $7.93/lbs mín$550 | Dest 3% mín$650 | IOR 5% mín$860 | Duties 0% | VAT 25%
+DOM. REP.: FOB 1.5% mín$1082 | Flete $1.71/lbs mín$350 | EOR 3% mín$550 | Dest 3% mín$700 | IOR 3% mín$650 | Duties 0% | VAT 18%
+DUBAI: FOB 1.5% mín$420 | Flete $9.20/lbs mín$550 | EOR 3% mín$650 | Dest 3% mín$780 | IOR 9% mín$860 | Duties 0% | VAT 5%
+ECUADOR: FOB 1.5% mín$270 | Flete $1.93/lbs mín$350 | EOR 3% mín$450 | Dest 2.5% mín$700 | IOR 3% mín$650 | Duties 26% | VAT 15%
+EGYPT: FOB 1.5% mín$420 | Flete $9.02/lbs mín$550 | Dest 3% mín$920 | IOR 15% mín$860 | Duties 0% | VAT 14%
+EL SALVADOR: FOB 1.5% mín$270 | Flete $1.93/lbs mín$350 | EOR 3% mín$450 | Dest 2.5% mín$700 | IOR 3% mín$650 | Duties 0% | VAT 13%
+ESPANA: FOB 1% mín$270 | Flete $2.45/lbs mín$350 | EOR 5% mín$650 | Dest 2% mín$600 | IOR 2% mín$650 | Duties 0% | VAT 19%
+FILIPINAS: FOB 1% mín$270 | Flete 1% mín$350 | Dest 2% mín$450 | IOR 2% mín$600 | Duties 0% | VAT 12%
+FINLAND: FOB 3.5% mín$450 | Flete $7.93/lbs mín$550 | Dest 3% mín$650 | IOR 5% mín$860 | Duties 0% | VAT 0%
+FRANCE: FOB 3.5% mín$450 | Flete $7.93/lbs mín$350 | Dest 3% mín$650 | IOR 5% mín$600 | Duties 0% | VAT 20%
+GERMANY: FOB 3.5% mín$450 | Flete $1.95/lbs mín$350 | Dest 3% mín$650 | IOR 3.5% mín$600 | Duties 0% | VAT 0%
+GHANA: FOB 1.5% mín$270 | Flete $5.85/kg mín$550 | Dest 3% mín$600 | IOR 5% mín$860 | Duties 20% | VAT 15%
+GRECIA: FOB 1.5% mín$350 | Flete $7.93/lbs mín$350 | Dest 3% mín$650 | IOR 5% mín$600 | Duties 0% | VAT 24%
+GRENADA: FOB 1.5% mín$270 | Flete $1.37/lbs mín$350 | Dest 2.5% mín$600 | IOR 3% mín$550 | VAT 15%
+GUATEMALA: FOB 1.5% mín$270 | Flete $1.93/lbs mín$350 | Dest 2.5% mín$700 | IOR 3% mín$650 | Duties 0% | VAT 12%
+GUAYANA: FOB 1.5% mín$270 | Flete $2.50/lbs mín$350 | Dest 3% mín$600 | IOR 4% mín$860 | VAT 14%
+HAITI: FOB 1.5% mín$270 | Flete 3% mín$350 | Dest 2.5% mín$700 | IOR 3% mín$860 | VAT 10%
+HONDURAS: FOB 1.5% mín$270 | Flete 3% mín$350 | EOR 3% mín$550 | Dest 2.5% mín$700 | IOR 3% mín$650 | Duties 0% | VAT 15%
+HONG KONG: FOB 1.5% mín$450 | Flete $9.02/lbs mín$550 | EOR 3% mín$650 | Dest 3% mín$650 | IOR 6% mín$860 | Duties 0% | VAT 13%
+HUNGARY: FOB 1% mín$270 | Flete $2.60/kg mín$350 | Dest 2% mín$450 | IOR 3% mín$600 | Duties 0% | VAT 27%
+ICELAND: FOB 0.25% mín$200 | EOR 0.25% mín$350 | Dest 0.75% mín$450 | IOR 0.85% mín$650 | Duties 0% | VAT 24%
+INDIA: FOB 1% mín$270 | Flete 3% mín$550 | Dest 2% mín$600 | IOR 2% mín$860 | Duties 20% | GST 18% | VAT 18%
+INDONESIA: FOB 1.5% mín$470 | Flete $3.00/lbs mín$350 | EOR 3% mín$650 | Dest 3% mín$800 | IOR 5% mín$850 | Duties 18% | VAT 11%
+IRENALD (Irlanda): FOB 1% mín$200 | Flete $4.00/kg mín$350 | Dest 2% mín$450 | IOR 2% mín$600 | Duties 2.1% | VAT 23%
+ISRAEL: FOB 1.5% mín$420 | Flete $19.14/lbs mín$550 | Dest 3% mín$600 | IOR 5% mín$860 | Duties 0% | VAT 18%
+ITALIA: FOB 1.5% mín$270 | Flete $7.93/lbs mín$350 | Dest 3% mín$650 | IOR 3.5% mín$600 | Duties 0% | VAT 22%
+JAMAICA: FOB 1.5% mín$270 | Flete 1.5% mín$350 | Dest 2.5% mín$700 | IOR 3% mín$860 | Duties 20% | VAT 22%
+JAPON: FOB 1.5% mín$270 | Flete $11.00/lbs mín$350 | EOR 3% mín$550 | Dest 3% mín$860 | IOR 8% mín$1700 | Duties 5% | VAT 10%
+JORDAN: FOB 1.5% mín$420 | Flete $9.02/lbs mín$550 | Dest 3% mín$600 | IOR 5% mín$860 | Duties 5% | VAT 16%
+KAZAKHSTAN: FOB 1.5% mín$420 | Flete $8.36/lbs mín$650 | Dest 3% mín$850 | IOR 10% mín$1200 | Duties 0% | VAT 12%
+KENYA: FOB 1.5% mín$270 | Flete $5.45/lbs mín$350 | Dest 3% mín$600 | IOR 8% mín$860 | Duties 0% | VAT 16%
+KOREA DEL SUR: FOB 1% mín$250 | Flete $7.00/kg mín$450 | Dest 5% mín$450 | IOR 6% mín$650 | Duties 10% | VAT 8%
+KUWAIT: FOB 1.5% mín$270 | Flete $4.36/lbs mín$550 | Dest 3% mín$700 | IOR 3% mín$860 | Duties 5% | VAT 0%
+LAOS: FOB 1.5% mín$420 | Flete $9.02/lbs mín$550 | Dest 3% mín$550 | IOR 14% mín$860 | Duties 10% | VAT 7%
+MALAYSIA: FOB 1.5% mín$420 | Flete $9.02/lbs mín$650 | Dest 3% mín$850 | IOR 6% mín$1600 | Duties 20% | VAT 7%
+MARRUECOS: FOB 1.5% mín$420 | Flete 5% mín$450 | Dest 3% mín$600 | IOR 6% mín$860 | Duties 3% | VAT 20%
+MONGOLIA: FOB 1.5% mín$420 | Flete $14.96/lbs mín$550 | Dest 3% mín$600 | IOR 5% mín$860 | Duties 5% | VAT 10%
+MOZAMBIQUE: FOB 1.5% mín$420 | Flete $13.42/lbs mín$550 | Dest 3% mín$600 | IOR 5% mín$860 | Duties 7.5% | VAT 16%
+NAMIBIA: FOB 1.5% mín$270 | Flete 5% mín$450 | Dest 5% mín$860 | IOR 8% mín$1700 | Duties 9% | VAT 15%
+NETHERLANDS: FOB 1% mín$270 | Flete $7.93/lbs mín$350 | Dest 3% mín$650 | IOR 5% mín$600 | Duties 0% | VAT 21%
+NEW ZELAND: FOB 1% mín$450 | Flete 6% mín$650 | Dest 3% mín$860 | IOR 6% mín$960 | Duties 1% | VAT 15%
+NICARAGUA: FOB 1.5% mín$270 | Flete 3% mín$350 | Dest 2.5% mín$700 | IOR 3% mín$650 | Duties 0% | VAT 15%
+NIGERIA: FOB 1.5% mín$270 | Flete 3% mín$450 | Dest 3% mín$600 | IOR 8% mín$860 | Duties 0% | VAT 13%
+NORWAY: FOB 1% mín$270 | Flete 2.5% mín$350 | Dest 2% mín$450 | IOR 3% mín$600 | Duties 0% | VAT 25%
+OMAN: FOB 1.5% mín$750 | Flete $10.00/lbs mín$550 | EOR 3% mín$650 | Dest 5% mín$1860 | IOR 7% mín$1700 | Duties 5.2% | VAT 5%
+PAKISTAN: FOB 1.5% mín$750 | Flete $9.02/lbs mín$550 | Dest 5% mín$860 | IOR 20% mín$920 | Duties 46% | VAT 18%
+PANAMA: FOB 1.5% mín$270 | Flete $1.64/lbs mín$350 | Dest 2.5% mín$700 | IOR 3% mín$650 | Duties 5% | VAT 7%
+PARAGUAY: FOB 1.5% mín$270 | Flete $2.42/lbs mín$350 | Dest 3% mín$700 | IOR 3% mín$650 | Duties 5% | VAT 10%
+PERU: FOB 1.5% mín$270 | Flete $2.42/lbs mín$350 | Dest 3% mín$700 | IOR 3% mín$650 | Duties 5% | VAT 18%
+POLAND: FOB 3.5% mín$450 | Flete $4.93/lbs mín$350 | Dest 3% mín$650 | IOR 5% mín$600 | Duties 0% | VAT 23%
+PORTUGUAL: FOB 3.5% mín$450 | Flete $7.93/lbs mín$350 | Dest 3% mín$650 | IOR 5% mín$600 | Duties 0% | VAT 23%
+PUERTO RICO: FOB 1.5% mín$270 | Flete 3% mín$350 | EOR 3% mín$860 | Dest 2.5% mín$700 | IOR 3% mín$860 | Duties 0% | VAT 11%
+QATAR: FOB 1.5% mín$750 | Flete $9.02/lbs mín$550 | Dest 5% mín$860 | IOR 11% mín$920 | Duties 6% | VAT 5%
+RUMANIA: FOB 1% mín$200 | Flete $2.00/lbs mín$350 | Dest 2% mín$450 | IOR 2% mín$850 | Duties 3% | VAT 19%
+SAUDI ARABIA: FOB 1.5% mín$270 | Flete $4.95/lbs mín$350 | Dest 3% mín$600 | IOR 17% mín$860 | Duties 5% | VAT 15%
+SINGAPURE: FOB 2% mín$270 | Flete $9.68/lbs mín$550 | Dest 3% mín$600 | IOR 6% mín$860 | Duties 0% | VAT 9%
+SLOVAKIA: FOB 1% mín$450 | Flete $7.93/lbs mín$550 | Dest 2% mín$450 | IOR 2% mín$600 | Duties 3.3% | VAT 20%
+SOUTH AFRICA: FOB 1.5% mín$270 | Flete $3.00/lbs mín$350 | EOR 3% mín$350 | Dest 3% mín$600 | IOR 8% mín$860 | Duties 0% | VAT 15%
+ST. CROIX: FOB 1.5% mín$270 | Flete $4.54/lbs mín$350 | Dest 2.5% mín$700 | IOR 3% mín$750 | VAT 4%
+ST. LUCIA: FOB 1.5% mín$270 | Flete $2.90/lbs mín$350 | Dest 2.5% mín$700 | IOR 9% mín$650 | VAT 20%
+SWEDEN: FOB 1% mín$200 | Flete $4.54/lbs mín$350 | Dest 2% mín$450 | IOR 2% mín$850 | Duties 0% | VAT 25%
+SWITZERLAND: FOB 1% mín$200 | Flete $2.00/lbs mín$350 | EOR 2% mín$350 | Dest 2% mín$450 | IOR 2% mín$550 | Duties 0% | VAT 9%
+T&T (Trinidad): FOB 1.5% mín$270 | Flete 3% mín$350 | Dest 2.5% mín$700 | IOR 3% mín$650 | VAT 12%
+TAIWAN: FOB 3.5% mín$650 | Flete 3% mín$450 | EOR 4% mín$750 | Dest 1% mín$800 | IOR 2% mín$860 | Duties 5% | VAT 5%
+THAILAND: FOB 1.5% mín$270 | Flete $5.84/lbs mín$550 | Dest 2% mín$600 | IOR 6% mín$860 | Duties 10% | VAT 7%
+TUNES (Túnez): FOB 1.5% mín$350 | Flete $9.02/lbs mín$550 | Dest 5% mín$860 | IOR 8% mín$1700 | Duties 39% | VAT 20%
+TURK & CAI: FOB 1.5% mín$270 | Flete $1.37/lbs mín$150 | Dest 2.5% mín$600 | IOR 3% mín$550 | VAT 0%
+TURKEY: FOB 1.5% mín$270 | Flete $9.02/lbs mín$550 | Dest 5% mín$860 | IOR 8% mín$1700 | Duties 0% | VAT 20%
+UK: FOB 1.5% mín$270 | Flete $3.00/lbs mín$450 | EOR 3.5% mín$500 | Dest 3% mín$650 | IOR 3.5% mín$600 | Duties 0% | VAT 20%
+UKRANIA: FOB 1% mín$200 | Flete $7.93/lbs mín$350 | Dest 3% mín$650 | IOR 5% mín$600 | Duties 5% | VAT 20%
+URUGUAY: FOB 1.5% mín$270 | Flete 2.5% mín$350 | Dest 3% mín$600 | IOR 3% mín$550 | Duties 14% | VAT 22%
+US (IOR): FOB 5% mín$730 | Flete $12.85/kg mín$650 | EOR 3% mín$550 | Dest 2.5% mín$600 | IOR 3% mín$500 | Duties 0% | VAT 0%
+UZBEKISTAN: FOB 1.5% mín$420 | Flete $9.02/lbs mín$550 | Dest 5% mín$1950 | IOR 12% mín$920 | Duties 20% | VAT 12%
+VENEZUELA: FOB 1.5% mín$270 | Flete $1.53/lbs mín$350 | Dest 2% mín$700 | IOR 3% mín$650 | Duties 14% | VAT 12%
+VIETNAM: FOB 1% mín$270 | Flete 3% mín$450 | EOR 3% mín$650 | Dest 3% mín$860 | IOR 4% mín$950 | Duties 0% | VAT 10%
+VIRGIN ISLANDS: FOB 1.5% mín$270 | Flete $1.37/lbs mín$150 | Dest 2.5% mín$600 | IOR 3% mín$550 | VAT 21%
+
+================================================================================
+TOTAL: 104 países | Sección 1 verificada | Sección 2 verificar vs Excel
+================================================================================
+`;
+
 // ── HARDWARE DATABASE ──────────────────────────────────
 const HW_DB = [
   // SWITCHES / ROUTERS
@@ -7305,6 +7473,7 @@ function getKBContext(){
     const avgFob = data.fobs.length ? Math.round(data.fobs.reduce((a,b)=>a+b,0)/data.fobs.length) : 0;
     ctx += `  - ${prod}: ${data.count} envíos, FOB prom $${avgFob.toLocaleString()}, destinos: ${[...data.dests].join('/')}, HS: ${data.hs}\n`;
   });
+  ctx += KB_EXTERNAL_RATES;
   return ctx;
 }
 
