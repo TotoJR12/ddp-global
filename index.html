@@ -1452,6 +1452,156 @@ function saveLog(arr){localStorage.setItem('ddp_log',JSON.stringify(arr));kvSync
 // ════════════════════════════════════════════════════════
 
 
+// ── KB EXTERNA — COMPLIANCE & CASES MASTER ─────────────
+// Fuente: REG_DB_Master + CASE_DB_Master | Abril 2026
+// REGLA: No editar manualmente — actualizar desde Drive
+const KB_EXTERNAL_COMPLIANCE = `
+================================================================================
+DDP GLOBAL — REG_DB MASTER
+Base Regulatoria Completa | 14 registros | Abril 2026
+================================================================================
+
+REG001 | Brazil | ANATEL Homologation | CRITICAL
+Wireless networking equipment (routers, APs, wireless switches).
+Brazil's ANATEL requires homologation certificates for all wireless-capable equipment before import.
+Practical: Equipment shipped without ANATEL certification will be detained at customs. Pure wireline switches and servers are EXEMPT. Always verify if the model has wireless capability before shipping. Certificate must match exact model number.
+Flag: ⚠️ Cisco Catalyst 9300 with wireless module REQUIRES ANATEL. Base models without wireless = EXEMPT.
+
+REG002 | Brazil | Canal Cinza (Gray Channel) | HIGH
+High-value IT hardware (servers, storage, networking).
+Brazil customs uses 4 channels (verde/amarelo/vermelho/cinza). Canal Cinza is the most severe — full physical inspection plus suspected fraud investigation.
+Practical: Canal Cinza triggered by: (1) declared value significantly below market, (2) importer history issues, (3) suspicious commercial invoice, (4) mismatch between tech specs and declared value. Can delay shipment 30–90 days.
+Flag: 🔴 Declared values below market by 40%+ almost guarantees Canal Cinza in Brazil.
+
+REG003 | Brazil | II/IPI/PIS/COFINS/ICMS Tax Cascade | HIGH
+All IT hardware.
+Brazil has a cascading import tax system that can total 60–80% of CIF value for IT hardware.
+Practical: Total effective tax rate for HS 8517.62 equipment: ~71% CIF. Never quote Brazil without running full tax calculation. Client often shocked by tax amount. Always show breakdown. Duties & Taxes must be paid in advance.
+Flag: 🔴 Brazil taxes on $100k CIF = ~$71,000 in duties. Always pre-calculate and confirm client understands.
+
+REG004 | Brazil | ANVISA (Pharmaceutical/Medical) | HIGH
+Any equipment with medical or health applications.
+ANVISA controls medical devices and health-related equipment. Not typical for IT hardware but can apply to biometric equipment.
+Practical: Rarely applies to standard IT hardware. Flag if client describes equipment as having health monitoring features.
+Flag: ℹ️ ANVISA does not apply to standard IT networking/server equipment.
+
+REG005 | USA | BIS Export Controls (EAR) | CRITICAL
+High-performance GPUs, advanced semiconductors, encryption equipment.
+Bureau of Industry and Security controls export of dual-use technology. NVIDIA H100, A100, and similar GPUs now subject to strict controls.
+Practical: Export license required for many GPU shipments to non-approved countries. Penalties for violations are severe. Always check Entity List before quoting GPU shipments. H100 to LATAM requires specific license.
+Flag: 🔴 CRITICAL: Never quote H100 or A800 exports without BIS compliance review. Post Oct 2023 rules are strict.
+
+REG006 | USA | Section 301 Tariffs (China) | HIGH
+IT hardware manufactured in China.
+Section 301 tariffs impose 25% additional duty on IT hardware imported to USA from China.
+Practical: 25% Section 301 + 20% IEEPA Reciprocal = 45% total duties on China-origin goods entering USA. US brand/label does NOT change Country of Origin for CBP. COO is where the product was manufactured.
+Flag: 🔴 China-made equipment entering USA: 45% total tariff. Client must be warned explicitly.
+
+REG007 | USA | OFAC Sanctions | CRITICAL
+All shipments involving sanctioned entities or countries.
+OFAC maintains list of sanctioned countries, companies, and individuals. Any transaction touching sanctioned parties is prohibited.
+Practical: Check SDN list before confirming any unusual destination or client. Iran, North Korea, Russia (partial), Cuba, Syria = absolute prohibition. Penalties include criminal charges.
+Flag: 🔴 OFAC compliance is non-negotiable. Screen all parties before quoting.
+
+REG008 | Mexico | IFT Homologation | MEDIUM
+Wireless telecommunications equipment.
+Mexico's IFT requires approval for wireless equipment. Similar to Brazil's ANATEL but enforcement is less strict. Mainly affects WiFi APs, routers with wireless, cellular equipment. Wireline switches generally exempt.
+Flag: ⚠️ IFT applies primarily to wireless-capable equipment. Wireline switches and servers = no IFT.
+
+REG009 | Mexico | DTA (Derecho de Trámite Aduanero) | LOW
+All imports. 0.93% fee on CIF value. Standard for all commercial imports. Always include in tax calculation.
+Flag: ℹ️ Standard 0.93% DTA on CIF — include in all Mexico quotes.
+
+REG010 | Argentina | SIRA Import Authorization | HIGH
+All imports over threshold.
+Argentina's Sistema de Importaciones requires pre-authorization for most imports. System changes frequently. Always verify current status before committing to a quote. AFIP scrutinizes declared values carefully against international databases.
+Flag: ⚠️ Argentina import rules change frequently. Verify current SIRA status before accepting any shipment.
+
+REG011 | Argentina | AFIP Valuation Control | HIGH
+High-value IT hardware.
+AFIP cross-references declared values against international price databases. Undervaluation triggers investigation. AFIP uses Reuters and other price databases to verify declared values. Cisco, HPE, Dell prices are well-known.
+Flag: ⚠️ AFIP is sophisticated — they know market prices for major IT brands. Declare correctly.
+
+REG012 | Colombia | DIAN Import Declaration | LOW
+All commercial imports. Standard Colombian customs declaration via DIAN portal. Colombia is relatively straightforward for IT hardware. Main risk is with used equipment and spare parts misclassification.
+Flag: ℹ️ Colombia — standard process. Key risk: correct HS code classification and used equipment.
+
+REG013 | Colombia | Antidumping Duties (some electronics) | MEDIUM
+Consumer electronics, some computer peripherals.
+Colombia has antidumping measures on some Chinese electronics. Mainly affects consumer electronics, not enterprise IT hardware.
+Flag: ℹ️ Antidumping primarily for consumer electronics. Enterprise IT hardware generally not affected.
+
+REG014 | USA | Section 122 — Temporary Import Surcharge | HIGH
+Vigencia: 24 Feb 2026 → 24 Jul 2026 (150 días)
+Todos los productos excepto exentos Annex II.
+Tras la anulación de los aranceles IEEPA por la Suprema Corte el 20 feb 2026, Trump invocó Section 122 del Trade Act of 1974 imponiendo un arancel global del 10% sobre todas las importaciones a USA por 150 días.
+Practical: Aplica a TODOS los productos excepto los listados en Annex II (1,655 códigos).
+- HS 8471 (servers, computers, laptops) → EXENTO
+- HS 8517 (networking, telecom, firewalls) → APLICA 10%
+- HS 8473 (parts for computers) → verificar Annex II
+- HS 8473.30 (GPU parts) → verificar caso por caso
+ACE filing codes: Sujeto a S122: 9903.03.01 | Exento Annex II: 9903.03.03 | Exento S232: 9903.03.06
+Stacking: S122 + S301 (China) se acumulan | S122 + S232 NO se acumulan | S122 + USMCA: USMCA goods exentos.
+Productos IT confirmados EXENTOS: Servers/Computers HS 8471 | Laptops HS 8471.30 | Smartphones | Semiconductores | Flat panel displays | Storage devices.
+Productos NO confirmados exentos: Networking HS 8517.6990 | Firewalls, routers, switches | Optical transceivers HS 8517.62.
+Flag: ⚠️ VENCE 24 JULIO 2026. Shipments que entren después → 0% duties (solo MPF). Para operaciones con tránsito largo, calcular fecha de entrada vs. vencimiento. Diferencia real: 10% vs. 0%. Verificar: hts.usitc.gov | Ref legal: CBP CSMS #67844987
+
+================================================================================
+DDP GLOBAL — CASE_DB MASTER
+Casos Operacionales Reales | 6 registros | Abril 2026
+================================================================================
+
+CASO BRA-2024-001 | Brazil | Customs Inspection | Cisco Catalyst 9300-48U (wireless module)
+Tags: ANATEL | Brazil | Cisco | Wireless | Detention
+Título: ANATEL Certification Missing on Wireless Switch — 45-day Detention
+Problema: Client failed to confirm wireless module presence. The 9300-48U has built-in wireless management — ANATEL required. Shipped without certificate.
+Solución: Engaged local customs broker to apply for emergency ANATEL certificate. Certificate process took 38 days. Shipment held in GRU bonded warehouse.
+Resultado: Equipment released after 38 days. Additional cost: $4,200 storage + $2,800 emergency ANATEL processing. Client relationship strained.
+Lección: CRITICAL: Always verify exact Cisco 9300 model suffix. -48U and -48UX have wireless — require ANATEL. -48T and -48P wireline only — EXEMPT. Never assume ANATEL status without checking specific model number against Cisco's ANATEL database.
+
+CASO BRA-2024-002 | Brazil | Valuation Dispute | HPE ProLiant DL360 Gen10 (refurbished)
+Tags: Canal Cinza | Brazil | HPE | Valuation | Refurbished
+Título: Canal Cinza — Declared Value 60% Below Market on HPE Servers
+Problema: Client insisted on low declared value ($1,200/unit on dual Xeon Gold + 256GB RAM server, market value $4,500–$6,000/unit). Shipment selected for Canal Cinza at GRU.
+Solución: Hired specialized customs lawyer in São Paulo. Provided LOE with detailed refurb valuation, age of equipment, purchase history. Negotiated declared value of $3,200/unit which customs accepted.
+Resultado: Delay of 61 days. Additional legal fees: $8,500. Relationship severely damaged.
+Lección: Never accept artificially low declared values from clients. Your IOR license is at risk. If client insists, decline the shipment. Always run market check on server configs — RAM and CPU config is everything on servers.
+
+CASO BRA-2024-003 | Brazil | Documentation | Arista 7280CR3-32P4
+Tags: Brazil | Arista | Documentation | Invoice
+Título: Invoice Mismatch on High-Value Arista Switches — Quick Resolution
+Problema: 4x Arista 7280CR3-32P4 switches ($38,000 each). Commercial invoice listed model as "7280CR3" without full suffix. Brazilian customs flagged model number discrepancy.
+Solución: Provided amended commercial invoice with full model number + Arista purchase order + technical spec sheet. Broker submitted within 24 hours of detention.
+Resultado: Released in 4 business days. Minimal additional cost.
+Lección: Always use complete, exact model numbers on all commercial invoices. For Arista, Cisco, and HPE — the full part number matters. Abbreviations will cause delays even if the equipment is identical.
+
+CASO USA-2023-001 | USA | Regulatory Compliance | NVIDIA A100 80GB PCIe (x8 units)
+Tags: BIS | GPU | NVIDIA | Export Control | USA
+Título: BIS Export Control — A100 to LATAM Destination Requires License
+Problema: Post October 2023 BIS rule change, A100 GPUs now require export license for many LATAM destinations. Client was not aware.
+Solución: Declined to process without compliance review. Referred client to export compliance attorney. License application filed — 6-week processing time.
+Resultado: Shipment eventually cleared with license. Correct decision — violation penalties would have been severe.
+Lección: Always check current BIS rules for GPU shipments. Rules change — what was legal 6 months ago may require a license today. A100, H100, A800 are all controlled. When in doubt, escalate to compliance counsel.
+
+CASO MEX-2023-001 | Mexico | Customs Inspection | Cisco ASR 1001-X Router
+Tags: Mexico | Cisco | Router | Dual-use | Inspection
+Título: Mexico Customs — Dual-Use Classification Query on High-Capacity Router
+Problema: 2x Cisco ASR 1001-X aggregation routers. Customs agent flagged high-throughput routers as potentially dual-use equipment requiring additional permits.
+Solución: Provided end-user certificate from ISP client (letter on letterhead stating commercial use), plus Cisco product documentation confirming commercial product status.
+Resultado: Released in 8 days. No additional costs beyond broker fees.
+Lección: High-throughput carrier-grade equipment in Mexico can trigger dual-use queries. Always have end-user certificate available for enterprise routers. ISP clients should provide this proactively.
+
+CASO COL-2023-001 | Colombia | Valuation Dispute | NetApp AFF A400 (partial config)
+Tags: Colombia | NetApp | Storage | Valuation | DIAN
+Título: Colombia DIAN — Undervalued Storage System — 3-week Delay
+Problema: NetApp AFF A400 base unit declared at $35,000. DIAN flagged as below market (typical $80,000+). Client declared only base system price without drives.
+Solución: Provided NetApp purchase order showing base unit only configuration (no drives), technical spec showing empty drive bays, and vendor invoice. DIAN accepted with explanation.
+Resultado: 3-week delay. Administrative costs $1,200. Accepted after documentation.
+Lección: For partial/base configurations of high-value systems (NetApp, Pure Storage, HP 3PAR), always provide DETAILED BOM showing what IS and IS NOT included. Customs compares to full system prices — you must explain the difference proactively.
+
+================================================================================
+`;
+
 // ── KB EXTERNA — RATES MASTER v2 ──────────────────────
 // Fuente: QT_GRAL.xlsx | Abril 2026 | 104 países
 // REGLA: No editar manualmente — actualizar desde RATES_MASTER_v2 en Drive
@@ -7473,6 +7623,7 @@ function getKBContext(){
     const avgFob = data.fobs.length ? Math.round(data.fobs.reduce((a,b)=>a+b,0)/data.fobs.length) : 0;
     ctx += `  - ${prod}: ${data.count} envíos, FOB prom $${avgFob.toLocaleString()}, destinos: ${[...data.dests].join('/')}, HS: ${data.hs}\n`;
   });
+  ctx += KB_EXTERNAL_COMPLIANCE;
   ctx += KB_EXTERNAL_RATES;
   return ctx;
 }
