@@ -1452,6 +1452,209 @@ function saveLog(arr){localStorage.setItem('ddp_log',JSON.stringify(arr));kvSync
 // ════════════════════════════════════════════════════════
 
 
+// ── KB EXTERNA — PLAYBOOKS MASTER ──────────────────────
+// Fuente: PLAYBOOK_CLAUDE_Master + PLAYBOOK_GPT_Master | Abril 2026
+// REGLA: No editar manualmente — actualizar desde Drive
+const KB_EXTERNAL_PLAYBOOKS = `
+================================================================================
+DDP GLOBAL — OPERATIONAL PLAYBOOKS MASTER
+Institutional Memory · All Cases · Abril 2026
+CONFIDENTIAL — FOR INTERNAL USE ONLY
+================================================================================
+
+--------------------------------------------------------------------------------
+SECTION 0 — QUOTATION FORMAT STANDARD & PRICING RULES
+--------------------------------------------------------------------------------
+Format: PDF via Python ReportLab — NO HTML quotes
+Page: A4 | Colors: Navy #0A1628 / Cyan #00B4D8 / White | Font: Helvetica
+Header: Full-width navy bar · "DDP GLOBAL LLC" in white · Cyan tagline
+Tagline: "Data Center & AI Infrastructure Logistics | U.S. Exporter & Importer of Record"
+Footer: Navy bar · contact info · page number
+Quote ref format: COUNTRY-YYMMDD-SEQ (e.g. FRA-260326-001 / MEX-260301-001)
+
+DOCUMENT STRUCTURE (4 MANDATORY SECTIONS):
+1. META INFO — Date, Valid Until, Quote Ref, Payment Terms, Prepared for, Prepared by
+2. SHIPMENT DETAILS — Origin, Destination, Mode, Service Type, Goods description, Weight/Qty, Cargo classification, Packaging, Incoterms
+3. PRICING TABLE — 3-4 operational line items max
+4. NOTES & CONDITIONS — Numbered list + acceptance block with quote ref
+
+PRICING RULES — CRITICAL:
+NEVER show "DDP Global Fee", "Service Fee", "Management Fee" or similar. Margin ALWAYS embedded silently in operational line items.
+Line 1: Pickup & Inland Transport
+Line 2: Air / Ocean Freight (origin → destination)
+Line 3: Origin Handling & Export Services
+Line 4 (optional): Destination Handling / Import Clearance — only if in scope
+No itemized sub-cost breakdown visible to client (no broker fee, storage, surcharges, MAWB, etc.)
+
+MANDATORY NOTES SECTION:
+1. Scope clarification (what is and is not included, especially destination customs)
+2. Weight / chargeable weight disclaimer
+3. Transit time estimate
+4. Insurance note (not included, available on request)
+5. Validity date reminder
+
+--------------------------------------------------------------------------------
+CASE #001 — Section 232 Semiconductors vs. HP ProLiant DL385 G11
+Broker Dispute · HTS 8471 · US Inbound · IOR Authority · March 2026
+--------------------------------------------------------------------------------
+Product: 2x HP ProLiant DL385 G11 (servers, AMD EPYC 9124)
+HTS: 8471.50.0150 | COO: Czech Republic | Invoice: USD 52,814
+IOR: DDP Global LLC | Port: Miami, FL | Status: RESOLVED — Duties avoided
+
+PROBLEM:
+Broker IBC incorrectly applied Section 232 semiconductor duties (Presidential Proclamation 11002, effective Jan 15 2026)
+to full shipment value USD 52,814, arguing "servers have semiconductors."
+Erroneous duty demanded: ~USD 18,000 (25% on full value).
+
+ARGUMENTS & SOLUTION:
+- GRI Rule 3(b): Product classifies by what it IS, not what it contains. HP server = ADP machine (HTS 8471). Semiconductors = HTS 8542. A server containing a CPU is not a semiconductor — same as steel in a car: the car is not classified as steel.
+- Proclamation 11002 scope is ULTRA-NARROW: Only applies to high-end AI accelerators with TPP >14,000 AND DRAM bandwidth >4,500 GB/s (e.g. Nvidia H100/H200). AMD EPYC 9124 does NOT meet these parameters. Standard server CPUs are explicitly out of scope.
+- HTS 8471 — Section 122 EXEMPT: Complete servers under HTS 8471 explicitly listed in Section 122 Annex II → exempt via secondary HTS 9903.03.03. Zero additional duty.
+- Czech Republic COO: NOT subject to Section 301 (China-origin tariffs). Only applicable duty = MFN rate under ITA (Information Technology Agreement) = 0% on HTS 8471.
+- MANDATORY ACE filing codes: 9903.79.02 (exemption from Sec.232 for HTS 8471) AND 9903.03.03 (exemption from Sec.122) MUST be filed as secondary HTS. Without them CBP issues Fatal 771 rejection. NOT optional even when exempt.
+- IOR authority: As IOR, DDP Global holds FINAL authority over classification decisions. Broker executes — broker does NOT decide. 19 U.S.C. § 1514 governs protest rights.
+
+RESULT: ~USD 17,817 in erroneous duties avoided. Only MPF payable.
+
+LEGAL REFERENCES:
+- Presidential Proclamation 11002 (Jan 14 2026) — Section 232 Semiconductors
+- CBP CSMS #67400472 — CBP guidance on Section 232 Semiconductor duties
+- CBP CSMS #67844987 — Section 122 Duties (Feb 24 2026)
+- HTS 9903.79.02 — Exemption: Section 232 for HTS 8471
+- HTS 9903.03.03 — Exemption: Section 122 (Annex II)
+- GRI Rule 3(b) — Classification by essential character
+- 19 U.S.C. § 1514 — CBP protest rights
+
+LESSONS LEARNED:
+L1 — HTS 8471 is FULLY EXEMPT from both Section 232 AND Section 122. Both exemptions are explicit (Annex II). Any broker applying either surcharge to complete servers under HTS 8471 is making a documented, disputable error. Dispute immediately.
+L2 — Proclamation 11002 scope is ultra-narrow. Only applies to Nvidia H100/H200, AMD MI300X class. Standard server CPUs (AMD EPYC, Intel Xeon) are definitively OUT OF SCOPE.
+L3 — ACE filing codes 9903.79.02 and 9903.03.03 MUST always be filed as secondary HTS for servers — even when exempt — to avoid CBP Fatal 771 rejection.
+L4 — DDP Global as IOR overrules broker classification decisions. Document all classification positions in writing.
+
+--------------------------------------------------------------------------------
+CASE #002 — AI Hardware EOR: USA → Istanbul, Turkey
+Export Control · ECCN 3A090 · BIS Compliance · Re-Export Risk · March 17 2026
+Quote ref: TUR-2026-17031
+--------------------------------------------------------------------------------
+Client: Mohammed Taha — Global Sales Manager, MCGlobe Ltd
+Service: EOR (Exporter of Record) + Air Freight
+Origin: USA (pickup TBC) | Destination: Istanbul Airport (IST), Turkey
+FOB total: USD 21,207.50 | Est. weight: ~110 lbs | Status: IN PROGRESS
+
+CARGO MANIFEST:
+- 2x Supermicro AS-1115HS-TNR 1U Server | HTS 8471.49 | $3,190.57/unit = $6,381.14
+- 4x AMD Instinct V80LL AI Accelerator — BIS Controlled ECCN 3A090 | HTS 8473.30 | $3,412.59/unit = $13,650.36
+- 16x 10G-SR Transceiver Optical | HTS 8517.62 | $7.50/unit = $120.00
+- 8x MMF Breakout Cable 1m | HTS 8544.42 | $60.00/unit = $480.00
+- 8x MMF Breakout Cable 2m | HTS 8544.42 | $72.00/unit = $576.00
+TOTAL FOB: $21,207.50
+
+EOR QUOTE (TUR-2026-17031):
+- EOR Fee — AI Accelerator / BIS-controlled (5% FOB / min $1,000): $1,060.38
+- BIS Compliance Review — ECCN 3A090 (flat / per shipment): $400.00
+- Customs Brokerage & Filing — Export entry, bond, FIOR — 4 HTS: $319.06
+- Domestic Pickup — Origin TBC (estimate): $455.00
+- Air Freight — USA to IST (~110 lbs, estimate): $1,072.50
+TOTAL EOR + FREIGHT (ESTIMATE): USD 3,306.94
+
+RED FLAGS & COMPLIANCE:
+CRITICAL — AMD Instinct V80LL — BIS Export Control ECCN 3A090: AI accelerator subject to BIS export controls. DDP Global is legally responsible party on export documentation as EOR. Criminal liability for violations. Compliance review mandatory before processing.
+WARNING — Turkey re-export risk to Russia: Turkey has documented history as transshipment hub for restricted technology to Russia. End User Statement must specify final physical location and end use. Screen against BIS Entity List + OFAC SDN.
+PENDING — COO not confirmed: V80LL assumed Taiwan (TSMC) — must be confirmed. Supermicro AS-1115HS-TNR may be USA or Taiwan assembled.
+PENDING — End User Statement (EUS): DDP Global AI hardware EOR protocol requires EUS before booking. Letter on company letterhead: end user legal name, full address, intended use of equipment. DO NOT PROCEED WITHOUT EUS.
+PENDING — Pickup origin not confirmed.
+
+PLAYBOOK NOTES — AI HARDWARE EOR PROTOCOL:
+- EOR Fee for AI Accelerators: Standard EOR fee 3% FOB. AI accelerators under BIS control (ECCN 3A090) carry elevated legal liability → apply 5% FOB / min $1,000. Add BIS Compliance Review flat $400/shipment.
+- EUS is non-negotiable: For any AI accelerator export, EUS must be on file before processing. Do not proceed regardless of client urgency.
+- Turkey = elevated due diligence: Always request EUS with specific physical end-user address. Screen against BIS Entity List and OFAC SDN.
+- ECCN 3A090 — AMD Instinct, NVIDIA H100/A100/H200, and similar AI accelerators. Export to D:5 countries (China, Russia, etc.) requires explicit BIS license. For most other destinations, EUS + compliance review sufficient.
+- Packing notation caution: Client notation "24 x 8x40 - 50 lbs" was initially misread as 24 units. Correct: dimensions 24"x8"x40" per box, 50 lbs per unit. Always clarify packing notation before finalizing.
+
+--------------------------------------------------------------------------------
+CASE #003 — Section 122 Surcharge vs. Dell PowerEdge R640
+Broker Dispute · HTS 8471 · Section 122 Exemption · US Inbound
+Ref: PB-S122-8471-001
+--------------------------------------------------------------------------------
+Product: Dell PowerEdge R640 (complete server)
+HTS: 8471.50.0150 | COO: Singapore | Invoice: EUR 28,500
+Erroneous duty: ~USD 3,090 (Section 122 · 10%) | Status: RESOLVED — Only MPF payable (~$107)
+
+PROBLEM:
+Broker incorrectly applied Section 122 duty (10%) to complete Dell PowerEdge R640 server under HTS 8471.50.0150.
+Broker's rationale: general 10% tariff applied to all goods. This is a factual error — HTS 8471 is explicitly exempt via Annex II.
+
+ARGUMENTS & RESOLUTION:
+- Section 122 Annex II: HTS 8471 (ADP machines — computers and servers) is EXPLICITLY listed as EXEMPT. File secondary HTS 9903.03.03. NOT ambiguous.
+- MFN rate — ITA: Singapore COO → MFN duty rate under ITA = 0% on HTS 8471.
+- Section 301 NOT applicable: Singapore is not China. Section 301 applies to Chinese-origin goods only.
+- Section 232 NOT applicable: Proclamation 11002 applies only to high-end AI chips meeting TPP/DRAM thresholds. Complete server (HTS 8471) is exempt.
+- Only payable: MPF ~$107. All other duties = $0.
+
+RESULT: USD 3,090 in erroneous Section 122 surcharge avoided.
+
+LESSONS LEARNED:
+L1 — Broker quoting Section 122 on HTS 8471 is ALWAYS an error. Not a gray area. HTS 8471 is explicitly in Annex II. Dispute immediately. Secondary HTS must be 9903.03.03.
+L2 — Complete server vs. component distinction: Section 232 applies to components (chips, TPP>14k, DRAM>4,500 GB/s), NOT to complete ADP machines classified under HTS 8471.
+L3 — Check ALL tariff layers on every server entry: (1) MFN rate, (2) Section 301 (China COO?), (3) Section 122 — file 9903.03.03, (4) Section 232 — file 9903.79.02. All four layers must be evaluated independently.
+L4 — Protest timeline: PSC (Post Summary Correction) within 15 days of filing, or formal protest under 19 U.S.C. § 1514 within 180 days of liquidation.
+
+--------------------------------------------------------------------------------
+CASE #004 — Multi-HS Split: Patchbox.one Datacenter Cabling
+Argentina IOR · HTS 8473 vs 8544 · Duty Optimization · March 2026
+--------------------------------------------------------------------------------
+Client: Vitco S.R.L.
+Product: Patchbox.one structured cabling system (datacenter)
+Route: Miami, FL → Buenos Aires (EZE), Argentina
+Service: IOR (Importer of Record) — Argentina | Status: RESOLVED — USD 1,050.30 saved
+
+THE SPLIT STRATEGY:
+Patchbox.one system contains products under TWO distinct Argentine HTS categories with dramatically different duty rates.
+Competitors applied higher rate across full FOB value. DDP Global correctly split packing list by product type.
+
+PRODUCT SPLIT:
+- Frames & Patch Panels (PONEFRAME, PONE30UTP, PONE30OS2) → HTS 8473.30.80 → 0% duties
+- Cassettes & Cables (CONE30UTP, CONE30OS2, cabling assemblies) → HTS 8544.42.90 → 16% duties
+
+DUTY COMPARISON:
+- Competitor approach (100% at 16%): Full FOB at 16%
+- DDP Global split (57.5% at 0% / 42.5% at 16%): Only cable portion at 16%
+- SAVINGS: USD 1,050.30 — achieved with ZERO reduction in DDP Global service fees
+
+RESULT: USD 1,050.30 saved vs. competitor quotes. Savings achieved purely through correct multi-HS classification. Positioned as competitive differentiator based on tariff intelligence, not price discounting.
+
+LESSONS LEARNED:
+L1 — Always request full packing list for mixed IT shipments. Any shipment combining frames/panels (8473) with cables/cassettes (8544) must be split.
+L2 — The 8473 vs 8544 split is the CORE datacenter cabling rule for Argentina. Applies to Patchbox, Panduit, Legrand, CommScope, Belden, etc. Frames/patch panels/server accessories = 8473.30 (0%). Cables and cassettes = 8544.42 (16%).
+L3 — Savings without discounting = premium positioning. DDP Global charges full service fees while delivering lower landed costs. Tariff intelligence as value-add, not fee reduction.
+L4 — Cross-applicable to any mixed HTS shipment combining 8471/8473 (servers, PCs, parts) with 8544 (cables) or 8517 (telecom).
+
+--------------------------------------------------------------------------------
+ADDITIONAL PLAYBOOKS — AI HARDWARE LOGISTICS FRAMEWORK
+--------------------------------------------------------------------------------
+
+CORE PLAYBOOK — AI HARDWARE LOGISTICS METHODOLOGY:
+Flow: (1) HS Classification → (2) ECCN Classification → (3) Compliance Screening (EAR/OFAC/BIS) → (4) Risk Identification → (5) Routing Strategy → (6) Cost Structure (Freight + IOR + Duties + Margin) → (7) Execution Plan
+Key value: Transforms logistics into compliance-driven advisory.
+
+PLAYBOOK — LARGE SCALE DC PROJECT (TESLA/UPSTAK):
+Type: Large-scale deployment | Value: ~USD 12.5M | HS: 8473.30 (China origin)
+Key points: Section 301 duties ~25%, possible Section 122 exposure, hybrid logistics strategy (Air + Ocean).
+Lesson: Strategic planning is critical for large deployments. Evaluate tariff exposure before committing to routing.
+
+PLAYBOOK — EOR AI HARDWARE (UK):
+Product: H100 GPU Server | Destination: United Kingdom | ECCN: 3A090 | UK = Tier 1 (no license required)
+Lesson: Not all AI hardware requires complex licensing. Always determine destination tier before escalating compliance.
+
+PLAYBOOK — HS CODE ERROR (ARGENTINA):
+Product: HP EliteDesk | Error: Used HS 8517 instead of HS 8471 | Impact: Higher taxes applied
+Lesson: Always validate HS code vs actual product description. 8517 = telecom/networking. 8471 = computers/servers. Misclassification is common and costly in Argentina.
+
+================================================================================
+END OF PLAYBOOKS MASTER | DDP Global Intelligence System | Abril 2026
+================================================================================
+`;
+
 // ── KB EXTERNA — COMPLIANCE & CASES MASTER ─────────────
 // Fuente: REG_DB_Master + CASE_DB_Master | Abril 2026
 // REGLA: No editar manualmente — actualizar desde Drive
@@ -7623,6 +7826,7 @@ function getKBContext(){
     const avgFob = data.fobs.length ? Math.round(data.fobs.reduce((a,b)=>a+b,0)/data.fobs.length) : 0;
     ctx += `  - ${prod}: ${data.count} envíos, FOB prom $${avgFob.toLocaleString()}, destinos: ${[...data.dests].join('/')}, HS: ${data.hs}\n`;
   });
+  ctx += KB_EXTERNAL_PLAYBOOKS;
   ctx += KB_EXTERNAL_COMPLIANCE;
   ctx += KB_EXTERNAL_RATES;
   return ctx;
