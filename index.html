@@ -1452,6 +1452,153 @@ function saveLog(arr){localStorage.setItem('ddp_log',JSON.stringify(arr));kvSync
 // ════════════════════════════════════════════════════════
 
 
+// ── KB EXTERNA — PLAYBOOKS V2 MASTER ───────────────────
+// Fuente: PLAYBOOK_DB_MASTER_SYNC4.txt | Mayo 2026 | 18 registros
+// REGLA: No editar manualmente — actualizar desde Drive
+const KB_EXTERNAL_PLAYBOOKS_V2 = `
+================================================================================
+DDP GLOBAL — PLAYBOOK_DB MASTER
+Knowledge Base Operacional | 18 Playbooks | Mayo 2026
+================================================================================
+
+PLAYBOOK PB-BRAZIL-DUAL-DELIVERY-001 | Doble shipment mismo destino | HS 8517 | Brazil IOR
+Producto: Optical modules + Amplifiers + Line Cards | Origen: USA (California) | Destino: 2 dirs Rio de Janeiro Brazil
+FOB c/u: $57,055.64 | FOB total: $114,111.28 | Peso: 10 lbs | Transit: 21 días | Riesgo: MEDIUM-HIGH
+CARGO: Line Cards telecom (COO Italy), Optical modules QSFP28 (COO China/Malaysia), EDFA Amplifiers (COO Italy/Thailand), WDM optical modules (COO Malaysia), QSFP-DD transceivers (COO China). Todos HS 8517.62.
+COTIZACIÓN POR SHIPMENT: FOB Charges 1.0% ($270 mín) = $1,141 | Flete $3.76/lbs = $350 | Seguro 1.0% CIF = $1,156 | Destination Svc 2.0% = $2,312 | Import License 2.0% = $2,312 | Subtotal servicios: $7,271
+DUTIES & TAXES BRAZIL HS 8517.62: II 16% = $18,497 | IPI 15% = $20,115 | PIS 2.1% = $3,239 | COFINS 9.65% = $14,882 | ICMS 18% = $25,437 | Total D&T: $82,170 | TOTAL DDP por shipment: $44,720 | TOTAL ambos: $89,441
+NOTA CRÍTICA: Brazil requiere advance payment de duties antes de clearance. $82,170 en advance payment requerido. Siempre comunicar antes de confirmar.
+LECCIONES: L1: Clarificar desde inicio si precio es por shipment o por total. L2: Dos shipments con dos direcciones = dos cotizaciones separadas. L3: Siempre advertir advance payment Brazil antes de recibir PO. L4: Deals técnicos complejos toman tiempo — este tomó 4 meses. L5: Aduana Brazil prácticamente cerrada semana Navidad y Año Nuevo.
+
+PLAYBOOK PB-CDN-MULTISITE-001 | Proyecto CDN multi-país | Infrastructure deployment | China→LATAM 9 países | FOB ~$13.3M
+PAÍSES: Peru $3.07M→$583K | Colombia $2.71M→$533K | Argentina $1.98M→$657K | Chile $1.19M→$364K | Guatemala $1.13M→$222K | Dom.Rep. $1.10M→$283K | Bolivia $1.08M→$340K | Ecuador $0.96M→$458K | Costa Rica $0.10M→$22K
+COSTOS CHINA→LATAM: FOB Charges 1.0% | EOR 1.5% (SIEMPRE requerido China) | Flete $11/kg | Seguro 1.0% CIF | Dest.Services 0.95% | Import License 1.0%
+DUTIES POR PAÍS: Peru 5%+VAT18% | Colombia 5%+VAT19% | Argentina 8%+Estadística2.5%+IVA10.5%+Ganancias6%+IIBB3%+IVAad10% | Chile 6%+VAT19% | Guatemala 0%+VAT12% | Dom.Rep. 0%+VAT18% | Bolivia 10%+VAT15% | Costa Rica 0%+VAT14% | Ecuador 25.5%+VAT15%
+NOTA: Argentina Duties 8% = SERVERS HS 8471 — no confundir con 16% standard. Ecuador 25.5% = más alto del grupo.
+ESTRATEGIA: Países complejos aceptar margen reducido si cliente adjudica todo. Descuento 30% solo si adjudicación completa.
+LECCIONES: L1: Cotizar el conjunto, nunca mostrar desglose por país al cliente. L2: EOR obligatorio China 1.5%/mín $550. L3: Argentina cascada 6 impuestos = total más alto aunque FOB sea menor. L4: Mixed HS datacenter — split: Servers 8471, Switches 8517.62, Cables 8544, PDU 8536.
+
+PLAYBOOK PB-EOR-H100-UK-001 | EOR Controlled AI Hardware | USA (GA)→UK (LHR)
+Producto: HPE Cray XD670 AI/HPC Server | Valor: USD 155,000 | Peso: ~235 lbs | Condición: Used | Consignee: Amodo Design Ltd. UK
+ECCN: Inicial 5A992.c (incorrecto) → Final 3A090 (correcto) | HS: 8471.50.00 | COO: Czech Republic | End use: Internal R&D + AI-related.
+ESTRUCTURA EOR: USPPI: DDP Business Group LLC | Forwarder: ShipRoad | AES Filing: Forwarder (autorizado por SLI)
+EOR FEE AI HARDWARE (ECCN 3A090): 5% FOB / mín $1,000 + BIS Compliance Review $400/shipment. Fee FLAT por operación — no escala por unidades mismo shipment. 1x H100 = $4,950 | 3x H100 mismo shipment = $4,950 | 3x shipments separados = $4,950 x 3.
+UK = Tier 1: No requiere export license para H100. EUS siempre requerido igualmente.
+CHECKLIST AI HARDWARE: ECCN confirmado por fabricante | Invoice completa | EUS con end use claro | Serial numbers | Fotos labels | SLI validado | AES controlado | ITN confirmado | AWB revisado.
+LECCIONES: L1: ECCN siempre se cuestiona en AI hardware — cliente no siempre tiene clasificación correcta. L2: Fotos labels = estándar. L3: USPPI implica responsabilidad real. L4: Costo compliance no escala linealmente.
+
+PLAYBOOK PB-CHINA-LATAM-EOR-001 | Costos referencia China→LATAM con EOR | Basado en proyecto ~$13M FOB
+ESTRUCTURA DE COSTOS: FOB Charges 1.0% (mín $370-530) | EOR 1.5% (mín $450-550) | Flete aéreo $11/kg (mín $450-650) | Seguro 1.0% CIF | Dest.Services 0.95% (mín $600-700) | Import License 1.0% (mín $550-750)
+TRANSIT TIMES DESDE CHINA: Costa Rica/Dom.Rep. 8 días | Ecuador/Guatemala/Peru 9-10 días | Bolivia 15 días | Colombia/Argentina 18 días | Chile 20 días
+REGLA: EOR siempre requerido cuando origen es China. No opcional.
+LECCIONES: L1: China cotiza en $/kg (no $/lbs como USA). L2: Transit varía enormemente. L3: En shipments pequeños los mínimos son el costo real.
+
+PLAYBOOK PB-IOR-LATAM-LOWVALUE-001 | IOR doble destino LATAM — producto no-IT / bajo valor
+Producto: Pulseras/Bracelets plata | HS 7113.11.5000 | Argentina (15u/$15) + Brazil (10u/$10) | IOR Fee: $400 ARG / $500 BRA flat mínimo
+WAREHOUSE MIAMI: DDP Business Group LLC, 8311 NW 68 Street, Miami FL 33166 | Ph: 305 922 7276
+HS CODES: Printed materials/brochures 4901.99.0040 | Backpack/tote bag 4202.92.3120 | Bracelet/jewelry 7113.11.5000
+LECCIONES: L1: Clientes IT también mandan no-IT. Aceptar si fee mínimo cubierto. L2: Verificar valor declarado cuando parece anormalmente bajo. L3: Fee mínimo flat para bajo valor. L4: UPS Ground al warehouse más económico que pickup. L5: Warehouse Miami = hub crítico.
+
+PLAYBOOK PB-MEX-EOR-SATCOM-001 | EOR México→USA | Equipo satelital controlado | Importación temporal retorno
+Producto: Hughes Network RCU OneWeb Final Assembly | HS 9801.00.1012 (Temp Import) | ECCN 5A002 ENC exemption | COO: USA (retorno)
+Origen: Jocotitlán Estado de México | Destino: BWI Airport USA | Valor: $24,124
+HS 9801.00.1012: Mercancía americana que regresa a USA. Duties = solo sobre valor agregado en exterior. En este caso: $60.
+ECCN 5A002: Telecom con encriptación. License Exemption ENC — verificar explícitamente, nunca asumir automática.
+ESTRUCTURA COSTOS AGENTE MEX: Broker $400 | Duties $60 | Terminal $150 | Airport $150 | Recolección $100 | Handling $150 | Comercializadora $500 | Flete $549 | Factura Exportación $3,860 — EL MAYOR | TOTAL: $5,918
+FACTURA EXPORTACIÓN MÉXICO: ~$3,800-4,000 para equipos alto valor. NUNCA subestimar al cotizar salidas desde México.
+LECCIONES: L1: HS 9801 = retorno USA, duties mínimos. L2: Factura exportación México es el costo mayor. L3: ECCN 5A002 requiere review explícito. L4: Nunca confirmar pickup sin docs completos. L5: Agentes Medio Oriente — verificar OFAC y Entity List.
+
+PLAYBOOK PB-IOR-USA-005 | Importación aérea USA | Cargo retenido por cargo pendiente aerolínea
+AWB: 074-05149524 | Miami | Driver detenido en airline por $205 import service fee
+COSTOS AEROLÍNEA MIAMI: Import Service Fee ~$205/shipment | Storage ~$205/2 días. Se activan cuando driver no retira en tiempo, cargos pendientes, falta arrival notice.
+LECCIONES: L1: Solicitar arrival notice de aerolínea ANTES de enviar driver. L2: No despachar driver sin validar cargos. L3: AWB debe incluir notify party claro. L4: Checklist interno: AWB recibido, arrival notice, cargos confirmados, payment listo, broker informado, driver liberado.
+
+PLAYBOOK PB-MALAYSIA-SG-001 | DDP Singapore→Malaysia | Networking equipment | 2 datacenters Cyberjaya (NTT + Equinix)
+Producto: Arista switches + DCS switches | HS 8517.62 | FOB $7,049 | 35kg | Transit 14 días | Riesgo MEDIUM (SIRIM requerido)
+COSTOS SG→MY: FOB Charges 1.0% | EOR 3.0% | Flete $7.00/lbs | Seguro 1.0% | Dest.Services 3.0% | Import License 6.0% | SIRIM ~$450 flat
+DUTIES MALAYSIA: Duties ~15-20% | SST 10% | SIRIM obligatorio — sin SIRIM equipo retenido en customs.
+LECCIONES: L1: SIRIM = ANATEL de Malaysia. Incluir $400-500 en toda cotización networking Malaysia. L2: SG→MY parece simple pero es caro: SIRIM + IOR + manejo local. L3: 2 addresses = 1 importación + distribución local. L4: Cuando costo real no da margen para descuento — decirlo directamente.
+
+PLAYBOOK PB-MEX-NVMe-SSD-001 | IOR México — Storage alto valor | Estrategia adquisición cliente
+Producto: 16x Micron Enterprise NVMe SSD | FOB $80,000 | HS 8471.70 | COO Malaysia | Destino: KIO MEX1 Datacenter CDMX | Peso: ~10 lbs | Total DDP: $18,242
+COTIZACIÓN: FOB Charges $1,200 | Flete $350 | Seguro $803 | Dest.Services $2,029 | Import License: WAIVED (estratégico) | DTA 0.93% + IVA 16% = $13,860
+HS 8471.70 MÉXICO: 0% duties bajo ITA. COO Malaysia → no hay Section 301.
+WAIVER ESTRATÉGICO: Import License ($860) waiviado para ganar cliente nuevo. Waiver = inversión en relación, no descuento por presión.
+KIO MEX1: KIO Networks = principal operador datacenters México. Tier III. Cliente KIO = empresa tech seria con proyectos recurrentes.
+LECCIONES: L1: Diferencia entre waiver estratégico y descuento por presión. L2: México = straightforward, ideal primer proyecto cliente nuevo. L3: NVMe SSD = ratio valor/peso muy alto ($80K en 10 lbs). L4: Cargo en USA = sin EOR, solo IOR + entrega.
+
+PLAYBOOK PB-MEX-STUCK-CUSTOMS-001 | Crisis — carga atascada customs México + cambio consignee
+Producto: EMC Unity480 Storage Processor + BBU Battery | HS 8471.49 | Origen: Miami | Destino: Mérida Yucatán | FOB $3,750
+SITUACIÓN: Carga retenida aduana México. Cliente solicita cambio consignee. Cambio con carga retenida = MUY COMPLEJO.
+SOLUCIÓN: Retorno al origen (USA) → warehouse Miami → IOR correcto → reenvío México como DDP completo.
+NOM MÉXICO: NOM-019-SCFI aplica equipos información y telecomunicaciones. Sin NOM compliance → retención indefinida. Verificar antes de cotizar — agente local debe confirmar.
+COTIZACIÓN MEX: FOB Charges $270 | Flete $350 | Seguro $80 | Dest.Services $200 | Import License $200 | DTA $38.87 | IVA $675.02 | TOTAL DDP: $1,813.89
+LECCIONES: L1: Cambio consignee en customs México = solución correcta es retornar y reimportar. L2: NOM = ANATEL de México. L3: Warehouse Miami permite recibir retornos y ofrecer solución completa. L4: Siempre pedir commercial invoice antes de evaluar opciones. L5: Urgencia del cliente = oportunidad. L6: Mérida ≠ CDMX — verificar broker local en Yucatán.
+
+PLAYBOOK PB-MIXED-HS-DATACENTER-001 | Clasificación arancelaria multi-HS en datacenter completo | China→LATAM
+CLASIFICACIÓN CORRECTA: SERVERS HS 8471.49 → 0% duties Guatemala/Dom.Rep./Costa Rica/Colombia | 8% Argentina | SWITCHES HS 8517.62 → tasa standard por país — Argentina 16%, Colombia 5% | CABLES AOC/DAC HS 8544.42 → tasa diferente | PDU/rPDU HS 8536.69 → tasa propia | LOCKBOX/MISC HS 9403 → generalmente baja
+ERROR COMÚN: aplicar un solo HS code a todo el shipment. EJEMPLO: Argentina $1.98M FOB — servers a 16% = $316K vs correcto 8% = $158K → $158K diferencia.
+PROCESO: (1) Separar packing list por categoría (2) HS code correcto a cada una (3) Calcular duties por categoría (4) Sumar total correcto.
+LECCIONES: L1: Siempre pedir packing list completo antes de cotizar cualquier datacenter. L2: Servers HS 8471 tienen duties menores que networking HS 8517. L3: Cables HS 8544 siempre tienen tasa distinta — nunca asumir.
+
+PLAYBOOK PB-MULTISITE-001 | Multi-destino simultáneo — White Glove | 2U Server ~150 lbs ~$50K/unit | Origen USA interior
+DESTINOS: Mexico City $12,077 (HS 8471, 0% duties, DTA 0.93%+IVA 16%) | Stockholm $16,537 (EU 0% duties, VAT 25%) | Tel Aviv $26,442 ZONA CONFLICTO ACTIVO | Mumbai $26,946 (BCD+GST 18%) | Luxembourg en proceso (EU 0%, VAT 17%) | + 4 destinos USA (Austin/Chicago/NYC/Scottsdale)
+ISRAEL: Verificar operatividad TLV. Seguro con sobrecosto bélico. Posible demora customs security screening. Mencionar proactivamente.
+INDIA: BCD + GST 18% + documentación extensa. Transit 14-21 días.
+LECCIONES: L1: Diferencial = poder cotizar Israel+India+Luxembourg+Mexico en un solo email. L2: Mencionar riesgos operacionales antes de que cliente pregunte — posiciona como experto. L3: Origen no-Miami requiere cotizar pickup doméstico adicional.
+
+PLAYBOOK PB-UK-EXPRESS-SFP-001 | Shipment express urgente USA→UK | Optical transceivers | Enero 2026
+Producto: Cisco SFP-10G-LR (256u) + SFP-10/25G-LR-S (320u) | HS 8517.62 | Origen: Fremont CA→depot SFO→UK | Destino: Kings Cross London
+FOB ~$84,904 | 160 lbs | Transit 6-8 días
+COTIZACIÓN UK: FOB Charges $849 | Flete express $480 | Seguro $862 | Dest.Services $1,725 | Import License $1,725 | Duties 0% (ITA) | VAT 20% = $17,248 | TOTAL DDP: $22,889
+UK POST-BREXIT: 0% duties IT hardware bajo UK-DCTS. Solo VAT 20%. No hay Section 122 ni 301.
+DEPOT SFO: Scan Global Logistics, 219 Shaw Rd, San Francisco CA 94080. Para shipments urgentes desde ubicaciones interiores.
+NOTA KINGS CROSS: Restricciones vehiculares. Confirmar ventana entrega. Tail lift y pallet truck = costo adicional.
+LECCIONES: L1: UK = 0% duties + 20% VAT. Destino simple. L2: Express (5-6 días) vs estándar (8 días) — diferencia mínima en precio. L3: Si cliente remueve productos del BOM, requotear inmediatamente. L4: Preguntar si requieren tail lift antes de booking UK.
+
+PLAYBOOK PB-YUBIKEY-INDIA-001 | IOR Security hardware | USA→India
+Producto: YubiKey 5 NFC (150u) | FOB $43.89/u = $6,583.50 | Destino: SP Infocity Gurugram Haryana India | Transit 14 días
+COTIZACIÓN: FOB Charges $270 | Flete $450 | Seguro $80 | Dest.Services $600 | Import License $860 | BIS Restriction flat $500 | Total servicios: $2,760
+DUTIES INDIA: BCD 20% = $1,421 | Social Welfare Cess 10% sobre BCD = $142 | GST 18% = $1,560 | Total D&T: $3,123 | TOTAL DDP: $5,883
+NOTA INDIA: Cess es 10% sobre BCD — NO sobre CIF. Error común. BIS Restriction $500 flat = security hardware con dual-use.
+COMPARATIVA: Colombia mismo FOB → $3,597 (10 días) vs India $5,883 (14 días) = +$2,286. Razón: BCD 20% India vs Duties 5% Colombia + BIS $500.
+LECCIONES: L1: Confirmar país destino antes de cotizar. L2: Security hardware (YubiKey, tokens, HSM) → BIS restriction $500 flat. L3: India 3 capas: BCD + Cess (sobre BCD) + GST — no confundir base de cálculo. L4: Tech parks India = destinos frecuentes security hardware.
+
+PLAYBOOK PB-S122-HS8517-001 | USA IOR — Section 122 aplicación HS 8517 networking | Taiwan→USA
+REGLA: HS 8471 (servers/computers) → EXENTO S122 | HS 8517 (networking/telecom) → APLICA S122 10%
+CÁLCULO HS 8517.6990 Taiwan: MFN 0% (ITA) + Section 122 10% + Section 301 0% (Taiwan≠China) + MPF 0.3464% = ~10.35% | ACE filing: 9903.03.01
+MISMO PRODUCTO CHINA ORIGEN: MFN 0% + Section 122 10% + Section 301 25% = ~35% + MPF
+EXENTOS S122 confirmados: Servers HS 8471 | Laptops HS 8471.30 | Smartphones | Memory chips | Flat panels | Storage
+NO EXENTOS: Networking HS 8517.6990 | Firewalls/routers/switches | Optical transceivers HS 8517.62
+CRÍTICO: Section 122 VENCE 24 JULIO 2026. Shipments entrada después → 0% (solo MPF). Para tránsito largo calcular fecha entrada vs vencimiento.
+LECCIONES: L1: HS 8471 exento ≠ HS 8517 exento. Verificar código exacto en Annex II. L2: S122 vence 24 julio 2026 — calcular para tránsito largo. L3: COO Taiwan 0% Section 301. COO China +25%.
+
+PLAYBOOK PB-EOR-TURKEY-001 | EOR Controlled Export ECCN 3A090 | USA→Istanbul Turkey | Quote ref TUR-2026-17031
+Producto: AMD Instinct V80LL AI Accelerator (4x) + Supermicro AS-1115HS-TNR (2x) | Cliente: Mohammed Taha — MCGlobe Ltd
+FOB $21,207.50 | ~110 lbs | Status: IN PROGRESS — Awaiting EUS
+CARGO: Supermicro (2x) HS 8471.49 | AMD Instinct V80LL ECCN 3A090 (4x) HS 8473.30 | 10G-SR Transceiver (16x) HS 8517.62 | MMF Cable (16x) HS 8544.42
+EOR QUOTE: EOR Fee 5% = $1,060 | BIS Compliance $400 | Brokerage $319 | Pickup $455 | Freight $1,073 | TOTAL: $3,307
+RED FLAGS: AMD V80LL ECCN 3A090 — responsabilidad legal DDP Global como EOR. Turkey = hub re-export a Russia. EUS solicitado — no recibido — NO PROCEDER. COO no confirmado.
+LECCIONES: L1: EOR fee 5% para AI accelerators BIS + $400 BIS Compliance. L2: EUS non-negotiable. L3: Turkey due diligence elevado. L4: Packing notation "24x8x40 - 50 lbs" = dimensiones no cantidad.
+
+PLAYBOOK PB-EOR-MULTISITE-TW-005 | EOR + DDP + Multi-Origin Air | Networking + transceivers | Status: CERRADO
+Origen: Fremont USA ($95,566/60 lbs/14 días) + Singapore ($5,277/10 lbs/10 días) | Destino: New Taipei City Taiwan
+COTIZACIÓN USA→TW: $21,017 total | COTIZACIÓN SG→TW: $3,628 total
+DUTIES TAIWAN: Derechos importación 10% sobre CIF | VAT 5% sobre base imponible.
+LECCIONES: L1: Costo logístico en IT hardware determinado por FOB, no por peso. L2: Usar mínimos operativos en bajo peso/alto valor. L3: Orígenes distintos = estructuras de costos distintas. L4: Multi-origin evita subsidios cruzados. L5: Consistencia en documentación es clave.
+
+PLAYBOOK PB-IOR-MYS-006 | IOR + SIRIM | Malaysia | Infinity Band Switch HS 8517.62
+Origen: San Jose USA / Tainan Taiwan | Destino: Penang Malaysia | FOB $165,620 | 382 lbs | Riesgo HIGH
+COTIZACIÓN: Destination $660 | SIRIM $600 | VAT 5% ~$5,294 | Disbursement 5% sobre VAT $265 | IOR 4% $6,625 | TOTAL $13,443 (~8.1% FOB)
+DUTIES MALAYSIA HS 8517.62: Import Duty 0% | SST 5% sobre CIF | SIRIM obligatoria | Disbursement ~5% sobre impuestos adelantados.
+ECCN sensible: posible 5A002 (encriptación). Si 5A002 → exportar desde USA más seguro que Taiwan.
+LECCIONES: L1: ECCN define origen de exportación — 5A002 desde USA más seguro. L2: SIRIM bloqueante — sin datasheet técnico no se procesa. L3: Confirmar modelo exacto antes de cotizar. L4: Estructura típica Malaysia: 0% duty + 5% VAT + SIRIM + IOR 4-5%. L5: Multi-origin aumenta riesgo — evaluar consolidar si hay riesgo ECCN.
+
+================================================================================
+PLAYBOOK_DB — 18 registros | DDP Global Intelligence System | Mayo 2026
+================================================================================
+`;
+
 // ── KB EXTERNA — PLAYBOOKS MASTER ──────────────────────
 // Fuente: PLAYBOOK_CLAUDE_Master + PLAYBOOK_GPT_Master | Abril 2026
 // REGLA: No editar manualmente — actualizar desde Drive
@@ -7826,6 +7973,7 @@ function getKBContext(){
     const avgFob = data.fobs.length ? Math.round(data.fobs.reduce((a,b)=>a+b,0)/data.fobs.length) : 0;
     ctx += `  - ${prod}: ${data.count} envíos, FOB prom $${avgFob.toLocaleString()}, destinos: ${[...data.dests].join('/')}, HS: ${data.hs}\n`;
   });
+  ctx += KB_EXTERNAL_PLAYBOOKS_V2;
   ctx += KB_EXTERNAL_PLAYBOOKS;
   ctx += KB_EXTERNAL_COMPLIANCE;
   ctx += KB_EXTERNAL_RATES;
