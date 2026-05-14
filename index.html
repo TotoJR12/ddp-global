@@ -3181,21 +3181,21 @@ function calcQuote(ct, fob, lbs, coo, fo, product, hs, type){
   }
   if(ct==="singapore"){
     const fc=mx(fob*.015,270),fr=mx(lbs*9.68,550),ins=mx((fob+fr)*.01,80),cif=fob+fr+ins;
-    const ds=mx(cif*.02,600),ior=mx(cif*.06,860),tx=sgpTax(cif);
-    return{li:[["FOB Charges","1.5% / min $270",fc],["Freight (Air →SIN)","$9.68/lb / min $550",fr],["Insurance","1% CIF",ins],["Destination Services","2% CIF / min $600",ds],["Import License (IOR)","6% CIF / min $860",ior]],
-      tx:[["Duties (0%)",0],["GST (9%)",tx.v]],tt:tx.t,tot:fc+fr+ins+ds+ior+tx.t,cif,tr:"14 Days"};
+    const ds=mx(cif*.02,600),ior=mx(cif*.03,860),tx=sgpTax(cif);
+    return{li:[["FOB Charges","1.5% / min $270",fc],["Freight (Air →SIN)","$9.68/lb / min $550",fr],["Insurance","1% CIF",ins],["Destination Services","2% CIF / min $600",ds],["Import License (IOR)","3% CIF / min $860",ior]],
+      tx:[["Duties (0%)",0],["GST (9%)",tx.v]],tt:tx.t,tot:fc+fr+ins+ds+ior+tx.t,cif,tr:"10 Days"};
   }
   if(ct==="japan"){
-    const fc=mx(fob*.015,270),fr=mx(lbs*11.00,350),ins=mx((fob+fr)*.01,80),cif=fob+fr+ins;
-    const ds=mx(cif*.02,500),ior=mx(cif*.08,1700),tx=jpnTax(cif);
-    return{li:[["FOB Charges","1.5% / min $270",fc],["Freight (Air →NRT)","$11.00/lb / min $350",fr],["Insurance","1% CIF",ins],["Destination Services","2% CIF / min $500",ds],["Import License (IOR)","8% CIF / min $1,700",ior]],
-      tx:[["Duties (5%)",tx.d],["Consumption Tax (10%)",tx.v]],tt:tx.t,tot:fc+fr+ins+ds+ior+tx.t,cif,tr:"15-20 Days"};
+    const fc=mx(fob*.015,270),fr=mx(lbs*9.68,350),ins=mx((fob+fr)*.01,80),cif=fob+fr+ins;
+    const ds=mx(cif*.02,500),ior=mx(cif*.04,860),tx=jpnTax(cif);
+    return{li:[["FOB Charges","1.5% / min $270",fc],["Freight (Air →NRT)","$9.68/lb / min $350",fr],["Insurance","1% CIF",ins],["Destination Services","2% CIF / min $500",ds],["Import License (IOR)","4% CIF / min $860",ior]],
+      tx:[["Duties (0%)",tx.d],["Consumption Tax (10%)",tx.v]],tt:tx.t,tot:fc+fr+ins+ds+ior+tx.t,cif,tr:"14 Days"};
   }
   if(ct==="australia"){
     const fc=mx(fob*.015,270),fr=mx(lbs*12.00,550),ins=mx((fob+fr)*.01,80),cif=fob+fr+ins;
-    const ds=mx(cif*.02,500),ior=mx(cif*.07,850),tx=ausTax(cif);
-    return{li:[["FOB Charges","1.5% / min $270",fc],["Freight (Air →SYD/MEL)","$12.00/lb / min $550",fr],["Insurance","1% CIF",ins],["Destination Services","2% CIF / min $500",ds],["Import License (IOR)","7% CIF / min $850",ior]],
-      tx:[["Duties (0%)",0],["GST (10%)",tx.v]],tt:tx.t,tot:fc+fr+ins+ds+ior+tx.t,cif,tr:"14-16 Days"};
+    const ds=mx(cif*.02,500),ior=mx(cif*.03,860),tx=ausTax(cif);
+    return{li:[["FOB Charges","1.5% / min $270",fc],["Freight (Air →SYD)","$12.00/lb / min $550",fr],["Insurance","1% CIF",ins],["Destination Services","2% CIF / min $500",ds],["Import License (IOR)","3% CIF / min $860",ior]],
+      tx:[["Duties (0%)",0],["GST (10%)",tx.v]],tt:tx.t,tot:fc+fr+ins+ds+ior+tx.t,cif,tr:"14 Days"};
   }
   if(ct==="canada"){
     const fc=mx(fob*.015,270),fr=mx(lbs*1.37,350),ins=mx((fob+fr)*.01,80),cif=fob+fr+ins;
@@ -3246,16 +3246,16 @@ function calcQuote(ct, fob, lbs, coo, fo, product, hs, type){
     ukraine:{fr:7.93,d:.10,v:.20,ior:.04,ds:.02,tr:"10 Days",ap:"KBP"},
     morocco:{fr:9.02,d:.03,v:.20,ior:.03,ds:.02,tr:"14 Days",ap:"CMN"},
     tunisia:{fr:9.02,d:.39,v:.20,ior:.08,ds:.03,tr:"22 Days",ap:"TUN"},
-    newzealand:{fr:12.0,d:.01,v:.15,ior:.08,ds:.02,tr:"14-16 Days",ap:"AKL"},
-    southkorea:{fr:9.68,d:.10,v:.05,ior:.06,ds:.02,tr:"14 Days",ap:"ICN"},
-    taiwan:{fr:9.68,d:.00,v:.10,ior:.10,ds:.02,tr:"14 Days",ap:"TPE"},
+    newzealand:{fr:12.0,d:.00,v:.15,ior:.03,ds:.02,tr:"14-16 Days",ap:"AKL"},
+    southkorea:{fr:9.68,d:.00,v:.10,ior:.04,ds:.02,tr:"14 Days",ap:"ICN"},
+    taiwan:{fr:9.68,d:.00,v:.05,ior:.05,ds:.02,tr:"14 Days",ap:"TPE"},
     hongkong:{fr:9.68,d:.00,v:.00,ior:.03,ds:.02,tr:"14 Days",ap:"HKG"},
-    china:{fr:9.68,d:.13,v:.13,ior:.06,ds:.02,tr:"14 Days",ap:"PVG"},
-    malaysia:{fr:9.68,d:.20,v:.07,ior:.06,ds:.02,tr:"14 Days",ap:"KUL"},
-    thailand:{fr:9.68,d:.07,v:.07,ior:.06,ds:.02,tr:"14-18 Days",ap:"BKK"},
+    china:{fr:9.68,d:.00,v:.13,ior:.05,ds:.02,tr:"14 Days",ap:"PVG"},
+    malaysia:{fr:9.68,d:.00,v:.05,ior:.05,ds:.02,tr:"14 Days",ap:"KUL"},
+    thailand:{fr:9.68,d:.00,v:.07,ior:.05,ds:.02,tr:"14-18 Days",ap:"BKK"},
     vietnam:{fr:9.68,d:.00,v:.10,ior:.06,ds:.02,tr:"14-16 Days",ap:"SGN"},
-    philippines:{fr:9.68,d:.14,v:.12,ior:.06,ds:.02,tr:"14 Days",ap:"MNL"},
-    indonesia:{fr:9.68,d:.175,v:.11,ior:.06,ds:.02,tr:"14-18 Days",ap:"CGK"},
+    philippines:{fr:9.68,d:.00,v:.12,ior:.05,ds:.02,tr:"14 Days",ap:"MNL"},
+    indonesia:{fr:9.68,d:.10,v:.145,ior:.07,ds:.02,tr:"14-18 Days",ap:"CGK"},
     bangladesh:{fr:9.68,d:.10,v:.15,ior:.08,ds:.02,tr:"14 Days",ap:"DAC"},
     pakistan:{fr:9.68,d:.03,v:.18,ior:.08,ds:.02,tr:"14 Days",ap:"KHI"},
     kazakhstan:{fr:9.68,d:.00,v:.12,ior:.12,ds:.02,tr:"14 Days",ap:"ALA"},
@@ -5177,7 +5177,7 @@ function runFromAI() {
   // Ensure minimum weight per item
   d.items.forEach(it => { if (!it.weightLbs || it.weightLbs < 1) it.weightLbs = 5; });
 
-  const destMap = { brazil:"brazil", mexico:"mexico", argentina:"argentina", colombia:"colombia", chile:"chile", peru:"peru", ecuador:"ecuador", costarica:"costarica", panama:"panama", domrep:"domrep", guatemala:"guatemala", honduras:"honduras", bolivia:"bolivia", paraguay:"paraguay", uruguay:"uruguay", dubai:"dubai", qatar:"qatar", saudiarabia:"saudiarabia", bahrain:"bahrain", israel:"israel", uk:"uk", spain:"spain", france:"france", germany:"germany", netherlands:"netherlands", turkey:"turkey", india:"india", singapore:"singapore", japan:"japan", australia:"australia", canada:"canada", usa:"usa" };
+  const destMap = { brazil:"brazil", mexico:"mexico", argentina:"argentina", colombia:"colombia", chile:"chile", peru:"peru", ecuador:"ecuador", costarica:"costarica", panama:"panama", domrep:"domrep", guatemala:"guatemala", honduras:"honduras", bolivia:"bolivia", paraguay:"paraguay", uruguay:"uruguay", dubai:"dubai", qatar:"qatar", saudiarabia:"saudiarabia", bahrain:"bahrain", israel:"israel", uk:"uk", spain:"spain", france:"france", germany:"germany", netherlands:"netherlands", turkey:"turkey", india:"india", singapore:"singapore", japan:"japan", australia:"australia", canada:"canada", usa:"usa", indonesia:"indonesia", malaysia:"malaysia", thailand:"thailand", philippines:"philippines", southkorea:"southkorea", taiwan:"taiwan", hongkong:"hongkong", china:"china", newzealand:"newzealand" };
   const ctry = destMap[d.destination] || "brazil";
   currentCtry = ctry;
 
@@ -5530,7 +5530,7 @@ async function parseVisionFile(file, ext, ctx) {
     '3. The subtotal/total at the bottom of a table confirms the sum - your items fobValues should add up to it.\n' +
     '4. Weight: if given in kg convert to lbs (x 2.205). If only total shipment weight, distribute proportionally or set weightLbs:0 per item.\n' +
     '5. If items are described as refurbished or used, set equipmentType to Refurbished Hardware.\n' +
-    '6. destination must be one of: brazil,mexico,argentina,colombia,chile,peru,ecuador,costarica,panama,domrep,guatemala,honduras,bolivia,paraguay,uruguay,dubai,qatar,saudiarabia,bahrain,israel,uk,spain,france,germany,netherlands,turkey,india,singapore,japan,australia,canada,usa\n\n' +
+    '6. destination must be one of: brazil,mexico,argentina,colombia,chile,peru,ecuador,costarica,panama,domrep,guatemala,honduras,bolivia,paraguay,uruguay,dubai,qatar,saudiarabia,bahrain,israel,uk,spain,france,germany,netherlands,turkey,india,singapore,japan,australia,canada,usa,indonesia,malaysia,thailand,philippines,southkorea,taiwan,hongkong,china,newzealand\n\n' +
     'Return this exact JSON structure: {destination, countryOfOrigin, notes, confidence, missingFields, items:[{product, equipmentType, quantity, fobValue, weightLbs, hsCode}]}\n\n' +
     'equipmentType: Switch / Router | Server | GPU / AI Hardware | Storage | Cable / Accessory | Refurbished Hardware | Laptop / Notebook | Other\n' +
     'hsCode: switch/router=8517.62, server=8471.49 or 8471.50, storage=8471.70, gpu=8473.30, cable=8544.42, laptop=8471.30, optics/fiber=8517.62, power cords=8544.42\n' +
