@@ -5574,7 +5574,7 @@ async function callAnthropicAPI(text) {
   const r = await fetch('https://ddp-proxy.nicolasjuarezroldan.workers.dev',{method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1200,
-      system:'You are a logistics data extractor. Extract shipment details and return ONLY raw JSON: {product, equipmentType, quantity, fobValue, weightLbs, countryOfOrigin, destination, hsCode, notes, confidence, missingFields}',
+      system:'You are an expert DDP logistics analyst with deep knowledge of international trade compliance. ' + getKBContext() + ' Using your knowledge above, extract shipment details from the email/text and return ONLY raw JSON: {product, equipmentType, quantity, fobValue, weightLbs, countryOfOrigin, destination, hsCode, notes, confidence, missingFields} When extracting, apply your KB knowledge to: - Assign correct hsCode based on product type - Flag any compliance risks in the notes field - Set confidence lower if regulatory risks exist',
       messages:[{role:'user',content:'Extract from:\n\n'+text}]})});
   if(!r.ok) throw new Error('API error '+r.status);
   const d = await r.json();
