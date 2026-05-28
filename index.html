@@ -2119,6 +2119,206 @@ TOTAL: 104 países | Sección 1 verificada | Sección 2 verificar vs Excel
 ================================================================================
 `;
 
+
+// ── KB EXTERNA — RATES MASTER v3 ──────────────────────
+// Fuente: RATES_MASTER_COMPLETO_v3 | Mayo 2026
+// Sección 4: LATAM detallado + APAC | Sección 5: Europa 30 países + Pakistan
+// REGLA: No editar manualmente — actualizar desde Drive
+const KB_EXTERNAL_RATES_V3 = `
+================================================================================
+RATES MASTER COMPLETO v3 — DDP Global | Mayo 2026
+================================================================================
+
+CAMBIOS v3 vs v2:
+  + LÓGICA DE USO documentada — árbol de decisión para el agente
+  + SECCIÓN 4: Centroamérica + APAC + Ecuador + México — duties por HS code
+  + SECCIÓN 5: 30 países Europa + Pakistan — duties por HS code (Mayo 2026)
+  + Alerta USA integrada
+
+REGLA DE ORO:
+  Sección 4/5 > Sección 1 > Sección 2
+  Dato específico siempre gana al genérico.
+  Nunca inventar un dato que no tenemos.
+  USA: consultar PB-USA-TARIFFS-001 siempre — nunca asumir 0%.
+
+================================================================================
+LÓGICA DE USO — ÁRBOL DE DECISIÓN
+================================================================================
+PASO 1: ¿Tengo el país destino? → No: pedir al cliente antes de cotizar
+PASO 2: ¿País en Sección 1? (ARG, BRA, MEX, CHI, COL) → Sí: usar Sección 1
+PASO 3: ¿Tengo HS code específico? → Sí: buscar en Sección 4 (LATAM/APAC) o Sección 5 (Europa/Pakistan)
+PASO 4: ¿País en Sección 4 o 5? → Sí: usar esa sección (más preciso)
+PASO 5: ¿Destino es USA? → SIEMPRE consultar PB-USA-TARIFFS-001
+
+================================================================================
+SECCIÓN 1 — PAÍSES COMPLEJOS (verificados manualmente)
+================================================================================
+
+ARGENTINA:
+  Miami → ARG: FOB 1.5%(mín$270) + Flete $1.99/lbs(mín$350) + Seg 1%(mín$80) + DestSvc 2.5%(mín$700) + ImpLic 3%(mín$750)
+  Europa → ARG: FOB 1.5%(mín$270) + EOR 3%(mín$270) + Flete $4.77/lbs(mín$550) + Seg 1% + DestSvc 2.5%(mín$700) + ImpLic 3%(mín$750)
+  China → ARG: FOB 3.5%(mín$350) + EOR 3%(mín$650) + Flete $7.00/lbs(mín$550) + Seg 1% + DestSvc 2.5%(mín$700) + ImpLic 3%(mín$750)
+  DUTIES STANDARD: Derechos 16% + Estadística 2.5% + IVA 21% + Ganancias 6% + IIBB 3% + IVA Adicional 10%
+  DUTIES SERVERS (HS 8471): Derechos 0% (FREE) + IVA 21% + Ganancias 6% + IIBB 3% + IVA Adicional 10.5%
+  DUTIES LAPTOPS: Derechos 8% + Estadística 3% + IVA 10.5% + Ganancias 6% + IIBB 2.5%
+  PKP/RAHI: FOB 1%(mín$270) + DestSvc 2%(mín$300) + ImpLic 2%(mín$350)
+  ⚠️ China origin: +45% adicional (25% Section301 + 20% IEEPA) sobre duties
+
+MEXICO:
+  Miami → MEX: FOB 1.5%(mín$270) + Flete $1.57/lbs(mín$350) + Seg 1%(mín$80) + DestSvc 2.5%(mín$700) + ImpLic 3%(mín$860)
+  Europa → MEX: FOB 3%(mín$470) + EOR 3%(mín$550) + Flete $6.00/kg(mín$550) + Seg 1% + DestSvc 2.5%(mín$700) + ImpLic 3%(mín$860)
+  China → MEX: FOB 3.5%(mín$730) + EOR 3%(mín$550) + Flete $10.00/kg(mín$650) + Seg 1% + DestSvc 2.5%(mín$700) + ImpLic 3%(mín$860)
+  DUTIES STANDARD: DTA 0.93% + IVA 16%
+  PKP: FOB 1%(mín$270) + DestSvc 2%(mín$250) + ImpLic 2%(mín$250)
+  ⚠️ México 0% duties en IT hardware bajo ITA; solo DTA 0.93% + IVA 16%
+
+COLOMBIA:
+  Miami → COL: FOB 1.5%(mín$270) + Flete $1.84/lbs(mín$350) + Seg 1%(mín$80) + DestSvc 2%(mín$700) + ImpLic 3%(mín$650)
+  México → COL: FOB 4.5%(mín$270) + Flete $1.65/lbs(mín$350) + Seg 1% + DestSvc 2%(mín$700) + ImpLic 3%(mín$550)
+  Europa → COL: FOB 1.5%(mín$270) + EOR 3%(mín$650) + Flete $2.40/lbs(mín$350) + Seg 1% + DestSvc 3%(mín$700) + ImpLic 3%(mín$650)
+  DUTIES STANDARD: Duties 5% + VAT 19%
+  DUTIES SERVERS (HS 8471): Duties 0% (FREE) + VAT 19%
+  RAHI/PKP: FOB 1.5%(mín$270) + DestSvc 2%(mín$550) + ImpLic 0% (exento)
+
+BRAZIL:
+  Miami → BRA: FOB 1.5%(mín$270) + Flete $3.76/lbs(mín$350) + Seg 1%(mín$80) + DestSvc 5%(mín$700) + ImpLic 5%(mín$1700)
+  China → BRA (Aéreo): FOB 1%(mín$530) + Flete $4.00/kg(mín$650) + Seg 1%(mín$80) + DestSvc 2%(mín$400) + ImpLic 4%(mín$860)
+  DUTIES STANDARD: II 16% + IPI 15% + PIS 2.1% + COFINS 9.65% + ICMS 18% (cascada) ≈ 71% CIF
+  DUTIES LAPTOPS (NCM 8471.30): II 10% + IPI 0% + PIS 2.1% + COFINS 9.65% + ICMS 18%
+  RAHI: FOB 1%(mín$270) + DestSvc 2%(mín$400) + ImpLic 2%(mín$860)
+  ⚠️ ANATEL: requerido para wireless (HS 8517). Servidores HS 8471: EXENTOS
+  ⚠️ Canal Cinza: nunca declarar 40%+ bajo mercado
+  ⚠️ Almacenamiento Brazil: 0.3% valor NF + $2 USD/SKU
+
+CHILE:
+  Miami → CHI: FOB 1.5%(mín$270) + Flete $1.92/lbs(mín$350) + Seg 1%(mín$80) + DestSvc 2%(mín$700) + ImpLic 2.5%(mín$650)
+  Europa → CHI: FOB 1.5%(mín$470) + EOR 3%(mín$450) + Flete $1.92/lbs(mín$450) + Seg 1% + DestSvc 2%(mín$700) + ImpLic 2.5%(mín$650)
+  China → CHI: FOB 1.5%(mín$270) + EOR 3%(mín$450) + Flete (ver hoja, mín$650) + Seg 1% + DestSvc 2%(mín$700) + ImpLic 2%
+  DUTIES STANDARD: Duties 6% + VAT 19%
+  PKP: FOB 1%(mín$270) + DestSvc 2%(mín$250) + ImpLic 2%(mín$350)
+
+================================================================================
+SECCIÓN 4 — HS CODES POR PRODUCTO Y PAÍS (LATAM + APAC)
+================================================================================
+
+REGLAS CENTROAMÉRICA (Guatemala, El Salvador, Honduras, Nicaragua):
+  Sistema Arancelario Centroamericano (SAC) — mismo arancel base
+  CAFTA-DR: origen USA → DAI 0% en partidas con arancel > 0%
+  EXCEPCIONES: Rack 42U (HS 7326.90) 15% | DAC/Cat6 (HS 8544.42) 5% | PDU (HS 8537.10) 5% | Monitor multipropósito (HS 8528.59) 10-15%
+
+GUATEMALA (IVA 12%):
+  Servidores HS 8471.50 | DAI 0% | Networking HS 8517.62 | DAI 0%
+  Storage HS 8471.70 | DAI 0% | SFP/QSFP HS 8517.70 | DAI 0%
+  DAC/Cat6 HS 8544.42 | DAI 5% (USA/CAFTA=0%) | UPS HS 8504.40 | DAI 0%
+  PDU HS 8537.10 | DAI 5% (USA/CAFTA=0%) | Rack 42U HS 7326.90 | DAI 15% (USA/CAFTA=0%)
+  GPU/AI HS 8473.30 | DAI 0% | ⚠️ WiFi → certificación SIT 2-4 semanas
+
+EL SALVADOR (IVA 13%):
+  Servidores HS 8471.50 | DAI 0% | Networking HS 8517.62 | DAI 0%
+  DAC/Cat6 HS 8544.42 | DAI 5% (USA/CAFTA=0%) | Rack 42U HS 7326.90 | DAI 15% (USA/CAFTA=0%)
+  ⚠️ WiFi → certificación SIGET 3-4 semanas
+
+HONDURAS (ISV 15%):
+  Servidores HS 8471.50 | DAI 0% | Networking HS 8517.62 | DAI 0%
+  DAC/Cat6 HS 8544.49.21 | DAI 15% (USA=0%) | Rack 42U HS 9403.20 | DAI 15% (USA=0%)
+  GPU HS 8517.62 | DAI 0%
+
+NICARAGUA (IVA 12% + ISC 10% + DAI 15% en TODO):
+  ⚠️ NICARAGUA: prácticamente todo paga DAI 15% + IVA 12% + ISC 10% — carga muy alta
+  ⚠️ TELCOR requerido UNIVERSAL para todos los equipos electrónicos
+
+PANAMÁ (ITBMS 7%):
+  Servidores HS 8471.50.90 | DAI 0% + Otros 5% | Networking HS 8517.62 | DAI 0% + Otros 5%
+  Storage HS 8523.51.10 | DAI 0% (HS diferente al resto LATAM) | Rack 42U HS 9403.20.99 | DAI 15%
+  ⚠️ Panamá usa HS 8523 para storage — diferente al resto de LATAM
+
+PERÚ (IGV 18% + Percepción 3.5%):
+  Todo IT hardware: DAI 0% | IGV 18% | Percepción 3.5%
+  Servidores HS 8471.50 | Networking HS 8517.62 | Storage HS 8471.70 / NVMe HS 8523.51
+  GPU HS 8473.30 | Rack 42U HS 9403.20 | DAI 0%
+  ⚠️ WiFi/Bluetooth → permiso de internamiento/homologación
+
+ECUADOR (IVA 15% + FODINFA 0.5% + Tasa Seguridad 1%):
+  Servidores HS 8471.50 | DAI 0% | GPU Server HS 8471.41 | DAI 0%
+  Networking HS 8517.62 | DAI 5% | Router Enterprise HS 8517.62 | DAI 10%
+  Storage HS 8471.70 | DAI 0% | GPU/AI HS 8542.31 | DAI 0%
+  ⚠️ Rack 42U HS 9403.20 | DAI 30% | Battery HS 8507.80 | DAI 25% | DAC/Cat6 HS 8544.42 | DAI 15%
+  Formula: CIF + FODINFA(0.5%) + DAI + Seg(1%) + IVA = (CIF+DAI+FODINFA+Seg)×15%
+
+MÉXICO HS LOCALES (fracciones arancelarias TIGIE 10 dígitos):
+  Servidores: 8471.500100 | Networking: 8517.621799 | Storage NVMe: 8523.510100 | HDD/JBOD: 8471.700100
+  SFP/Cables: 8544.429904 | UPS/PDU: 8504.409900 | Rack: 9403.209199 | KVM: 8471.809199
+  Laptop: 8471.300199 | Monitor: 8528.520299 | GPU: 8473.300499 | HSM: 8543.709999
+
+APAC — TABLA RÁPIDA (carga tributaria IT hardware estándar):
+  Singapur: DAI 0% + GST 9% + IOR 3%(mín$150) — destino más simple
+  Tailandia: DAI 0% + VAT 7% + IOR 5%(mín$450) | ⚠️ NBTC wireless
+  Australia: DAI 0% + GST 10% + IOR 3%(mín$250) | Rack 5%
+  Taiwan: DAI 0% + VAT 5% + IOR 5%(mín$750) | ⚠️ BSMI todo + Rack HS 8302.49
+  Japón: DAI 0% + CT 10% + IOR 4%(mín$500)
+  Nueva Zelanda: DAI 0% + GST 15% + IOR 3%(mín$250)
+  Malasia: DAI 0% + SST 5-10% + IOR 5%(mín$250) | ⚠️ SIRIM todo | ⚠️ AOC/DAC/Cat6: 30% DAI
+  Filipinas: DAI 0% + VAT 12% + IOR 5%(mín$250) | ⚠️ NTC Permit casi todo
+  Corea del Sur: DAI 0-8% + VAT 10% + IOR 4%(mín$500) | ⚠️ KC Cert no evitable
+  China: DAI 0-10% + IVA 13% + IOR 5%(mín$250) | ⚠️ CCC todo + NAL networking
+  Indonesia: DAI 10% + PPN 12% + PPh 2.5% + IOR 7%(mín$500) — más complejo APAC
+  Hong Kong: DAI 0% + IVA 0% + IOR 3%(mín$250) | ⚠️ BIS = China mainland
+
+ALERTAS CRÍTICAS APAC:
+  ⚠️ HK/China: GPU H100/H200/B200 — BIS export controls USA
+  ⚠️ Malasia: AOC/DAC/Cat6 pagan 30% DAI — destruye cotizaciones
+  ⚠️ Indonesia: ~24.5% total + IOR 7% — el más caro
+  ⚠️ Taiwán: Server Rack → HS 8302.49 (no 9403.20 como resto del mundo)
+
+================================================================================
+SECCIÓN 5 — EUROPA 30 PAÍSES + PAKISTAN (Mayo 2026)
+================================================================================
+
+NOTA EUROPA GENERAL:
+  Duties 0% IT hardware bajo ITA (HS 8471/8517)
+  Cables cobre (HS 8544.42): 3.3% TARIC (depende subpartida)
+  PDU (HS 8537.10): 2.1% TARIC | Battery (HS 8507.60): 2.7% TARIC
+  CE Marking obligatorio UE | UK post-Brexit: UKCA (diferente a CE)
+  Islandia: Recycling Fee adicional por KG (13-56 ISK/kg)
+
+UNIÓN EUROPEA — duties IT hardware 0% (ITA) + CE Marking:
+  Austria: VAT 20% | Belgium: VAT 21% | Bulgaria: VAT 20% | Croatia: VAT 25%
+  Czech Republic: VAT 21% | Denmark: VAT 25% | Estonia: VAT 24% | Finland: VAT 25.5%
+  France: VAT 20% | Germany: VAT 19% | Greece: VAT 24% | Hungary: VAT 27%
+  Ireland: VAT 23% | Italy: VAT 22% | Latvia: VAT 21% | Lithuania: VAT 21%
+  Luxembourg: VAT 17% (más bajo UE) | Malta: VAT 18% | Netherlands: VAT 21%
+  Poland: VAT 23% | Portugal: VAT 23% | Romania: VAT 21% | Slovakia: VAT 23%
+  Spain: VAT 21% | Sweden: VAT 25%
+  En todos: IT Hardware (HS 8471/8517) 0% | Cables cobre 3.3% TARIC | PDU 2.1% | Battery 2.7%
+
+EUROPA NO-UE:
+  Iceland: VAT 24% + Recycling Fee 13-56 ISK/kg | EEA — no EU | Duties 0%
+  Norway: VAT 25% | EEA — no EU | Duties 0% | No aplica TARIC europeo
+  Switzerland: VAT 8.1% (más bajo Europa) | Duties 0% todo | CE reconocido
+  UK: VAT 20% | ⚠️ UKCA Marking (no CE) | PDU: 2% | Cables cobre: depende UK TARIC
+
+PAKISTAN:
+  Impuestos: Import Duty (varía 1-20%) + Sales Tax 17% + Income Tax 6% + Regulatory Duty 2%
+  Carga efectiva total: ~35-45% sobre CIF según producto
+  IT Networking (HS 8517): 10% duty | Servidores (HS 8471): 5% | Laptops (HS 8471.30): 1%
+  Storage NVMe (HS 8523): 1% | GPU/AI H100: 5%
+  Cables/PDU/Battery/Rack: 20% duty | COO China: duty preferencial (1% servers, 3% networking)
+  ⚠️ PTA Type Approval obligatorio para WiFi, telecom, wireless
+  ⚠️ GPU/AI (H100/H200): verificar ECCN export license USA antes de cotizar
+  ⚠️ Mercado complejo — validar con agente local antes de cotizar
+
+================================================================================
+COSTOS OPERATIVOS AEROPUERTO MIAMI (MIA):
+  Broker: IBC Customs Brokerage
+  Storage fee: ~$205 / primeros 2 días
+  Import Service Fee: ~$205 por shipment
+  Costo mínimo demora: ~$410
+  Aplica si: driver no retira en tiempo, cargos pendientes, falta arrival notice
+  Nota cotización: "Airport storage/handling: ~$200-$400 si cargo no retirado en 48hs"
+================================================================================
+Fuente: RATES_MASTER_COMPLETO_v3 | QT_GRAL.xlsx | Mayo 2026
+`;
+
 // ── HARDWARE DATABASE ──────────────────────────────────
 const HW_DB = [
   // SWITCHES / ROUTERS
@@ -7977,6 +8177,7 @@ function getKBContext(){
   ctx += KB_EXTERNAL_PLAYBOOKS;
   ctx += KB_EXTERNAL_COMPLIANCE;
   ctx += KB_EXTERNAL_RATES;
+  ctx += KB_EXTERNAL_RATES_V3;
   return ctx;
 }
 
