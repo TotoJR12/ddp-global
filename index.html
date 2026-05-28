@@ -2707,6 +2707,7 @@ const COUNTRIES = [
   {id:"portugal",lb:"🇵🇹 Portugal",code:"PRT"},{id:"romania",lb:"🇷🇴 Romania",code:"ROU"},
   {id:"greece",lb:"🇬🇷 Greece",code:"GRC"},{id:"slovakia",lb:"🇸🇰 Slovakia",code:"SVK"},
   {id:"cyprus",lb:"🇨🇾 Cyprus",code:"CYP"},{id:"ireland",lb:"🇮🇪 Ireland",code:"IRL"},
+  {id:"bulgaria",lb:"🇧🇬 Bulgaria",code:"BGR"},{id:"croatia",lb:"🇭🇷 Croatia",code:"HRV"},{id:"czechrepublic",lb:"🇨🇿 Czech Republic",code:"CZE"},{id:"estonia",lb:"🇪🇪 Estonia",code:"EST"},{id:"latvia",lb:"🇱🇻 Latvia",code:"LVA"},{id:"lithuania",lb:"🇱🇹 Lithuania",code:"LTU"},{id:"luxembourg",lb:"🇱🇺 Luxembourg",code:"LUX"},{id:"malta",lb:"🇲🇹 Malta",code:"MLT"},{id:"hungary",lb:"🇭🇺 Hungary",code:"HUN"},
   {id:"iceland",lb:"🇮🇸 Iceland",code:"ISL"},{id:"turkey",lb:"🇹🇷 Turkey",code:"TUR"},
   {id:"ukraine",lb:"🇺🇦 Ukraine",code:"UKR"},{id:"morocco",lb:"🇲🇦 Morocco",code:"MAR"},
   {id:"tunisia",lb:"🇹🇳 Tunisia",code:"TUN"},
@@ -2727,7 +2728,7 @@ const COUNTRIES = [
   {id:"mozambique",lb:"🇲🇿 Mozambique",code:"MOZ"},{id:"chad",lb:"🇹🇩 Chad",code:"TCD"},
   {id:"usa",lb:"🇺🇸 USA IOR",code:"US"},
 ];
-const SEQ={BRA:35,MEX:10,ARG:5,COL:5,CHL:2,PER:2,ECU:1,CRI:1,PAN:1,DOM:1,GTM:1,HND:1,SLV:1,NIC:1,BOL:1,PRY:1,URY:1,VEN:1,GUY:1,HTI:1,JAM:1,TTO:1,BRB:1,BHS:1,ABW:1,CUW:1,CYM:1,LCA:1,GRD:1,PRI:1,VIR:1,TCA:1,UAE:1,AUH:1,QAT:1,KSA:1,BHR:1,KWT:1,OMN:1,JOR:1,ISR:1,EGY:1,GBR:1,ESP:1,FRA:1,DEU:1,NLD:1,ITA:1,BEL:1,AUT:1,CHE:1,SWE:1,NOR:1,DNK:1,FIN:1,POL:1,PRT:1,ROU:1,GRC:1,SVK:1,CYP:1,IRL:1,ISL:1,TUR:1,UKR:1,MAR:1,TUN:1,IND:1,SGP:1,JPN:1,AUS:1,NZL:1,KOR:1,TWN:1,HKG:1,CHN:1,MYS:1,THA:1,VNM:1,PHL:1,IDN:1,BGD:1,PAK:1,KAZ:1,UZB:1,MNG:1,KHM:1,LAO:1,CAN:1,ZAF:1,NGA:1,KEN:1,GHA:1,AGO:1,NAM:1,MOZ:1,TCD:1,HUN:1,US:32};
+const SEQ={BRA:35,MEX:10,ARG:5,COL:5,CHL:2,PER:2,ECU:1,CRI:1,PAN:1,DOM:1,GTM:1,HND:1,SLV:1,NIC:1,BOL:1,PRY:1,URY:1,VEN:1,GUY:1,HTI:1,JAM:1,TTO:1,BRB:1,BHS:1,ABW:1,CUW:1,CYM:1,LCA:1,GRD:1,PRI:1,VIR:1,TCA:1,UAE:1,AUH:1,QAT:1,KSA:1,BHR:1,KWT:1,OMN:1,JOR:1,ISR:1,EGY:1,GBR:1,ESP:1,FRA:1,DEU:1,NLD:1,ITA:1,BEL:1,AUT:1,CHE:1,SWE:1,NOR:1,DNK:1,FIN:1,POL:1,PRT:1,ROU:1,GRC:1,SVK:1,CYP:1,IRL:1,ISL:1,TUR:1,UKR:1,MAR:1,TUN:1,IND:1,SGP:1,JPN:1,AUS:1,NZL:1,KOR:1,TWN:1,HKG:1,CHN:1,MYS:1,THA:1,VNM:1,PHL:1,IDN:1,BGD:1,PAK:1,KAZ:1,UZB:1,MNG:1,KHM:1,LAO:1,CAN:1,ZAF:1,NGA:1,KEN:1,GHA:1,AGO:1,NAM:1,MOZ:1,TCD:1,HUN:1,BGR:1,HRV:1,CZE:1,EST:1,LVA:1,LTU:1,LUX:1,MLT:1,US:32};
 
 const mx=(v,n)=>Math.max(v,n);
 const fmt=n=>n.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -3442,6 +3443,15 @@ function calcQuote(ct, fob, lbs, coo, fo, product, hs, type){
     slovakia:{fr:7.93,d:.033,v:.20,ior:.02,ds:.02,tr:"10 Days",ap:"BTS"},
     cyprus:{fr:7.93,d:.00,v:.19,ior:.04,ds:.02,tr:"14 Days",ap:"LCA"},
     ireland:{fr:7.93,d:.021,v:.23,ior:.02,ds:.02,tr:"10 Days",ap:"DUB"},
+    // ── EU Fallback — 8 países agregados v3 (duties 0% ITA, VAT por Sección 5) ──
+    bulgaria:{fr:7.93,d:.00,v:.20,ior:.035,ds:.02,tr:"12 Days",ap:"SOF"},
+    croatia:{fr:7.93,d:.00,v:.25,ior:.035,ds:.02,tr:"12 Days",ap:"ZAG"},
+    czechrepublic:{fr:7.93,d:.00,v:.21,ior:.035,ds:.02,tr:"10 Days",ap:"PRG"},
+    estonia:{fr:7.93,d:.00,v:.24,ior:.035,ds:.02,tr:"12 Days",ap:"TLL"},
+    latvia:{fr:7.93,d:.00,v:.21,ior:.035,ds:.02,tr:"12 Days",ap:"RIX"},
+    lithuania:{fr:7.93,d:.00,v:.21,ior:.035,ds:.02,tr:"12 Days",ap:"VNO"},
+    luxembourg:{fr:7.93,d:.00,v:.17,ior:.035,ds:.02,tr:"10 Days",ap:"LUX"},
+    malta:{fr:7.93,d:.00,v:.18,ior:.035,ds:.02,tr:"14 Days",ap:"MLA"},
     iceland:{fr:7.93,d:.00,v:.24,ior:.03,ds:.02,tr:"10 Days",ap:"KEF"},
     ukraine:{fr:7.93,d:.10,v:.20,ior:.04,ds:.02,tr:"10 Days",ap:"KBP"},
     morocco:{fr:9.02,d:.03,v:.20,ior:.03,ds:.02,tr:"14 Days",ap:"CMN"},
@@ -3787,7 +3797,7 @@ function ctrySearch(val) {
   const regions = [
     {label:'LATAM', ids:['brazil','mexico','argentina','colombia','chile','peru','ecuador','costarica','panama','domrep','guatemala','honduras','elsalvador','nicaragua','bolivia','paraguay','uruguay','venezuela','guyana','haiti','jamaica','trinidad','barbados','bahamas','aruba','curacao','cayman','stlucia','grenada','puertorico','stcroix','turkcai']},
     {label:'MIDDLE EAST', ids:['dubai','abudhabi','qatar','saudiarabia','bahrain','kuwait','oman','jordan','israel','egypt']},
-    {label:'EUROPE', ids:['uk','spain','france','germany','netherlands','italy','belgium','austria','switzerland','sweden','norway','denmark','finland','poland','portugal','romania','greece','slovakia','cyprus','ireland','iceland','turkey','ukraine','morocco','tunisia','hungary']},
+    {label:'EUROPE', ids:['uk','spain','france','germany','netherlands','italy','belgium','austria','switzerland','sweden','norway','denmark','finland','poland','portugal','romania','greece','slovakia','cyprus','ireland','bulgaria','croatia','czechrepublic','estonia','latvia','lithuania','luxembourg','malta','hungary','iceland','turkey','ukraine','morocco','tunisia']},
     {label:'ASIA-PACIFIC', ids:['india','singapore','japan','australia','newzealand','southkorea','taiwan','hongkong','china','malaysia','thailand','vietnam','philippines','indonesia','bangladesh','pakistan','kazakhstan','uzbekistan','mongolia','cambodia','laos','canada']},
     {label:'AFRICA', ids:['southafrica','nigeria','kenya','ghana','angola','namibia','mozambique','chad']},
     {label:'USA', ids:['usa']},
