@@ -4125,7 +4125,114 @@ function checkMainFieldsRequired(){
   }
 }
 
-function doQuote(){
+
+// ════════════════════════════════════════════════════════════════════
+// calcQuoteAI — Motor de cálculo vía KB v3 (reemplaza calcQuote como motor principal)
+// Llama a Claude con la KB completa para obtener datos exactos por HS code y país.
+// FALLBACK OBLIGATORIO: si la API falla, usa calcQuote() para garantizar producción.
+// ════════════════════════════════════════════════════════════════════
+async function calcQuoteAI(ct, fob, lbs, coo, fo, product, hs, type) {
+  const PROXY = 'https://ddp-proxy.nicolasjuarezroldan.workers.dev';
+  const kb = getKBContext();
+
+  const systemPrompt = `Sos el motor de cálculo de DDP Global LLC. Tu ÚNICA tarea es calcular cotizaciones DDP usando los datos exactos de la KB.
+
+JERARQUÍA DE DATOS (obligatorio respetar):
+1. Sección 4 o 5 del RATES_MASTER_V3 — dato específico por HS code y país → MÁXIMA PRIORIDAD
+2. Sección 1 — países complejos verificados manualmente
+3. Sección 2 — tarifario general genérico (usar solo si no hay dato específico)
+
+FÓRMULA DE CÁLCULO:
+- FOB Charges = FOB × % (respetar mínimo de la KB)
+- EOR = FOB × % si origen ≠ Miami/USA (respetar mínimo)
+- Flete = Peso(lbs) × $/lbs O Peso(kg) × $/kg (respetar mínimo)
+- Seguro = (FOB + Flete) × 1% (mínimo $80)
+- CIF = FOB + Flete + Seguro
+- Destination Services = FOB × % (respetar mínimo)
+- Import License (IOR) = FOB × % (respetar mínimo)
+- Duties = CIF × duty% (usar HS code específico si existe en Sección 4/5)
+- Taxes = cascada sobre CIF según país
+
+REGLAS:
+- Todos los amounts son NÚMEROS (no strings)
+- li: máximo 5 líneas operacionales. EOR solo si origen ≠ Miami/USA
+- tx: cada impuesto en línea separada con label claro (ej: "II (16%)", "IVA (19%)")
+- tt: suma exacta de todos los valores en tx
+- cif: FOB + Flete + Seguro solamente
+- tr: tiempo estimado de tránsito (ej: "10 Days", "14 Days")
+- NUNCA inventar datos — si no tenés el dato específico, usar Sección 2 y aclararlo en el label con "(~est.)"
+- NUNCA mostrar márgenes, fees internos, ni "DDP Global Fee"
+
+Responde ÚNICAMENTE con este bloque, sin texto adicional:
+QUOTE_DATA:{"li":[["FOB Charges","1.5% / min $270",450.00],["Freight (Air →IATA)","$X.XX/lb / min $XXX",1200.00],["Insurance","1% CIF / min $80",162.00],["Destination Services","2.5% FOB / min $700",700.00],["Import License (IOR)","3% FOB / min $860",900.00]],"tx":[["Duties (X%)",0],["VAT/IVA (X%)",2850.00]],"tt":2850.00,"cif":16200.00,"tr":"10 Days"}
+
+${kb}`;
+
+  const userMsg = `Calcular cotización DDP:
+País destino: ${ct}
+FOB: $${fob}
+Peso: ${lbs} lbs
+Country of Origin: ${coo || 'USA'}
+Producto: ${product || 'IT Hardware'}
+HS Code: ${hs || '8517.62'}
+Tipo: ${type || 'Standard'}
+Origen del flete: ${fo > 0 ? 'Europa (EOR requerido)' : 'Miami, USA'}`;
+
+  try {
+    const res = await fetch(PROXY, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 1200,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userMsg }]
+      })
+    });
+
+    if (!res.ok) throw new Error('API error ' + res.status);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message || 'API error');
+
+    // Extraer texto de la respuesta
+    const text = (data.content || [])
+      .filter(b => b.type === 'text')
+      .map(b => b.text)
+      .join('');
+
+    // Parsear QUOTE_DATA:{...}
+    const match = text.match(/QUOTE_DATA:\s*(\{[\s\S]*\})/);
+    if (!match) throw new Error('No QUOTE_DATA block found');
+
+    const q = JSON.parse(match[1]);
+
+    // Validar estructura mínima
+    if (!q.li || !Array.isArray(q.li) || !q.cif || !q.tr) {
+      throw new Error('Invalid QUOTE_DATA structure');
+    }
+
+    // Normalizar: asegurar que todos los amounts sean números
+    q.li = q.li.map(([l, b, v]) => [l, b, parseFloat(v) || 0]);
+    q.tx = (q.tx || []).map(([l, v]) => [l, parseFloat(v) || 0]);
+    q.tt = parseFloat(q.tt) || q.tx.reduce((s, [, v]) => s + v, 0);
+    q.cif = parseFloat(q.cif) || 0;
+
+    // Marcar origen para debugging interno (nunca visible al cliente)
+    q._source = 'AI_KB_V3';
+    return q;
+
+  } catch (err) {
+    // ── FALLBACK OBLIGATORIO ─────────────────────────────────────────
+    // Si la API falla por cualquier motivo, usar calcQuote() hardcodeado.
+    // Esto garantiza que el sistema nunca se rompe en producción.
+    console.warn('[calcQuoteAI] API failed, falling back to calcQuote():', err.message);
+    const fallback = calcQuote(ct, fob, lbs, coo, fo, product, hs, type);
+    if (fallback) fallback._source = 'FALLBACK_HARDCODED';
+    return fallback;
+  }
+}
+
+async function doQuote(){
   const fob=parseFloat(document.getElementById("q-fob").value)||0;
   const lbs=parseFloat(document.getElementById("q-wt").value)||0;
   const product=document.getElementById("q-product").value;
@@ -4163,8 +4270,18 @@ function doQuote(){
   const totalLbs=allItems.reduce((s,i)=>s+(i.weightLbs||0),0);
   const multiItem=allItems.length>1;
 
-  const r=calcQuote(currentCtry,totalFob,totalLbs,coo,fo,product,hs,type);
-  if(!r) return;
+  // ── Loading state ──────────────────────────────────────────────────
+  const calcBtn = document.getElementById('calc-btn');
+  const origBtnText = calcBtn ? calcBtn.innerHTML : '';
+  if (calcBtn) {
+    calcBtn.disabled = true;
+    calcBtn.innerHTML = '<div class="dot-pulse" style="display:inline-flex;gap:4px;vertical-align:middle"><span></span><span></span><span></span></div> CALCULANDO CON KB v3...';
+  }
+
+  const r = await calcQuoteAI(currentCtry, totalFob, totalLbs, coo, fo, product, hs, type);
+
+  if (calcBtn) { calcBtn.disabled = false; calcBtn.innerHTML = origBtnText; }
+  if (!r) return;
 
   // Recalcular taxes por ítem usando función central — aplica para TODOS los países
   let taxLines=r.tx, totalTax=r.tt, hasLaptop=r.isLaptop||false;
@@ -5359,7 +5476,7 @@ function showExtracted(d) {
 }
 
 
-function runFromAI() {
+async function runFromAI() {
   if (!aiExtracted) return;
   const d = aiExtracted;
 
@@ -5390,7 +5507,17 @@ function runFromAI() {
   // Freight, Insurance, FOB charges, Destination, IOR: se calculan sobre el total
   // Taxes: se calculan por ítem y se suman
 
-  const r = calcQuote(ctry, totalFob, totalLbs, d.countryOfOrigin || "", 0, d.items[0].product, d.items[0].hsCode, d.items[0].equipmentType);
+  // ── Loading state ──────────────────────────────────────────────────
+  const runBtn = document.querySelector('[onclick="runFromAI()"]');
+  const origRunText = runBtn ? runBtn.innerHTML : '';
+  if (runBtn) {
+    runBtn.disabled = true;
+    runBtn.innerHTML = '<div class="dot-pulse" style="display:inline-flex;gap:4px;vertical-align:middle"><span></span><span></span><span></span></div> CALCULANDO CON KB v3...';
+  }
+
+  const r = await calcQuoteAI(ctry, totalFob, totalLbs, d.countryOfOrigin || '', 0, d.items[0].product, d.items[0].hsCode, d.items[0].equipmentType);
+
+  if (runBtn) { runBtn.disabled = false; runBtn.innerHTML = origRunText; }
   if (!r) return;
 
   // Si hay múltiples ítems con distintos HS, recalcular taxes con función central
