@@ -2707,7 +2707,6 @@ const COUNTRIES = [
   {id:"portugal",lb:"🇵🇹 Portugal",code:"PRT"},{id:"romania",lb:"🇷🇴 Romania",code:"ROU"},
   {id:"greece",lb:"🇬🇷 Greece",code:"GRC"},{id:"slovakia",lb:"🇸🇰 Slovakia",code:"SVK"},
   {id:"cyprus",lb:"🇨🇾 Cyprus",code:"CYP"},{id:"ireland",lb:"🇮🇪 Ireland",code:"IRL"},
-  {id:"bulgaria",lb:"🇧🇬 Bulgaria",code:"BGR"},{id:"croatia",lb:"🇭🇷 Croatia",code:"HRV"},{id:"czechrepublic",lb:"🇨🇿 Czech Republic",code:"CZE"},{id:"estonia",lb:"🇪🇪 Estonia",code:"EST"},{id:"latvia",lb:"🇱🇻 Latvia",code:"LVA"},{id:"lithuania",lb:"🇱🇹 Lithuania",code:"LTU"},{id:"luxembourg",lb:"🇱🇺 Luxembourg",code:"LUX"},{id:"malta",lb:"🇲🇹 Malta",code:"MLT"},{id:"hungary",lb:"🇭🇺 Hungary",code:"HUN"},
   {id:"iceland",lb:"🇮🇸 Iceland",code:"ISL"},{id:"turkey",lb:"🇹🇷 Turkey",code:"TUR"},
   {id:"ukraine",lb:"🇺🇦 Ukraine",code:"UKR"},{id:"morocco",lb:"🇲🇦 Morocco",code:"MAR"},
   {id:"tunisia",lb:"🇹🇳 Tunisia",code:"TUN"},
@@ -2728,7 +2727,7 @@ const COUNTRIES = [
   {id:"mozambique",lb:"🇲🇿 Mozambique",code:"MOZ"},{id:"chad",lb:"🇹🇩 Chad",code:"TCD"},
   {id:"usa",lb:"🇺🇸 USA IOR",code:"US"},
 ];
-const SEQ={BRA:35,MEX:10,ARG:5,COL:5,CHL:2,PER:2,ECU:1,CRI:1,PAN:1,DOM:1,GTM:1,HND:1,SLV:1,NIC:1,BOL:1,PRY:1,URY:1,VEN:1,GUY:1,HTI:1,JAM:1,TTO:1,BRB:1,BHS:1,ABW:1,CUW:1,CYM:1,LCA:1,GRD:1,PRI:1,VIR:1,TCA:1,UAE:1,AUH:1,QAT:1,KSA:1,BHR:1,KWT:1,OMN:1,JOR:1,ISR:1,EGY:1,GBR:1,ESP:1,FRA:1,DEU:1,NLD:1,ITA:1,BEL:1,AUT:1,CHE:1,SWE:1,NOR:1,DNK:1,FIN:1,POL:1,PRT:1,ROU:1,GRC:1,SVK:1,CYP:1,IRL:1,ISL:1,TUR:1,UKR:1,MAR:1,TUN:1,IND:1,SGP:1,JPN:1,AUS:1,NZL:1,KOR:1,TWN:1,HKG:1,CHN:1,MYS:1,THA:1,VNM:1,PHL:1,IDN:1,BGD:1,PAK:1,KAZ:1,UZB:1,MNG:1,KHM:1,LAO:1,CAN:1,ZAF:1,NGA:1,KEN:1,GHA:1,AGO:1,NAM:1,MOZ:1,TCD:1,HUN:1,BGR:1,HRV:1,CZE:1,EST:1,LVA:1,LTU:1,LUX:1,MLT:1,US:32};
+const SEQ={BRA:35,MEX:10,ARG:5,COL:5,CHL:2,PER:2,ECU:1,CRI:1,PAN:1,DOM:1,GTM:1,HND:1,SLV:1,NIC:1,BOL:1,PRY:1,URY:1,VEN:1,GUY:1,HTI:1,JAM:1,TTO:1,BRB:1,BHS:1,ABW:1,CUW:1,CYM:1,LCA:1,GRD:1,PRI:1,VIR:1,TCA:1,UAE:1,AUH:1,QAT:1,KSA:1,BHR:1,KWT:1,OMN:1,JOR:1,ISR:1,EGY:1,GBR:1,ESP:1,FRA:1,DEU:1,NLD:1,ITA:1,BEL:1,AUT:1,CHE:1,SWE:1,NOR:1,DNK:1,FIN:1,POL:1,PRT:1,ROU:1,GRC:1,SVK:1,CYP:1,IRL:1,ISL:1,TUR:1,UKR:1,MAR:1,TUN:1,IND:1,SGP:1,JPN:1,AUS:1,NZL:1,KOR:1,TWN:1,HKG:1,CHN:1,MYS:1,THA:1,VNM:1,PHL:1,IDN:1,BGD:1,PAK:1,KAZ:1,UZB:1,MNG:1,KHM:1,LAO:1,CAN:1,ZAF:1,NGA:1,KEN:1,GHA:1,AGO:1,NAM:1,MOZ:1,TCD:1,HUN:1,US:32};
 
 const mx=(v,n)=>Math.max(v,n);
 const fmt=n=>n.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -3443,15 +3442,6 @@ function calcQuote(ct, fob, lbs, coo, fo, product, hs, type){
     slovakia:{fr:7.93,d:.033,v:.20,ior:.02,ds:.02,tr:"10 Days",ap:"BTS"},
     cyprus:{fr:7.93,d:.00,v:.19,ior:.04,ds:.02,tr:"14 Days",ap:"LCA"},
     ireland:{fr:7.93,d:.021,v:.23,ior:.02,ds:.02,tr:"10 Days",ap:"DUB"},
-    // ── EU Fallback — 8 países agregados v3 (duties 0% ITA, VAT por Sección 5) ──
-    bulgaria:{fr:7.93,d:.00,v:.20,ior:.035,ds:.02,tr:"12 Days",ap:"SOF"},
-    croatia:{fr:7.93,d:.00,v:.25,ior:.035,ds:.02,tr:"12 Days",ap:"ZAG"},
-    czechrepublic:{fr:7.93,d:.00,v:.21,ior:.035,ds:.02,tr:"10 Days",ap:"PRG"},
-    estonia:{fr:7.93,d:.00,v:.24,ior:.035,ds:.02,tr:"12 Days",ap:"TLL"},
-    latvia:{fr:7.93,d:.00,v:.21,ior:.035,ds:.02,tr:"12 Days",ap:"RIX"},
-    lithuania:{fr:7.93,d:.00,v:.21,ior:.035,ds:.02,tr:"12 Days",ap:"VNO"},
-    luxembourg:{fr:7.93,d:.00,v:.17,ior:.035,ds:.02,tr:"10 Days",ap:"LUX"},
-    malta:{fr:7.93,d:.00,v:.18,ior:.035,ds:.02,tr:"14 Days",ap:"MLA"},
     iceland:{fr:7.93,d:.00,v:.24,ior:.03,ds:.02,tr:"10 Days",ap:"KEF"},
     ukraine:{fr:7.93,d:.10,v:.20,ior:.04,ds:.02,tr:"10 Days",ap:"KBP"},
     morocco:{fr:9.02,d:.03,v:.20,ior:.03,ds:.02,tr:"14 Days",ap:"CMN"},
@@ -3797,7 +3787,7 @@ function ctrySearch(val) {
   const regions = [
     {label:'LATAM', ids:['brazil','mexico','argentina','colombia','chile','peru','ecuador','costarica','panama','domrep','guatemala','honduras','elsalvador','nicaragua','bolivia','paraguay','uruguay','venezuela','guyana','haiti','jamaica','trinidad','barbados','bahamas','aruba','curacao','cayman','stlucia','grenada','puertorico','stcroix','turkcai']},
     {label:'MIDDLE EAST', ids:['dubai','abudhabi','qatar','saudiarabia','bahrain','kuwait','oman','jordan','israel','egypt']},
-    {label:'EUROPE', ids:['uk','spain','france','germany','netherlands','italy','belgium','austria','switzerland','sweden','norway','denmark','finland','poland','portugal','romania','greece','slovakia','cyprus','ireland','bulgaria','croatia','czechrepublic','estonia','latvia','lithuania','luxembourg','malta','hungary','iceland','turkey','ukraine','morocco','tunisia']},
+    {label:'EUROPE', ids:['uk','spain','france','germany','netherlands','italy','belgium','austria','switzerland','sweden','norway','denmark','finland','poland','portugal','romania','greece','slovakia','cyprus','ireland','iceland','turkey','ukraine','morocco','tunisia','hungary']},
     {label:'ASIA-PACIFIC', ids:['india','singapore','japan','australia','newzealand','southkorea','taiwan','hongkong','china','malaysia','thailand','vietnam','philippines','indonesia','bangladesh','pakistan','kazakhstan','uzbekistan','mongolia','cambodia','laos','canada']},
     {label:'AFRICA', ids:['southafrica','nigeria','kenya','ghana','angola','namibia','mozambique','chad']},
     {label:'USA', ids:['usa']},
@@ -3995,9 +3985,8 @@ function buildIntelligenceReport(product, hs, coo, fob, lbs, dest, type) {
   if (matches.length === 0) unknown.push('❓ Producto nuevo — sin historial en KB. Verificar HS code y valor de mercado manualmente.');
   if (!hs || hs === '8517.62') unknown.push('❓ HS Code no confirmado — usar 8517.62 como referencia pero verificar para este modelo específico');
 
-  // Validar contra COUNTRIES — fuente de verdad del sistema (no hardcodear lista)
-  const destKnown = COUNTRIES.some(c => c.id === dest);
-  if (!destKnown) unknown.push(`❓ Destino "${dest}" — no reconocido en el sistema. Verificar nombre exacto antes de cotizar.`);
+  const destKnown = ['brazil','mexico','argentina','colombia','usa'].includes(dest);
+  if (!destKnown) unknown.push(`❓ Destino "${dest}" — tasas de D&T no están en la base de datos. Investigar antes de cotizar.`);
 
   // ── Country-specific intelligence from QT_GRAL ──────
   const destLower = (dest||'').toLowerCase();
@@ -4136,114 +4125,7 @@ function checkMainFieldsRequired(){
   }
 }
 
-
-// ════════════════════════════════════════════════════════════════════
-// calcQuoteAI — Motor de cálculo vía KB v3 (reemplaza calcQuote como motor principal)
-// Llama a Claude con la KB completa para obtener datos exactos por HS code y país.
-// FALLBACK OBLIGATORIO: si la API falla, usa calcQuote() para garantizar producción.
-// ════════════════════════════════════════════════════════════════════
-async function calcQuoteAI(ct, fob, lbs, coo, fo, product, hs, type) {
-  const PROXY = 'https://ddp-proxy.nicolasjuarezroldan.workers.dev';
-  const kb = getKBContext();
-
-  const systemPrompt = `Sos el motor de cálculo de DDP Global LLC. Tu ÚNICA tarea es calcular cotizaciones DDP usando los datos exactos de la KB.
-
-JERARQUÍA DE DATOS (obligatorio respetar):
-1. Sección 4 o 5 del RATES_MASTER_V3 — dato específico por HS code y país → MÁXIMA PRIORIDAD
-2. Sección 1 — países complejos verificados manualmente
-3. Sección 2 — tarifario general genérico (usar solo si no hay dato específico)
-
-FÓRMULA DE CÁLCULO:
-- FOB Charges = FOB × % (respetar mínimo de la KB)
-- EOR = FOB × % si origen ≠ Miami/USA (respetar mínimo)
-- Flete = Peso(lbs) × $/lbs O Peso(kg) × $/kg (respetar mínimo)
-- Seguro = (FOB + Flete) × 1% (mínimo $80)
-- CIF = FOB + Flete + Seguro
-- Destination Services = FOB × % (respetar mínimo)
-- Import License (IOR) = FOB × % (respetar mínimo)
-- Duties = CIF × duty% (usar HS code específico si existe en Sección 4/5)
-- Taxes = cascada sobre CIF según país
-
-REGLAS:
-- Todos los amounts son NÚMEROS (no strings)
-- li: máximo 5 líneas operacionales. EOR solo si origen ≠ Miami/USA
-- tx: cada impuesto en línea separada con label claro (ej: "II (16%)", "IVA (19%)")
-- tt: suma exacta de todos los valores en tx
-- cif: FOB + Flete + Seguro solamente
-- tr: tiempo estimado de tránsito (ej: "10 Days", "14 Days")
-- NUNCA inventar datos — si no tenés el dato específico, usar Sección 2 y aclararlo en el label con "(~est.)"
-- NUNCA mostrar márgenes, fees internos, ni "DDP Global Fee"
-
-Responde ÚNICAMENTE con este bloque, sin texto adicional:
-QUOTE_DATA:{"li":[["FOB Charges","1.5% / min $270",450.00],["Freight (Air →IATA)","$X.XX/lb / min $XXX",1200.00],["Insurance","1% CIF / min $80",162.00],["Destination Services","2.5% FOB / min $700",700.00],["Import License (IOR)","3% FOB / min $860",900.00]],"tx":[["Duties (X%)",0],["VAT/IVA (X%)",2850.00]],"tt":2850.00,"cif":16200.00,"tr":"10 Days"}
-
-${kb}`;
-
-  const userMsg = `Calcular cotización DDP:
-País destino: ${ct}
-FOB: $${fob}
-Peso: ${lbs} lbs
-Country of Origin: ${coo || 'USA'}
-Producto: ${product || 'IT Hardware'}
-HS Code: ${hs || '8517.62'}
-Tipo: ${type || 'Standard'}
-Origen del flete: ${fo > 0 ? 'Europa (EOR requerido)' : 'Miami, USA'}`;
-
-  try {
-    const res = await fetch(PROXY, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-5',
-        max_tokens: 1200,
-        system: systemPrompt,
-        messages: [{ role: 'user', content: userMsg }]
-      })
-    });
-
-    if (!res.ok) throw new Error('API error ' + res.status);
-    const data = await res.json();
-    if (data.error) throw new Error(data.error.message || 'API error');
-
-    // Extraer texto de la respuesta
-    const text = (data.content || [])
-      .filter(b => b.type === 'text')
-      .map(b => b.text)
-      .join('');
-
-    // Parsear QUOTE_DATA:{...}
-    const match = text.match(/QUOTE_DATA:\s*(\{[\s\S]*\})/);
-    if (!match) throw new Error('No QUOTE_DATA block found');
-
-    const q = JSON.parse(match[1]);
-
-    // Validar estructura mínima
-    if (!q.li || !Array.isArray(q.li) || !q.cif || !q.tr) {
-      throw new Error('Invalid QUOTE_DATA structure');
-    }
-
-    // Normalizar: asegurar que todos los amounts sean números
-    q.li = q.li.map(([l, b, v]) => [l, b, parseFloat(v) || 0]);
-    q.tx = (q.tx || []).map(([l, v]) => [l, parseFloat(v) || 0]);
-    q.tt = parseFloat(q.tt) || q.tx.reduce((s, [, v]) => s + v, 0);
-    q.cif = parseFloat(q.cif) || 0;
-
-    // Marcar origen para debugging interno (nunca visible al cliente)
-    q._source = 'AI_KB_V3';
-    return q;
-
-  } catch (err) {
-    // ── FALLBACK OBLIGATORIO ─────────────────────────────────────────
-    // Si la API falla por cualquier motivo, usar calcQuote() hardcodeado.
-    // Esto garantiza que el sistema nunca se rompe en producción.
-    console.warn('[calcQuoteAI] API failed, falling back to calcQuote():', err.message);
-    const fallback = calcQuote(ct, fob, lbs, coo, fo, product, hs, type);
-    if (fallback) fallback._source = 'FALLBACK_HARDCODED';
-    return fallback;
-  }
-}
-
-async function doQuote(){
+function doQuote(){
   const fob=parseFloat(document.getElementById("q-fob").value)||0;
   const lbs=parseFloat(document.getElementById("q-wt").value)||0;
   const product=document.getElementById("q-product").value;
@@ -4281,18 +4163,8 @@ async function doQuote(){
   const totalLbs=allItems.reduce((s,i)=>s+(i.weightLbs||0),0);
   const multiItem=allItems.length>1;
 
-  // ── Loading state ──────────────────────────────────────────────────
-  const calcBtn = document.getElementById('calc-btn');
-  const origBtnText = calcBtn ? calcBtn.innerHTML : '';
-  if (calcBtn) {
-    calcBtn.disabled = true;
-    calcBtn.innerHTML = '<div class="dot-pulse" style="display:inline-flex;gap:4px;vertical-align:middle"><span></span><span></span><span></span></div> CALCULANDO CON KB v3...';
-  }
-
-  const r = await calcQuoteAI(currentCtry, totalFob, totalLbs, coo, fo, product, hs, type);
-
-  if (calcBtn) { calcBtn.disabled = false; calcBtn.innerHTML = origBtnText; }
-  if (!r) return;
+  const r=calcQuote(currentCtry,totalFob,totalLbs,coo,fo,product,hs,type);
+  if(!r) return;
 
   // Recalcular taxes por ítem usando función central — aplica para TODOS los países
   let taxLines=r.tx, totalTax=r.tt, hasLaptop=r.isLaptop||false;
@@ -5224,91 +5096,13 @@ function extractFromEmail(text) {
     'japan|japón|tokyo|osaka|nrt airport': 'japan',
     'australia|sydney|melbourne|syd airport': 'australia',
     'canada|toronto|vancouver|montreal|yyz': 'canada',
-    'united states|usa |u\.s\.a|miami|new york|los angeles': 'usa',
-    // ── Sección 2 + nuevos países RATES_MASTER v3 ──────────────────
-    'el salvador|elsalvador|san salvador|sal airport': 'elsalvador',
-    'nicaragua|managua|mga airport': 'nicaragua',
-    'venezuela|caracas|ccs airport': 'venezuela',
-    'guyana|georgetown|geo airport': 'guyana',
-    'haiti|port.au.prince|pap airport': 'haiti',
-    'jamaica|kingston|kin airport': 'jamaica',
-    'trinidad|tobago|port of spain|pos airport': 'trinidad',
-    'barbados|bridgetown|bgi airport': 'barbados',
-    'bahamas|nassau|nas airport': 'bahamas',
-    'aruba|oranjestad|aua airport': 'aruba',
-    'curacao|curaçao|willemstad|cur airport': 'curacao',
-    'cayman|grand cayman|gcm airport': 'cayman',
-    'st lucia|saint lucia|st\. lucia|uvf airport': 'stlucia',
-    'grenada|st george|gnd airport': 'grenada',
-    'puerto rico|san juan|sju airport': 'puertorico',
-    'st croix|saint croix|stx airport': 'stcroix',
-    'turks|caicos|providenciales|pls airport': 'turkcai',
-    'abu dhabi|auh airport': 'abudhabi',
-    'kuwait|kwi airport': 'kuwait',
-    'oman|muscat|mct airport': 'oman',
-    'jordan|amman|amm airport': 'jordan',
-    'egypt|cairo|cai airport': 'egypt',
-    'italy|italia|milan|rome|roma|mxp airport|fco airport': 'italy',
-    'belgium|belgique|brussels|bruxelles|bru airport': 'belgium',
-    'austria|vienna|wien|vie airport': 'austria',
-    'switzerland|suisse|zurich|zürich|zrh airport|geneva': 'switzerland',
-    'sweden|sverige|stockholm|arn airport': 'sweden',
-    'norway|norge|oslo|osl airport': 'norway',
-    'denmark|danmark|copenhagen|cph airport': 'denmark',
-    'finland|suomi|helsinki|hel airport': 'finland',
-    'poland|polska|warsaw|waw airport|krakow': 'poland',
-    'portugal|lisbon|lisboa|lis airport|porto': 'portugal',
-    'romania|românia|bucharest|otp airport': 'romania',
-    'greece|grecia|athens|ath airport': 'greece',
-    'slovakia|bratislava|bts airport': 'slovakia',
-    'cyprus|nicosia|lca airport': 'cyprus',
-    'ireland|dublin|dub airport': 'ireland',
-    'iceland|reykjavik|kef airport': 'iceland',
-    'ukraine|kyiv|kiev|kbp airport': 'ukraine',
-    'morocco|maroc|casablanca|cmn airport|rabat': 'morocco',
-    'tunisia|tunis|tun airport': 'tunisia',
-    'bulgaria|sofia|sof airport|plovdiv': 'bulgaria',
-    'croatia|hrvatska|zagreb|zag airport|split': 'croatia',
-    'czech republic|czechia|prague|prg airport|brno|republika checa': 'czechrepublic',
-    'estonia|tallinn|tll airport': 'estonia',
-    'latvia|riga|rix airport': 'latvia',
-    'lithuania|vilnius|vno airport|kaunas': 'lithuania',
-    'luxembourg|lux airport': 'luxembourg',
-    'malta|valletta|mla airport': 'malta',
-    'hungary|magyarország|budapest|bud airport': 'hungary',
-    'new zealand|nueva zelanda|auckland|akl airport|wellington': 'newzealand',
-    'south korea|corea del sur|seoul|incheon|icn airport': 'southkorea',
-    'taiwan|taipei|tpe airport|taoyuan': 'taiwan',
-    'hong kong|hongkong|hkg airport': 'hongkong',
-    'china|beijing|shanghai|pvg airport|pek airport|guangzhou|shenzhen': 'china',
-    'malaysia|kuala lumpur|kul airport': 'malaysia',
-    'thailand|tailandia|bangkok|bkk airport': 'thailand',
-    'vietnam|hanoi|ho chi minh|sgn airport': 'vietnam',
-    'philippines|filipinas|manila|mnl airport': 'philippines',
-    'indonesia|jakarta|cgk airport|bali': 'indonesia',
-    'bangladesh|dhaka|dac airport': 'bangladesh',
-    'pakistan|karachi|khi airport|lahore|islamabad': 'pakistan',
-    'kazakhstan|almaty|ala airport|nur.sultan|astana': 'kazakhstan',
-    'uzbekistan|tashkent|tas airport': 'uzbekistan',
-    'mongolia|ulaanbaatar|uln airport': 'mongolia',
-    'cambodia|camboya|phnom penh|pnh airport': 'cambodia',
-    'laos|vientiane|vte airport': 'laos',
-    'south africa|sudáfrica|johannesburg|jnb airport|cape town': 'southafrica',
-    'nigeria|lagos|los airport|abuja': 'nigeria',
-    'kenya|nairobi|nbo airport': 'kenya',
-    'ghana|accra|acc airport': 'ghana',
-    'angola|luanda|lad airport': 'angola',
-    'namibia|windhoek|wdh airport': 'namibia',
-    'mozambique|maputo|mpm airport': 'mozambique',
-    'chad|n.djamena|ndj airport': 'chad',
+    'united states|usa |u\\.s\\.a|miami|new york|los angeles': 'usa',
   };
   let destination = null;
   for (const [pattern, id] of Object.entries(destMap)) {
-    if (new RegExp(pattern, 'i').test(t)) { destination = id; break; }
+    if (new RegExp(pattern).test(t)) { destination = id; break; }
   }
-  // Validate against COUNTRIES — source of truth
-  if (destination && !COUNTRIES.some(c => c.id === destination)) destination = null;
-  if (!destination) { missing.push('destination'); }
+  if (!destination) { destination = 'brazil'; missing.push('destination'); }
 
   // ── FOB VALUE ──
   let fobValue = null;
@@ -5565,7 +5359,7 @@ function showExtracted(d) {
 }
 
 
-async function runFromAI() {
+function runFromAI() {
   if (!aiExtracted) return;
   const d = aiExtracted;
 
@@ -5583,99 +5377,8 @@ async function runFromAI() {
   // Ensure minimum weight per item
   d.items.forEach(it => { if (!it.weightLbs || it.weightLbs < 1) it.weightLbs = 5; });
 
-  // ── Normalización de destination antes del lookup ──────────────────
-  // La IA puede devolver "Pakistan", "Karachi", "PAK", etc.
-  // Esta tabla convierte cualquier variante al id exacto de COUNTRIES.
-  const DEST_ALIASES = {
-    // Pakistan
-    'pakistan':'pakistan','karachi':'pakistan','islamabad':'pakistan',
-    'lahore':'pakistan','pak':'pakistan','karachi airport':'pakistan',
-    // Bulgaria
-    'bulgaria':'bulgaria','sofia':'bulgaria','bgr':'bulgaria','plovdiv':'bulgaria',
-    // Croatia
-    'croatia':'croatia','hrvatska':'croatia','zagreb':'croatia','zag':'croatia',
-    'split':'croatia','hrv':'croatia',
-    // Czech Republic
-    'czech republic':'czechrepublic','czechrepublic':'czechrepublic',
-    'czechia':'czechrepublic','prague':'czechrepublic','prg':'czechrepublic',
-    'brno':'czechrepublic','cze':'czechrepublic','czech':'czechrepublic',
-    'república checa':'czechrepublic','republica checa':'czechrepublic',
-    // Estonia
-    'estonia':'estonia','tallinn':'estonia','tll':'estonia','est':'estonia',
-    // Latvia
-    'latvia':'latvia','riga':'latvia','rix':'latvia','lva':'latvia',
-    // Lithuania
-    'lithuania':'lithuania','vilnius':'lithuania','vno':'lithuania',
-    'kaunas':'lithuania','ltu':'lithuania',
-    // Luxembourg
-    'luxembourg':'luxembourg','luxemburg':'luxembourg','lux':'luxembourg',
-    // Malta
-    'malta':'malta','valletta':'malta','mla':'malta','mlt':'lithuania',
-    // Hungary
-    'hungary':'hungary','magyarország':'hungary','budapest':'hungary',
-    'bud':'hungary','hun':'hungary',
-    // Common mismatches for existing countries
-    'united states':'usa','united states of america':'usa','u.s.a.':'usa',
-    'u.s.a':'usa','us':'usa','eeuu':'usa',
-    'united kingdom':'uk','great britain':'uk','england':'uk','britain':'uk',
-    'south korea':'southkorea','korea':'southkorea','corea del sur':'southkorea',
-    'corea':'southkorea','republic of korea':'southkorea',
-    'new zealand':'newzealand','nueva zelanda':'newzealand',
-    'south africa':'southafrica','sudáfrica':'southafrica','sudafrica':'southafrica',
-    'hong kong':'hongkong','hk':'hongkong',
-    'saudi arabia':'saudiarabia','arabia saudita':'saudiarabia','ksa':'saudiarabia',
-    'saudi':'saudiarabia',
-    'costa rica':'costarica',
-    'dom rep':'domrep','dominican republic':'domrep','república dominicana':'domrep',
-    'republica dominicana':'domrep','dominicana':'domrep',
-    'el salvador':'elsalvador',
-    'trinidad':'trinidad','trinidad and tobago':'trinidad','trinidad & tobago':'trinidad',
-    'puerto rico':'puertorico','pr':'puertorico',
-    'st lucia':'stlucia','saint lucia':'stlucia','st. lucia':'stlucia',
-    'st croix':'stcroix','saint croix':'stcroix','st. croix':'stcroix',
-    'turks and caicos':'turkcai','turks & caicos':'turkcai','turks caicos':'turkcai',
-    'cayman islands':'cayman','cayman island':'cayman','grand cayman':'cayman',
-    'abu dhabi':'abudhabi','abudhabi':'abudhabi',
-    'south korea':'southkorea',
-  };
-
-  // Strip non-alpha chars, lowercase, collapse spaces
-  let rawDest = (d.destination || '').toLowerCase().trim()
-    .replace(/[^a-záéíóúüñ ]/gi, ' ').replace(/\s+/g, ' ').trim();
-  // Reject useless values the AI sometimes returns
-  const INVALID_DEST = ['other','unknown','n/a','na','unspecified','null','undefined','tbd','tbc','','none'];
-  if (INVALID_DEST.includes(rawDest)) {
-    // Try to recover from the raw text using a simple city→country lookup
-    const CITY_RESCUE = {
-      'karachi':'pakistan','islamabad':'pakistan','lahore':'pakistan',
-      'frankfurt':'germany','berlin':'germany','munich':'germany',
-      'paris':'france','lyon':'france',
-      'sofia':'bulgaria','zagreb':'croatia','prague':'czechrepublic',
-      'tallinn':'estonia','riga':'latvia','vilnius':'lithuania',
-      'luxembourg':'luxembourg','valletta':'malta','budapest':'hungary',
-      'lagos':'nigeria','nairobi':'kenya','accra':'ghana','luanda':'angola',
-      'casablanca':'morocco','tunis':'tunisia','cairo':'egypt',
-      'dubai':'dubai','riyadh':'saudiarabia','doha':'qatar',
-      'manila':'philippines','jakarta':'indonesia','bangkok':'thailand',
-    };
-    const textLower = (d._rawText || '').toLowerCase();
-    rawDest = Object.keys(CITY_RESCUE).find(city => textLower.includes(city))
-      ? CITY_RESCUE[Object.keys(CITY_RESCUE).find(city => textLower.includes(city))]
-      : rawDest;
-  }
-  console.log('[runFromAI] destination pipeline:', {
-    original: d.destination,
-    rawDest: rawDest,
-    aliasHit: DEST_ALIASES[rawDest] || null,
-    noSpaces: rawDest.replace(/\s+/g, '')
-  });
-  const resolvedDest = DEST_ALIASES[rawDest] || rawDest.replace(/\s+/g, '');
-
-  // Lookup: alias resuelto primero, luego id directo contra COUNTRIES
-  const ctryObj = COUNTRIES.find(c => c.id === resolvedDest)
-                || COUNTRIES.find(c => c.id === rawDest.replace(/\s+/g,''));
-  const ctry = ctryObj ? ctryObj.id : 'brazil';
-  if (!ctryObj) console.warn('[runFromAI] Destination not resolved:', d.destination, '→ raw:', rawDest, '→ defaulting to brazil');
+  const destMap = { brazil:"brazil", mexico:"mexico", argentina:"argentina", colombia:"colombia", chile:"chile", peru:"peru", ecuador:"ecuador", costarica:"costarica", panama:"panama", domrep:"domrep", guatemala:"guatemala", honduras:"honduras", bolivia:"bolivia", paraguay:"paraguay", uruguay:"uruguay", dubai:"dubai", qatar:"qatar", saudiarabia:"saudiarabia", bahrain:"bahrain", israel:"israel", uk:"uk", spain:"spain", france:"france", germany:"germany", netherlands:"netherlands", turkey:"turkey", india:"india", singapore:"singapore", japan:"japan", australia:"australia", canada:"canada", usa:"usa", indonesia:"indonesia", malaysia:"malaysia", thailand:"thailand", philippines:"philippines", southkorea:"southkorea", taiwan:"taiwan", hongkong:"hongkong", china:"china", newzealand:"newzealand" };
+  const ctry = destMap[d.destination] || "brazil";
   currentCtry = ctry;
 
   const totalFob = d.items.reduce((s,i) => s + (i.fobValue||0), 0);
@@ -5687,17 +5390,7 @@ async function runFromAI() {
   // Freight, Insurance, FOB charges, Destination, IOR: se calculan sobre el total
   // Taxes: se calculan por ítem y se suman
 
-  // ── Loading state ──────────────────────────────────────────────────
-  const runBtn = document.querySelector('[onclick="runFromAI()"]');
-  const origRunText = runBtn ? runBtn.innerHTML : '';
-  if (runBtn) {
-    runBtn.disabled = true;
-    runBtn.innerHTML = '<div class="dot-pulse" style="display:inline-flex;gap:4px;vertical-align:middle"><span></span><span></span><span></span></div> CALCULANDO CON KB v3...';
-  }
-
-  const r = await calcQuoteAI(ctry, totalFob, totalLbs, d.countryOfOrigin || '', 0, d.items[0].product, d.items[0].hsCode, d.items[0].equipmentType);
-
-  if (runBtn) { runBtn.disabled = false; runBtn.innerHTML = origRunText; }
+  const r = calcQuote(ctry, totalFob, totalLbs, d.countryOfOrigin || "", 0, d.items[0].product, d.items[0].hsCode, d.items[0].equipmentType);
   if (!r) return;
 
   // Si hay múltiples ítems con distintos HS, recalcular taxes con función central
@@ -6081,7 +5774,7 @@ async function callAnthropicAPI(text) {
   const r = await fetch('https://ddp-proxy.nicolasjuarezroldan.workers.dev',{method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1200,
-      system:'You are an expert DDP logistics analyst with deep knowledge of international trade compliance. ' + getKBContext() + ' Using your knowledge above, extract shipment details from the email/text and return ONLY raw JSON: {product, equipmentType, quantity, fobValue, weightLbs, countryOfOrigin, destination, hsCode, notes, confidence, missingFields} DESTINATION RULES (critical): - Return the destination country name in lowercase english (e.g. \'pakistan\', \'germany\', \'brazil\') - If you see a city name, return its country (e.g. Karachi → \'pakistan\', Frankfurt → \'germany\', Lagos → \'nigeria\') - NEVER return \'other\', \'unknown\', \'n/a\', or null for destination — if any city or country is mentioned, return it - If truly no destination is mentioned, return \'unspecified\' When extracting, apply your KB knowledge to: - Assign correct hsCode based on product type - Flag any compliance risks in the notes field - Set confidence lower if regulatory risks exist',
+      system:'You are an expert DDP logistics analyst with deep knowledge of international trade compliance. ' + getKBContext() + ' Using your knowledge above, extract shipment details from the email/text and return ONLY raw JSON: {product, equipmentType, quantity, fobValue, weightLbs, countryOfOrigin, destination, hsCode, notes, confidence, missingFields} When extracting, apply your KB knowledge to: - Assign correct hsCode based on product type - Flag any compliance risks in the notes field - Set confidence lower if regulatory risks exist',
       messages:[{role:'user',content:'Extract from:\n\n'+text}]})});
   if(!r.ok) throw new Error('API error '+r.status);
   const d = await r.json();
