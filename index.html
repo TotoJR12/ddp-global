@@ -6038,6 +6038,15 @@ THAILAND: Duties 10% + VAT 7%. Import Permit requerido (15 días). Transit ~14 d
 VIETNAM: Duties 5-10% + VAT 10%. Transit ~14 días.
 FILIPINAS: Duties 1-15% + VAT 12%. Permisos requeridos: PNP, NTC, DTI, BPS según equipo.
 
+JERARQUÍA DE DATOS — REGLA CRÍTICA (aplicar siempre):
+Cuando consultes duties, taxes o HS codes, seguir este orden estricto:
+1. SECCIÓN 4 o 5 del RATES_MASTER_V3 (dato específico por HS code y país) → MÁXIMA PRIORIDAD
+2. SECCIÓN 1 (países complejos — rutas verificadas manualmente)
+3. SECCIÓN 2 (tarifario general — genérico HS 8517.62)
+El dato más específico SIEMPRE ANULA al genérico. Nunca promediar ni combinar.
+Ejemplo: DAC cables Alemania → Sección 5 dice 3.3% (HS 8544.42 TARIC) → usar 3.3%, NO el 0% genérico de Sección 2.
+Si la Sección 4/5 tiene un valor para el producto y país → ese valor es la respuesta correcta.
+
 REGLAS DE NEGOCIO DDP GLOBAL:
 - Margen siempre embebido en líneas operacionales — nunca mostrar como línea separada
 - IOR fee es ingreso de Toto, no costo
@@ -8157,6 +8166,12 @@ function getKBInsights(product, fob, dest){
 
 function getKBContext(){
   // Returns a text summary of the KB for the chat system prompt
+  // ── JERARQUÍA DE DATOS — REGLA FIJA ──────────────────────────────────────
+  // Sección 4 o 5 (dato específico por HS code) > Sección 1 > Sección 2 (genérico)
+  // El dato más específico SIEMPRE prevalece sobre el dato genérico.
+  // Si existe un duty rate en Sección 4/5 para un HS code y país específico,
+  // ese valor ANULA el dato de Sección 2. Nunca promediar ni combinar ambos.
+  // ─────────────────────────────────────────────────────────────────────────
   const kb = getKB();
   if(!kb.length) return '';
   let ctx = '\n\nHISTORIAL DE OPERACIONES DDP GLOBAL ('+kb.length+' envíos):\n';
