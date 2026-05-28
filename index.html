@@ -5494,8 +5494,12 @@ async function runFromAI() {
   // Ensure minimum weight per item
   d.items.forEach(it => { if (!it.weightLbs || it.weightLbs < 1) it.weightLbs = 5; });
 
-  const destMap = { brazil:"brazil", mexico:"mexico", argentina:"argentina", colombia:"colombia", chile:"chile", peru:"peru", ecuador:"ecuador", costarica:"costarica", panama:"panama", domrep:"domrep", guatemala:"guatemala", honduras:"honduras", bolivia:"bolivia", paraguay:"paraguay", uruguay:"uruguay", dubai:"dubai", qatar:"qatar", saudiarabia:"saudiarabia", bahrain:"bahrain", israel:"israel", uk:"uk", spain:"spain", france:"france", germany:"germany", netherlands:"netherlands", turkey:"turkey", india:"india", singapore:"singapore", japan:"japan", australia:"australia", canada:"canada", usa:"usa", indonesia:"indonesia", malaysia:"malaysia", thailand:"thailand", philippines:"philippines", southkorea:"southkorea", taiwan:"taiwan", hongkong:"hongkong", china:"china", newzealand:"newzealand" };
-  const ctry = destMap[d.destination] || "brazil";
+  // Resolución dinámica desde COUNTRIES — cubre todos los países del sistema
+  // sin hardcodear una lista parcial que se desincroniza
+  const ctryObj = COUNTRIES.find(c => c.id === d.destination);
+  const ctry = ctryObj ? ctryObj.id : "brazil";
+  // Si no matchea, loguear para debugging — nunca silencioso
+  if (!ctryObj) console.warn('[runFromAI] Destination not found in COUNTRIES:', d.destination, '→ defaulting to brazil');
   currentCtry = ctry;
 
   const totalFob = d.items.reduce((s,i) => s + (i.fobValue||0), 0);
