@@ -3995,8 +3995,9 @@ function buildIntelligenceReport(product, hs, coo, fob, lbs, dest, type) {
   if (matches.length === 0) unknown.push('❓ Producto nuevo — sin historial en KB. Verificar HS code y valor de mercado manualmente.');
   if (!hs || hs === '8517.62') unknown.push('❓ HS Code no confirmado — usar 8517.62 como referencia pero verificar para este modelo específico');
 
-  const destKnown = ['brazil','mexico','argentina','colombia','usa'].includes(dest);
-  if (!destKnown) unknown.push(`❓ Destino "${dest}" — tasas de D&T no están en la base de datos. Investigar antes de cotizar.`);
+  // Validar contra COUNTRIES — fuente de verdad del sistema (no hardcodear lista)
+  const destKnown = COUNTRIES.some(c => c.id === dest);
+  if (!destKnown) unknown.push(`❓ Destino "${dest}" — no reconocido en el sistema. Verificar nombre exacto antes de cotizar.`);
 
   // ── Country-specific intelligence from QT_GRAL ──────
   const destLower = (dest||'').toLowerCase();
