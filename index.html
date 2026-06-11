@@ -5877,18 +5877,14 @@ Respond in the same language the user writes in (Spanish or English). Be concise
         // Apply to activeQuoteData — NEVER overwrite taxes
         if (update.lines) activeQuoteData.lines = update.lines;
         if (update.taxes && update.taxes.length > 0) activeQuoteData.taxes = update.taxes;
-        // Always recalculate tot = services + existing taxes
-        const taxTotal = (activeQuoteData.taxes||[]).reduce((s,[,v])=>s+Number(v),0);
-        if (update.tot !== undefined) activeQuoteData.tot = update.tot;
-        // If Claude forgot to include taxes in tot, add them
+        // Always recalculate tot = sum of all lines + all taxes (never trust update.tot from AI)
         const svcTotal = (activeQuoteData.lines||[]).reduce((s,[,,v])=>s+Number(v),0);
-        if (Math.abs(activeQuoteData.tot - (svcTotal + taxTotal)) > 1) {
-          activeQuoteData.tot = svcTotal + taxTotal;
-        }
+        const taxTotal = (activeQuoteData.taxes||[]).reduce((s,[,v])=>s+Number(v),0);
+        activeQuoteData.tot = svcTotal + taxTotal;
 
-        // Update total in UI
+        // Update total in UI using the recalculated value (never update.tot)
         document.querySelectorAll('.total-val').forEach(el2 => {
-          el2.textContent = '$' + Number(update.tot).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+          el2.textContent = '$' + activeQuoteData.tot.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
         });
 
         // Update service rows in UI
