@@ -6071,10 +6071,24 @@ Respondé en el mismo idioma que usa Toto (español o inglés). Sé directo y co
     msgsEl.removeChild(thinkDiv);
     const replyDiv = document.createElement('div');
     replyDiv.style.cssText = 'display:flex;gap:10px;align-items:flex-start';
+
+    // Detect if reply contains quote data (has $ amounts + destination signals)
+    const hasQuoteData = (function(txt) {
+      const hasDollar = (txt.match(/\$[\d,]+/g) || []).length >= 2;
+      const hasDestKeywords = /\b(fob|flete|freight|total|impuesto|duty|duties|iva|tax|ior|cif|ddp)\b/i.test(txt);
+      const hasCountry = /\b(brasil|brazil|mexico|colombia|argentina|chile|usa|peru|ecuador|panama|costa rica|france|germany|india|uae|dubai|singapore|australia)\b/i.test(txt);
+      return hasDollar && hasDestKeywords && hasCountry;
+    })(reply);
+
+    const btnHtml = hasQuoteData
+      ? `<button onclick="loadFreeChatQuote(freeChatHistory[freeChatHistory.length-1].content)" style="margin-top:8px;padding:7px 14px;background:linear-gradient(135deg,var(--teal),#0077a8);border:none;border-radius:4px;color:var(--bg);font-family:Barlow,sans-serif;font-weight:800;font-size:10px;letter-spacing:1.5px;cursor:pointer;width:100%;text-align:center">GENERAR QUOTE →</button>`
+      : '';
+
     replyDiv.innerHTML = `<div style="flex-shrink:0;width:30px;height:30px;border-radius:50%;background:#7c3aed;display:flex;align-items:center;justify-content:center;font-family:Barlow,sans-serif;font-weight:800;font-size:10px;color:#fff">AI</div>
       <div style="max-width:82%;display:flex;flex-direction:column;">
         <div style="font-size:8px;color:#a78bfa;letter-spacing:2px;margin-bottom:4px;font-family:Barlow,sans-serif;font-weight:700">CLAUDE IA</div>
         <div style="background:var(--bg2);border:1px solid var(--bd);border-left:3px solid #7c3aed;padding:10px 14px;font-size:12px;color:var(--tx2);line-height:1.8;white-space:pre-wrap">${reply}</div>
+        ${btnHtml}
       </div>`;
     msgsEl.appendChild(replyDiv);
     msgsEl.scrollTop = msgsEl.scrollHeight;
@@ -6088,6 +6102,130 @@ Respondé en el mismo idioma que usa Toto (español o inglés). Sé directo y co
     msgsEl.appendChild(errDiv);
     msgsEl.scrollTop = msgsEl.scrollHeight;
   }
+}
+
+// ════════════════════════════════════════════════════════
+// FREE CHAT → GENERAR QUOTE
+// ════════════════════════════════════════════════════════
+function loadFreeChatQuote(text) {
+  function extractAmt(patterns, src) {
+    for (const rx of patterns) {
+      const m = src.match(rx);
+      if (m) return parseFloat(m[1].replace(/,/g,''));
+    }
+    return 0;
+  }
+  const destMap = {
+    'brasil':'Brazil','brazil':'Brazil','mexico':'Mexico','\u00e9xico':'Mexico',
+    'colombia':'Colombia','argentina':'Argentina','chile':'Chile',
+    'peru':'Peru','per\u00fa':'Peru','ecuador':'Ecuador','panama':'Panama','panam\u00e1':'Panama',
+    'costa rica':'Costa Rica','\busa\b':'USA','estados unidos':'USA',
+    'france':'France','francia':'France','germany':'Germany','alemania':'Germany',
+    'india':'India','uae':'UAE','dubai':'UAE','singapore':'Singapore',
+    'australia':'Australia','canada':'Canada','canad\u00e1':'Canada',
+    'israel':'Israel','taiwan':'Taiwan','hong kong':'Hong Kong',
+    'japan':'Japan','jap\u00f3n':'Japan','korea':'South Korea','corea':'South Korea',
+    'ghana':'Ghana','nigeria':'Nigeria','tunisia':'Tunisia','t\u00fanez':'Tunisia',
+    'egypt':'Egypt','egipto':'Egypt','malaysia':'Malaysia','malasia':'Malaysia',
+    'thailand':'Thailand','tailandia':'Thailand','vietnam':'Vietnam','philippines':'Philippines'
+  };
+  let dest = 'Destination TBC';
+  const txtLow = text.toLowerCase();
+  for (const [kw, label] of Object.entries(destMap)) {
+    if (txtLow.includes(kw.replace(/\\b/g,''))) { dest = label; break; }
+  }
+
+  const fob = extractAmt([/fob[:\s*]+\$?([\d,]+(?:\.\d+)?)/i,/valor fob[:\s*]+\$?([\d,]+(?:\.\d+)?)/i,/fob value[:\s*]+\$?([\d,]+(?:\.\d+)?)/i], text) || 10000;
+  const freight = extractAmt([/flete[:\s*]+\$?([\d,]+(?:\.\d+)?)/i,/freight[:\s*]+\$?([\d,]+(?:\.\d+)?)/i,/air freight[:\s*]+\$?([\d,]+(?:\.\d+)?)/i], text);
+  const insurance = extractAmt([/seguro[:\s*]+\$?([\d,]+(?:\.\d+)?)/i,/insurance[:\s*]+\$?([\d,]+(?:\.\d+)?)/i], text);
+  const ior = extractAmt([/ior[:\s*]+\$?([\d,]+(?:\.\d+)?)/i,/import license[:\s*]+\$?([\d,]+(?:\.\d+)?)/i,/licencia[:\s*]+\$?([\d,]+(?:\.\d+)?)/i], text);
+  const destSvc = extractAmt([/destino[:\s*]+\$?([\d,]+(?:\.\d+)?)/i,/destination services?[:\s*]+\$?([\d,]+(?:\.\d+)?)/i,/handling[:\s*]+\$?([\d,]+(?:\.\d+)?)/i], text);
+
+  const taxes = [];
+  const taxPatterns = [
+    [/\bII[:\s*]+\$?([\d,]+(?:\.\d+)?)/i,'II (Impuesto de Importación)'],
+    [/\bIPI[:\s*]+\$?([\d,]+(?:\.\d+)?)/i,'IPI'],
+    [/\bPIS[:\s*]+\$?([\d,]+(?:\.\d+)?)/i,'PIS'],
+    [/\bCOFINS[:\s*]+\$?([\d,]+(?:\.\d+)?)/i,'COFINS'],
+    [/\bICMS[:\s*]+\$?([\d,]+(?:\.\d+)?)/i,'ICMS'],
+    [/\bIVA[:\s*]+\$?([\d,]+(?:\.\d+)?)/i,'IVA'],
+    [/\bDTA[:\s*]+\$?([\d,]+(?:\.\d+)?)/i,'DTA'],
+    [/\bVAT[:\s*]+\$?([\d,]+(?:\.\d+)?)/i,'VAT'],
+    [/duties[:\s*]+\$?([\d,]+(?:\.\d+)?)/i,'Duties'],
+    [/\bGST[:\s*]+\$?([\d,]+(?:\.\d+)?)/i,'GST'],
+    [/\bMPF[:\s*]+\$?([\d,]+(?:\.\d+)?)/i,'MPF'],
+    [/customs duty[:\s*]+\$?([\d,]+(?:\.\d+)?)/i,'Customs Duty']
+  ];
+  for (const [rx, label] of taxPatterns) {
+    const m = text.match(rx);
+    if (m) taxes.push([label, parseFloat(m[1].replace(/,/g,''))]);
+  }
+
+  let total = extractAmt([/total ddp[:\s*]+\$?([\d,]+(?:\.\d+)?)/i,/total[:\s*]+\$?([\d,]+(?:\.\d+)?)/i,/grand total[:\s*]+\$?([\d,]+(?:\.\d+)?)/i,/costo total[:\s*]+\$?([\d,]+(?:\.\d+)?)/i], text);
+
+  const lines = [];
+  if (fob > 0)       lines.push(['Pickup & Inland / FOB Charges','Origin services — Miami warehouse',fob]);
+  if (freight > 0)   lines.push(['Air Freight','Miami → '+dest,freight]);
+  if (insurance > 0) lines.push(['Insurance','Cargo insurance',insurance]);
+  if (destSvc > 0)   lines.push(['Destination Handling & Customs Brokerage','Destination country services',destSvc]);
+  if (ior > 0)       lines.push(['Import License (IOR)','DDP Global IOR service fee',ior]);
+
+  const svcSum = lines.reduce((s,[,,v])=>s+v,0);
+  const taxSum = taxes.reduce((s,[,v])=>s+v,0);
+  if (!total || total < svcSum + taxSum*0.5) total = svcSum + taxSum;
+
+  const prodMatch = text.match(/producto[:\s]+([^\n.]+)/i)||text.match(/product[:\s]+([^\n.]+)/i)||text.match(/equipo[:\s]+([^\n.]+)/i);
+  const product = prodMatch ? prodMatch[1].trim().substring(0,60) : 'IT Hardware';
+
+  const now = new Date();
+  const yy = String(now.getFullYear()).slice(2);
+  const mm = String(now.getMonth()+1).padStart(2,'0');
+  const dd = String(now.getDate()).padStart(2,'0');
+  const destCode = dest.toUpperCase().replace(/[^A-Z]/g,'').substring(0,3);
+  const qn = destCode+'-'+yy+mm+dd+'-001';
+
+  setActiveQuote({qn,dest,product,hs:'8471.49.00',coo:'TBC',fob,lbs:0,cif:fob+freight+insurance,tot:total,tr:0,country:dest,lines,taxes,flags:['⚠ Cotización generada desde Chat IA — verificar valores antes de enviar al cliente'],dv:{score:0,level:'ok'},origin:'Miami, USA (DDP Global warehouse)',type:'—'});
+
+  const fmt = n => Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+  let svcHtml = '<div class="table-wrap"><div class="table-head" style="grid-template-columns:1fr 160px 90px"><div>Service</div><div>Basis</div><div style=\"text-align:right\">Amount</div></div>';
+  lines.forEach(([l,b,v],i)=>{ const bg=i%2===1?'background:rgba(255,255,255,.015)':''; svcHtml+=`<div class="table-row" style="grid-template-columns:1fr 160px 90px;${bg}"><div style="font-size:12px;color:var(--tx2)">${l}</div><div style="font-size:10px;color:var(--tx5)">${b}</div><div style="font-size:12px;text-align:right">$${fmt(v)}</div></div>`; });
+  svcHtml += '</div>';
+
+  let taxHtml = '';
+  if (taxes.length) {
+    taxHtml = '<div class="table-wrap" style="margin-top:8px"><div class="table-head" style="grid-template-columns:1fr 90px"><div>Duties & Taxes</div><div style=\"text-align:right\">Amount</div></div>';
+    taxes.forEach(([l,v],i)=>{ const bg=i%2===1?'background:rgba(255,255,255,.015)':''; taxHtml+=`<div class="table-row" style="grid-template-columns:1fr 90px;${bg}"><div style="font-size:12px;color:var(--tx3)">${l}</div><div style="font-size:12px;color:var(--tx3);text-align:right">$${fmt(v)}</div></div>`; });
+    taxHtml += '</div>';
+  }
+
+  const html = `<div class="result-block">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div>
+        <div style="font-size:10px;color:var(--teal);letter-spacing:2px;font-family:Barlow,sans-serif;font-weight:700">QUOTE GENERADO DESDE CHAT IA</div>
+        <div style="font-size:18px;font-weight:700;color:var(--tx1);margin-top:2px">${product}</div>
+        <div style="font-size:11px;color:var(--tx4);margin-top:2px">${dest} · Ref: ${qn}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:9px;color:var(--tx5);letter-spacing:1px;font-family:Barlow,sans-serif">TOTAL DDP</div>
+        <div class="total-val">$${fmt(total)}</div>
+      </div>
+    </div>
+    <div style="background:rgba(234,179,8,.08);border:1px solid rgba(234,179,8,.3);border-radius:4px;padding:8px 12px;font-size:11px;color:#fcd34d;margin-bottom:12px">
+      ⚠ Generado desde Chat IA — revisá los valores antes de exportar PDF
+    </div>
+    ${svcHtml}${taxHtml}
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button onclick="generateQuotePDF()" style="flex:1;padding:10px;background:var(--teal);border:none;border-radius:4px;color:var(--bg);font-family:Barlow,sans-serif;font-weight:800;font-size:11px;letter-spacing:1px;cursor:pointer">⬇ EXPORTAR PDF</button>
+      <button onclick="openQChat()" style="flex:1;padding:10px;background:var(--bg2);border:1px solid var(--bd);border-radius:4px;color:var(--tx2);font-family:Barlow,sans-serif;font-weight:700;font-size:11px;letter-spacing:1px;cursor:pointer">💬 AJUSTAR EN CHAT</button>
+    </div>
+  </div>`;
+
+  showPage('ai');
+  const resultEl = document.getElementById('ai-quote-result');
+  resultEl.style.display = 'block';
+  resultEl.innerHTML = html;
+  resultEl.scrollIntoView({behavior:'smooth',block:'start'});
 }
 
 // ════════════════════════════════════════════════════════
