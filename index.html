@@ -6083,7 +6083,10 @@ REGLAS DEL QUOTE_JSON:
 - "flags": array de strings con alertas, o [] si no hay
 - "dv": objeto con "level" (ok/medium/high/critical) y "msg" string
 - Terminá siempre el bloque con }* (asterisco pegado al cierre de llave)
-- Solo incluir QUOTE_JSON cuando la respuesta tiene una cotización completa con todos los valores calculados`;
+- Solo incluir QUOTE_JSON cuando la respuesta tiene una cotización completa con todos los valores calculados
+
+FORMATO DE RESPUESTA — SIEMPRE:
+Respondé en texto plano limpio. Sin markdown, sin asteriscos para negritas, sin guiones para listas, sin HTML tags, sin #headers. Solo texto simple con números claros. Para listas usá números (1. 2. 3.) o comas. El bloque QUOTE_JSON al final es la única excepción de formato estructurado.`;
 
     const r = await fetch('https://ddp-proxy.nicolasjuarezroldan.workers.dev', {
       method: 'POST',
@@ -8748,12 +8751,7 @@ function downloadQuotePDF() {
 
   // PAGE 2
   doc.addPage();dHdr2();
-  sb('IMPORTANT NOTICES');y+=2;
-  let hf=false;
-  if(q.dv){const lv=q.dv.level;fl(lv==='green'?'DECLARED VALUE - ACCEPTABLE':lv==='critical'?'DECLARED VALUE - CRITICAL':'DECLARED VALUE - VERIFY',q.dv.msg||'',lv==='critical'?RED:lv==='high'?ORANGE:lv==='green'?GREEN:ORANGE,lv==='critical'?REDBG:lv==='high'?ORANGEBG:lv==='green'?GREENBG:ORANGEBG);hf=true;}
-  (q.flags||[]).forEach(f=>{const lv=f.level;fl(lv==='critical'?'CRITICAL NOTICE':lv==='high'?'IMPORTANT NOTICE':lv==='green'?'COMPLIANCE NOTE':'NOTICE',f.msg||'',lv==='critical'?RED:lv==='high'?ORANGE:lv==='green'?GREEN:BLUE,lv==='critical'?REDBG:lv==='high'?ORANGEBG:lv==='green'?GREENBG:BLUEBG);hf=true;});
-  if(!hf){doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(...DGRAY);doc.text('No specific compliance flags for this shipment.',ML+3,y+5);y+=12;}
-  y+=4;sb('NOTES & CONDITIONS');y+=3;
+  sb('NOTES & CONDITIONS');y+=3;
   [['1.','SCOPE: This quote covers DDP service from DDP Global Miami warehouse to the final delivery address, including air freight, customs clearance, full IOR services, and all duties & taxes.'],
    ['2.','DUTIES & TAXES: Import taxes calculated on CIF value, paid in advance on behalf of the consignee. Non-negotiable.'],
    ['3.','PAYMENT: Duties & Taxes paid in advance before clearance. Service fees due upon delivery.'],
