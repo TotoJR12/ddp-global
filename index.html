@@ -6051,7 +6051,39 @@ REGLAS DE NEGOCIO DDP GLOBAL:
 
 ${activeQuoteData ? 'COTIZACIÓN ACTIVA:\n' + JSON.stringify({qn:activeQuoteData.qn, product:activeQuoteData.product, dest:activeQuoteData.dest, fob:activeQuoteData.fob, tot:activeQuoteData.tot}) : 'Sin cotización activa en este momento.'}
 
-Respondé en el mismo idioma que usa Toto (español o inglés). Sé directo y conciso. Si no sabés algo con certeza, decilo claramente en lugar de inventar.`;
+Respondé en el mismo idioma que usa Toto (español o inglés). Sé directo y conciso. Si no sabés algo con certeza, decilo claramente en lugar de inventar.
+
+REGLA CRÍTICA — CUANDO GENERÁS UNA COTIZACIÓN COMPLETA:
+Siempre incluí al FINAL de tu respuesta un bloque QUOTE_JSON con este formato exacto (sin espacios antes de QUOTE_JSON, en una sola línea de apertura):
+
+QUOTE_JSON:{
+  "qn": "BRA-YYMMDD-001",
+  "dest": "Brazil",
+  "product": "Descripción del producto",
+  "hs": "8517.62",
+  "coo": "USA",
+  "fob": 45000,
+  "lbs": 86,
+  "cif": 46350,
+  "tot": 55200,
+  "tr": "10 Days",
+  "lines": [["FOB Charges","1% / min $270", 450], ["Freight (Air Miami->GRU)","$3.76/lb / min $350", 323.36], ["Insurance","1% CIF / min $80", 463.50], ["Destination Services","2% CIF / min $400", 927], ["Import License (IOR)","2% CIF / min $860", 927]],
+  "taxes": [["II (16%)", 7416], ["IPI (15%)", 8067], ["PIS (2.1%)", 1299], ["COFINS (9.65%)", 5969], ["ICMS (18%)", 15175]],
+  "flags": [],
+  "dv": {"level": "ok", "msg": "Declared value consistent with market rates"}
+}*
+
+REGLAS DEL QUOTE_JSON:
+- "lines": array de [nombre_servicio, basis_string, monto_numerico] — solo servicios DDP Global (NO incluir el FOB del cliente como línea)
+- "taxes": array de [nombre_impuesto, monto_numerico] — solo impuestos pass-through
+- "tot": suma de TODOS los valores de lines[] + taxes[] — recalculá siempre desde cero
+- "fob": valor FOB declarado del cliente (número, sin símbolo $)
+- "lbs": peso en libras (número)
+- "cif": fob + freight + insurance (número)
+- "flags": array de strings con alertas, o [] si no hay
+- "dv": objeto con "level" (ok/medium/high/critical) y "msg" string
+- Terminá siempre el bloque con }* (asterisco pegado al cierre de llave)
+- Solo incluir QUOTE_JSON cuando la respuesta tiene una cotización completa con todos los valores calculados`;
 
     const r = await fetch('https://ddp-proxy.nicolasjuarezroldan.workers.dev', {
       method: 'POST',
@@ -6105,127 +6137,107 @@ Respondé en el mismo idioma que usa Toto (español o inglés). Sé directo y co
 }
 
 // ════════════════════════════════════════════════════════
-// FREE CHAT → GENERAR QUOTE
+// FREE CHAT → LOAD QUOTE FROM QUOTE_JSON BLOCK
 // ════════════════════════════════════════════════════════
 function loadFreeChatQuote(text) {
-  function extractAmt(patterns, src) {
-    for (const rx of patterns) {
-      const m = src.match(rx);
-      if (m) return parseFloat(m[1].replace(/,/g,''));
+  // Try to parse QUOTE_JSON block first (new structured format)
+  const qjMatch = text.match(/QUOTE_JSON:\s*(\{[\s\S]*?\})\s*\*/);
+  if (qjMatch) {
+    let q;
+    try { q = JSON.parse(qjMatch[1]); } catch(e) { q = null; }
+    if (q && q.qn && q.tot) {
+      // Build complete activeQuoteData from the structured JSON
+      const destLabel = q.dest || 'Destination TBC';
+      const destCode  = destLabel.toUpperCase().replace(/[^A-Z]/g,'').substring(0,3);
+      setActiveQuote({
+        qn:      q.qn,
+        dest:    destLabel,
+        product: q.product || 'IT Hardware',
+        hs:      q.hs || '8517.62',
+        coo:     q.coo || 'TBC',
+        fob:     Number(q.fob) || 0,
+        lbs:     Number(q.lbs) || 0,
+        cif:     Number(q.cif) || 0,
+        tot:     Number(q.tot) || 0,
+        tr:      q.tr || '—',
+        country: destLabel,
+        lines:   q.lines  || [],
+        taxes:   q.taxes  || [],
+        flags:   (q.flags || []).map(f => typeof f === 'string' ? {level:'medium', msg:f} : f),
+        dv:      q.dv || {level:'ok', msg:''},
+        origin:  'Miami, USA (DDP Global warehouse)',
+        type:    '—'
+      });
+
+      // Render preview card and show PDF button
+      const fmt = n => Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+      let svcHtml = '<div class="table-wrap"><div class="table-head" style="grid-template-columns:1fr 160px 90px"><div>Service</div><div>Basis</div><div style="text-align:right">Amount</div></div>';
+      (q.lines||[]).forEach(([l,b,v],i)=>{
+        const bg = i%2===1 ? 'background:rgba(255,255,255,.015)' : '';
+        svcHtml += `<div class="table-row" style="grid-template-columns:1fr 160px 90px;${bg}"><div style="font-size:12px;color:var(--tx2)">${l}</div><div style="font-size:10px;color:var(--tx5)">${b}</div><div style="font-size:12px;text-align:right">$${fmt(v)}</div></div>`;
+      });
+      svcHtml += '</div>';
+
+      let taxHtml = '';
+      if (q.taxes && q.taxes.length) {
+        taxHtml = '<div class="table-wrap" style="margin-top:8px"><div class="table-head" style="grid-template-columns:1fr 90px"><div>Duties & Taxes</div><div style="text-align:right">Amount</div></div>';
+        (q.taxes||[]).forEach(([l,v],i)=>{
+          const bg = i%2===1 ? 'background:rgba(255,255,255,.015)' : '';
+          taxHtml += `<div class="table-row" style="grid-template-columns:1fr 90px;${bg}"><div style="font-size:12px;color:var(--tx3)">${l}</div><div style="font-size:12px;color:var(--tx3);text-align:right">$${fmt(v)}</div></div>`;
+        });
+        taxHtml += '</div>';
+      }
+
+      const html = `<div class="result-block">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <div>
+            <div style="font-size:10px;color:var(--teal);letter-spacing:2px;font-family:Barlow,sans-serif;font-weight:700">QUOTE GENERADO DESDE CHAT IA</div>
+            <div style="font-size:18px;font-weight:700;color:var(--tx1);margin-top:2px">${q.product||'IT Hardware'}</div>
+            <div style="font-size:11px;color:var(--tx4);margin-top:2px">${destLabel} · Ref: ${q.qn}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:9px;color:var(--tx5);letter-spacing:1px;font-family:Barlow,sans-serif">TOTAL DDP</div>
+            <div class="total-val">$${fmt(q.tot)}</div>
+          </div>
+        </div>
+        ${svcHtml}${taxHtml}
+        <div style="display:flex;gap:8px;margin-top:16px">
+          <button onclick="generateQuotePDF()" style="flex:1;padding:10px;background:var(--teal);border:none;border-radius:4px;color:var(--bg);font-family:Barlow,sans-serif;font-weight:800;font-size:11px;letter-spacing:1px;cursor:pointer">⬇ EXPORTAR PDF</button>
+          <button onclick="openQChat()" style="flex:1;padding:10px;background:var(--bg2);border:1px solid var(--bd);border-radius:4px;color:var(--tx2);font-family:Barlow,sans-serif;font-weight:700;font-size:11px;letter-spacing:1px;cursor:pointer">💬 AJUSTAR EN CHAT</button>
+        </div>
+      </div>`;
+
+      showPage('ai');
+      const resultEl = document.getElementById('ai-quote-result');
+      resultEl.style.display = 'block';
+      resultEl.innerHTML = html;
+      resultEl.scrollIntoView({behavior:'smooth',block:'start'});
+      return;
     }
-    return 0;
-  }
-  const destMap = {
-    'brasil':'Brazil','brazil':'Brazil','mexico':'Mexico','\u00e9xico':'Mexico',
-    'colombia':'Colombia','argentina':'Argentina','chile':'Chile',
-    'peru':'Peru','per\u00fa':'Peru','ecuador':'Ecuador','panama':'Panama','panam\u00e1':'Panama',
-    'costa rica':'Costa Rica','\busa\b':'USA','estados unidos':'USA',
-    'france':'France','francia':'France','germany':'Germany','alemania':'Germany',
-    'india':'India','uae':'UAE','dubai':'UAE','singapore':'Singapore',
-    'australia':'Australia','canada':'Canada','canad\u00e1':'Canada',
-    'israel':'Israel','taiwan':'Taiwan','hong kong':'Hong Kong',
-    'japan':'Japan','jap\u00f3n':'Japan','korea':'South Korea','corea':'South Korea',
-    'ghana':'Ghana','nigeria':'Nigeria','tunisia':'Tunisia','t\u00fanez':'Tunisia',
-    'egypt':'Egypt','egipto':'Egypt','malaysia':'Malaysia','malasia':'Malaysia',
-    'thailand':'Thailand','tailandia':'Thailand','vietnam':'Vietnam','philippines':'Philippines'
-  };
-  let dest = 'Destination TBC';
-  const txtLow = text.toLowerCase();
-  for (const [kw, label] of Object.entries(destMap)) {
-    if (txtLow.includes(kw.replace(/\\b/g,''))) { dest = label; break; }
   }
 
-  const fob = extractAmt([/fob[:\s*]+\$?([\d,]+(?:\.\d+)?)/i,/valor fob[:\s*]+\$?([\d,]+(?:\.\d+)?)/i,/fob value[:\s*]+\$?([\d,]+(?:\.\d+)?)/i], text) || 10000;
-  const freight = extractAmt([/flete[:\s*]+\$?([\d,]+(?:\.\d+)?)/i,/freight[:\s*]+\$?([\d,]+(?:\.\d+)?)/i,/air freight[:\s*]+\$?([\d,]+(?:\.\d+)?)/i], text);
-  const insurance = extractAmt([/seguro[:\s*]+\$?([\d,]+(?:\.\d+)?)/i,/insurance[:\s*]+\$?([\d,]+(?:\.\d+)?)/i], text);
-  const ior = extractAmt([/ior[:\s*]+\$?([\d,]+(?:\.\d+)?)/i,/import license[:\s*]+\$?([\d,]+(?:\.\d+)?)/i,/licencia[:\s*]+\$?([\d,]+(?:\.\d+)?)/i], text);
-  const destSvc = extractAmt([/destino[:\s*]+\$?([\d,]+(?:\.\d+)?)/i,/destination services?[:\s*]+\$?([\d,]+(?:\.\d+)?)/i,/handling[:\s*]+\$?([\d,]+(?:\.\d+)?)/i], text);
-
-  const taxes = [];
-  const taxPatterns = [
-    [/\bII[:\s*]+\$?([\d,]+(?:\.\d+)?)/i,'II (Impuesto de Importación)'],
-    [/\bIPI[:\s*]+\$?([\d,]+(?:\.\d+)?)/i,'IPI'],
-    [/\bPIS[:\s*]+\$?([\d,]+(?:\.\d+)?)/i,'PIS'],
-    [/\bCOFINS[:\s*]+\$?([\d,]+(?:\.\d+)?)/i,'COFINS'],
-    [/\bICMS[:\s*]+\$?([\d,]+(?:\.\d+)?)/i,'ICMS'],
-    [/\bIVA[:\s*]+\$?([\d,]+(?:\.\d+)?)/i,'IVA'],
-    [/\bDTA[:\s*]+\$?([\d,]+(?:\.\d+)?)/i,'DTA'],
-    [/\bVAT[:\s*]+\$?([\d,]+(?:\.\d+)?)/i,'VAT'],
-    [/duties[:\s*]+\$?([\d,]+(?:\.\d+)?)/i,'Duties'],
-    [/\bGST[:\s*]+\$?([\d,]+(?:\.\d+)?)/i,'GST'],
-    [/\bMPF[:\s*]+\$?([\d,]+(?:\.\d+)?)/i,'MPF'],
-    [/customs duty[:\s*]+\$?([\d,]+(?:\.\d+)?)/i,'Customs Duty']
-  ];
-  for (const [rx, label] of taxPatterns) {
-    const m = text.match(rx);
-    if (m) taxes.push([label, parseFloat(m[1].replace(/,/g,''))]);
-  }
-
-  let total = extractAmt([/total ddp[:\s*]+\$?([\d,]+(?:\.\d+)?)/i,/total[:\s*]+\$?([\d,]+(?:\.\d+)?)/i,/grand total[:\s*]+\$?([\d,]+(?:\.\d+)?)/i,/costo total[:\s*]+\$?([\d,]+(?:\.\d+)?)/i], text);
-
-  const lines = [];
-  if (fob > 0)       lines.push(['Pickup & Inland / FOB Charges','Origin services — Miami warehouse',fob]);
-  if (freight > 0)   lines.push(['Air Freight','Miami → '+dest,freight]);
-  if (insurance > 0) lines.push(['Insurance','Cargo insurance',insurance]);
-  if (destSvc > 0)   lines.push(['Destination Handling & Customs Brokerage','Destination country services',destSvc]);
-  if (ior > 0)       lines.push(['Import License (IOR)','DDP Global IOR service fee',ior]);
-
-  const svcSum = lines.reduce((s,[,,v])=>s+v,0);
-  const taxSum = taxes.reduce((s,[,v])=>s+v,0);
-  if (!total || total < svcSum + taxSum*0.5) total = svcSum + taxSum;
-
-  const prodMatch = text.match(/producto[:\s]+([^\n.]+)/i)||text.match(/product[:\s]+([^\n.]+)/i)||text.match(/equipo[:\s]+([^\n.]+)/i);
-  const product = prodMatch ? prodMatch[1].trim().substring(0,60) : 'IT Hardware';
-
-  const now = new Date();
-  const yy = String(now.getFullYear()).slice(2);
-  const mm = String(now.getMonth()+1).padStart(2,'0');
-  const dd = String(now.getDate()).padStart(2,'0');
-  const destCode = dest.toUpperCase().replace(/[^A-Z]/g,'').substring(0,3);
-  const qn = destCode+'-'+yy+mm+dd+'-001';
-
-  setActiveQuote({qn,dest,product,hs:'8471.49.00',coo:'TBC',fob,lbs:0,cif:fob+freight+insurance,tot:total,tr:0,country:dest,lines,taxes,flags:['⚠ Cotización generada desde Chat IA — verificar valores antes de enviar al cliente'],dv:{score:0,level:'ok'},origin:'Miami, USA (DDP Global warehouse)',type:'—'});
-
-  const fmt = n => Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
-
-  let svcHtml = '<div class="table-wrap"><div class="table-head" style="grid-template-columns:1fr 160px 90px"><div>Service</div><div>Basis</div><div style=\"text-align:right\">Amount</div></div>';
-  lines.forEach(([l,b,v],i)=>{ const bg=i%2===1?'background:rgba(255,255,255,.015)':''; svcHtml+=`<div class="table-row" style="grid-template-columns:1fr 160px 90px;${bg}"><div style="font-size:12px;color:var(--tx2)">${l}</div><div style="font-size:10px;color:var(--tx5)">${b}</div><div style="font-size:12px;text-align:right">$${fmt(v)}</div></div>`; });
-  svcHtml += '</div>';
-
-  let taxHtml = '';
-  if (taxes.length) {
-    taxHtml = '<div class="table-wrap" style="margin-top:8px"><div class="table-head" style="grid-template-columns:1fr 90px"><div>Duties & Taxes</div><div style=\"text-align:right\">Amount</div></div>';
-    taxes.forEach(([l,v],i)=>{ const bg=i%2===1?'background:rgba(255,255,255,.015)':''; taxHtml+=`<div class="table-row" style="grid-template-columns:1fr 90px;${bg}"><div style="font-size:12px;color:var(--tx3)">${l}</div><div style="font-size:12px;color:var(--tx3);text-align:right">$${fmt(v)}</div></div>`; });
-    taxHtml += '</div>';
-  }
-
-  const html = `<div class="result-block">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-      <div>
-        <div style="font-size:10px;color:var(--teal);letter-spacing:2px;font-family:Barlow,sans-serif;font-weight:700">QUOTE GENERADO DESDE CHAT IA</div>
-        <div style="font-size:18px;font-weight:700;color:var(--tx1);margin-top:2px">${product}</div>
-        <div style="font-size:11px;color:var(--tx4);margin-top:2px">${dest} · Ref: ${qn}</div>
-      </div>
-      <div style="text-align:right">
-        <div style="font-size:9px;color:var(--tx5);letter-spacing:1px;font-family:Barlow,sans-serif">TOTAL DDP</div>
-        <div class="total-val">$${fmt(total)}</div>
-      </div>
-    </div>
-    <div style="background:rgba(234,179,8,.08);border:1px solid rgba(234,179,8,.3);border-radius:4px;padding:8px 12px;font-size:11px;color:#fcd34d;margin-bottom:12px">
-      ⚠ Generado desde Chat IA — revisá los valores antes de exportar PDF
-    </div>
-    ${svcHtml}${taxHtml}
-    <div style="display:flex;gap:8px;margin-top:16px">
-      <button onclick="generateQuotePDF()" style="flex:1;padding:10px;background:var(--teal);border:none;border-radius:4px;color:var(--bg);font-family:Barlow,sans-serif;font-weight:800;font-size:11px;letter-spacing:1px;cursor:pointer">⬇ EXPORTAR PDF</button>
-      <button onclick="openQChat()" style="flex:1;padding:10px;background:var(--bg2);border:1px solid var(--bd);border-radius:4px;color:var(--tx2);font-family:Barlow,sans-serif;font-weight:700;font-size:11px;letter-spacing:1px;cursor:pointer">💬 AJUSTAR EN CHAT</button>
+  // Fallback: if no QUOTE_JSON block found, show error asking user to re-run
+  const resultEl = document.getElementById('ai-quote-result');
+  showPage('ai');
+  resultEl.style.display = 'block';
+  resultEl.innerHTML = `<div class="result-block">
+    <div style="background:rgba(234,179,8,.08);border:1px solid rgba(234,179,8,.3);border-radius:4px;padding:12px;font-size:12px;color:#fcd34d">
+      ⚠ No se encontró un bloque QUOTE_JSON estructurado en la respuesta del Chat.<br>
+      Pedile al Chat IA que regenere la cotización completa con todos los valores.
     </div>
   </div>`;
-
-  showPage('ai');
-  const resultEl = document.getElementById('ai-quote-result');
-  resultEl.style.display = 'block';
-  resultEl.innerHTML = html;
   resultEl.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+// ════════════════════════════════════════════════════════
+// GENERATE PDF FROM CHAT IA QUOTE
+// ════════════════════════════════════════════════════════
+function generateQuotePDF() {
+  if (!activeQuoteData) {
+    alert('No hay cotización activa. Generá una cotización primero desde el Chat IA.');
+    return;
+  }
+  downloadQuotePDF();
 }
 
 // ════════════════════════════════════════════════════════
