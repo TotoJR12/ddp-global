@@ -3688,7 +3688,7 @@ IMPORTANT: Never invent prices. Only return data you actually found in web searc
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
-        model:'claude-sonnet-4-20250514',
+        model:'claude-sonnet-4-6',
         max_tokens:500,
         tools:[{"type":"web_search_20250305","name":"web_search"}],
         messages:[{role:'user',content:prompt}]
@@ -4388,7 +4388,7 @@ Respondé en máximo 3-4 bullets concisos. Si todo está bien, decí "✅ Cotiza
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',
+        model:'claude-sonnet-4-6',
         max_tokens:400,
         messages:[{role:'user',content:prompt}]
       })
@@ -4659,7 +4659,7 @@ async function analyzeNewCase(){
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',
+        model:'claude-sonnet-4-6',
         max_tokens:1500,
         system:sysPrompt,
         messages:[{role:'user',content:`Analizá este caso y generá el JSON:
@@ -4927,7 +4927,7 @@ async function parseEmail() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
+        model: "claude-sonnet-4-6",
         max_tokens: 1000,
         system: AI_SYSTEM_PROMPT,
         messages: [{ role: "user", content: `Extract shipment details:\n\n${email}` }]
@@ -5741,7 +5741,7 @@ async function parseVisionFile(file, ext, ctx) {
     : [{type:'image',source:{type:'base64',media_type:mime,data:b64}},{type:'text',text:prompt}];
   const r = await fetch('https://ddp-proxy.nicolasjuarezroldan.workers.dev',{method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1200,messages:[{role:'user',content}]})});
+    body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1200,messages:[{role:'user',content}]})});
   if(!r.ok) throw new Error('API error '+r.status);
   const d = await r.json();
   const rawText = (d.content?.[0]?.text||'').replace(/```json|```/g,'').trim();
@@ -5752,7 +5752,7 @@ async function parseVisionFile(file, ext, ctx) {
     // Claude returned plain text instead of JSON — re-ask with stricter prompt
     const retry = await fetch('https://ddp-proxy.nicolasjuarezroldan.workers.dev',{method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1200,
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1200,
         system:'You are a logistics data extractor. You MUST respond with ONLY a valid JSON object, nothing else. No explanations, no markdown.',
         messages:[
           {role:'user',content},
@@ -5773,7 +5773,7 @@ async function callAnthropicAPI(text) {
   document.getElementById('ai-status-text').textContent = 'Analizando con Claude...';
   const r = await fetch('https://ddp-proxy.nicolasjuarezroldan.workers.dev',{method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1200,
+    body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1200,
       system:'You are an expert DDP logistics analyst with deep knowledge of international trade compliance. ' + getKBContext() + ' Using your knowledge above, extract shipment details from the email/text and return ONLY raw JSON: {product, equipmentType, quantity, fobValue, weightLbs, countryOfOrigin, destination, hsCode, notes, confidence, missingFields} When extracting, apply your KB knowledge to: - Assign correct hsCode based on product type - Flag any compliance risks in the notes field - Set confidence lower if regulatory risks exist',
       messages:[{role:'user',content:'Extract from:\n\n'+text}]})});
   if(!r.ok) throw new Error('API error '+r.status);
@@ -5859,7 +5859,7 @@ Respond in the same language the user writes in (Spanish or English). Be concise
 
     const r = await fetch('https://ddp-proxy.nicolasjuarezroldan.workers.dev',{method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1500,system:sysPrompt,messages:history})});
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1500,system:sysPrompt,messages:history})});
     const d = await r.json();
     if (d.error) throw new Error(d.error.message || JSON.stringify(d.error));
     const fullReply = d.content?.[0]?.text || 'No response';
@@ -6057,7 +6057,7 @@ Respondé en el mismo idioma que usa Toto (español o inglés). Sé directo y co
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         max_tokens: 1500,
         system: internalCtx,
         messages: freeChatHistory
@@ -6302,7 +6302,7 @@ async function sfParseWithAI(){
     const r = await fetch('https://ddp-proxy.nicolasjuarezroldan.workers.dev',{
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
-        model:'claude-sonnet-4-20250514', max_tokens:1500,
+        model:'claude-sonnet-4-6', max_tokens:1500,
         system:`Sos un extractor de datos logísticos para DDP Global LLC. Extraé los datos del email y devolvé SOLO JSON sin markdown.
 Campos a extraer:
 - ref: string (referencia si la hay, sino "")
@@ -6493,7 +6493,7 @@ async function modalFillWithAI(id){
     const r = await fetch('https://ddp-proxy.nicolasjuarezroldan.workers.dev',{
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
-        model:'claude-sonnet-4-20250514', max_tokens:1000,
+        model:'claude-sonnet-4-6', max_tokens:1000,
         system:`Extract shipment data from this email and return ONLY raw JSON (no markdown, no explanation).
 Fields to extract:
 - rcptName: full name of the final recipient/consignee
@@ -7802,7 +7802,7 @@ async function runEORAnalysis(){
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',
+        model:'claude-sonnet-4-6',
         max_tokens:3000,
         system: EOR_SYSTEM_PROMPT + prevCasesCtx,
         tools:[{type:'web_search_20250305',name:'web_search'}],
@@ -7837,7 +7837,7 @@ async function runEORAnalysis(){
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify({
-          model:'claude-sonnet-4-20250514',
+          model:'claude-sonnet-4-6',
           max_tokens:3000,
           system: EOR_SYSTEM_PROMPT + prevCasesCtx,
           tools:[{type:'web_search_20250305',name:'web_search'}],
@@ -8010,20 +8010,11 @@ function showApiKeyCard(){
 }
 
 function loadApiKey() {
-  const k = localStorage.getItem('ddp_api_key') || '';
+  // El sistema usa el proxy de Cloudflare (key como secreto server-side) — no requiere key manual del usuario.
   const banner = document.getElementById('apikey-banner');
-  if(banner) banner.style.display = k ? 'none' : 'flex';
-  // Only show API key card if no key configured
+  if(banner) banner.style.display = 'none';
   const card = document.getElementById('apikey-card');
-  if(card) card.style.display = k ? 'none' : 'block';
-  const inp = document.getElementById('ai-api-key');
-  const st = document.getElementById('api-key-status');
-  if (!inp) return;
-  if (k) {
-    inp.value = k;
-    st.textContent = '✓ KEY CARGADA';
-    st.style.color = 'var(--green)';
-  }
+  if(card) card.style.display = 'none';
 }
 
 function resetAI() {
@@ -8837,7 +8828,7 @@ function prClearContactBtn() {
 async function prCallClaude(system, userMsg, useSearch) {
   if (useSearch === undefined) useSearch = true;
   var PROXY = "https://ddp-proxy.nicolasjuarezroldan.workers.dev";
-  var body = { model:"claude-sonnet-4-5", max_tokens:2000, system:system, messages:[{role:"user",content:userMsg}] };
+  var body = { model:"claude-sonnet-4-6", max_tokens:2000, system:system, messages:[{role:"user",content:userMsg}] };
   if (useSearch) body.tools = [{type:"web_search_20250305",name:"web_search"}];
   var r = await fetch(PROXY, {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
   if (r.status === 429) throw new Error("Limite de requests alcanzado — espera 60 segundos y reintenta");
@@ -9412,18 +9403,12 @@ function openRadarDetail(id){
 }
 
 async function radarFetchDetailAnalysis(alert){
-  const apiKey = localStorage.getItem("ddp_api_key");
-  if(!apiKey){
-    document.getElementById("rdm-body").innerHTML = '<div class="rdm-warning">No hay API key configurada. Podés aplicar igual con la información disponible.</div><div class="rdm-section"><div class="rdm-section-label">Info disponible</div><div class="rdm-text">'+alert.desc+'<br/><br/>'+alert.meta+'</div></div>';
-    document.getElementById("rdm-apply-btn").disabled = false;
-    return;
-  }
   try {
     const today = new Date().toLocaleDateString("es-AR",{day:"numeric",month:"long",year:"numeric"});
     const dateStr = new Date(alert.date).toLocaleDateString("es-AR",{day:"numeric",month:"long",year:"numeric"});
     const prompt = 'Hoy es '+today+'. Análisis detallado del evento regulatorio:\n\nEVENTO: "'+alert.title+'"\nPAÍS: '+alert.country+'\nFECHA: '+dateStr+'\nDESCRIPCIÓN: '+alert.desc+'\n\nBuscá información actualizada. Respondé SOLO con JSON sin markdown:\n{"confirmed":true/false,"status":"confirmado|probable|en_negociacion|cancelado","tariff_pct":"ej: 25% adicional","affected_countries":["país"],"affected_products":["producto"],"hs_codes":["8471.49"],"impact_importers":"texto","impact_exporters":"texto","action_required":"texto","sources":["fuente"],"confidence":0-100,"notes":"texto"}\n\nSolo HS codes IT hardware. null si no hay info confirmada.';
     const PROXY = "https://ddp-proxy.nicolasjuarezroldan.workers.dev";
-    const resp = await fetch(PROXY,{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:2000,tools:[{"type":"web_search_20250305","name":"web_search"}],messages:[{role:"user",content:prompt}]})});
+    const resp = await fetch(PROXY,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:2000,tools:[{"type":"web_search_20250305","name":"web_search"}],messages:[{role:"user",content:prompt}]})});
     const data = await resp.json();
     let text = "";
     (data.content||[]).forEach(b => { if(b.type==="text") text += b.text; });
@@ -9505,8 +9490,6 @@ function getRadarWarnings(country, shipDate){
 async function radarFetchUpdates(){
   const btn  = document.getElementById("radar-update-btn");
   const lbl  = document.getElementById("radar-btn-label");
-  const apiKey = localStorage.getItem("ddp_api_key");
-  if(!apiKey){ alert("Configurá tu API key en el sistema primero."); return; }
 
   btn.disabled = true;
   lbl.textContent = "Buscando...";
@@ -9527,9 +9510,9 @@ Máximo 10 eventos futuros reales, ordenados por fecha. Si no encontrás eventos
     const PROXY = "https://ddp-proxy.nicolasjuarezroldan.workers.dev";
     const resp = await fetch(PROXY, {
       method:"POST",
-      headers:{"Content-Type":"application/json","x-api-key":apiKey},
+      headers:{"Content-Type":"application/json"},
       body: JSON.stringify({
-        model:"claude-sonnet-4-20250514",
+        model:"claude-sonnet-4-6",
         max_tokens:2000,
         tools:[{"type":"web_search_20250305","name":"web_search"}],
         messages:[{role:"user",content:prompt}]
