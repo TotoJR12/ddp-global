@@ -6076,7 +6076,7 @@ QUOTE_JSON:{
 REGLAS DEL QUOTE_JSON:
 - "lines": array de [nombre_servicio, basis_string, monto_numerico] — solo servicios DDP Global (NO incluir el FOB del cliente como línea)
 - "taxes": array de [nombre_impuesto, monto_numerico] — solo impuestos pass-through
-- "tot": suma de TODOS los valores de lines[] + taxes[] — recalculá siempre desde cero
+- "tot": SOLO la suma de todos los montos en lines[] más todos los montos en taxes[]. El FOB es el valor declarado de la mercadería y NO se suma al total DDP. NUNCA incluir el FOB en tot.
 - "fob": valor FOB declarado del cliente (número, sin símbolo $)
 - "lbs": peso en libras (número)
 - "cif": fob + freight + insurance (número)
@@ -6103,6 +6103,9 @@ Respondé en texto plano limpio. Sin markdown, sin asteriscos para negritas, sin
     const reply = d.content?.[0]?.text || 'Sin respuesta';
     freeChatHistory.push({role:'assistant', content: reply});
 
+    // Strip QUOTE_JSON block from visible text — keep it in history for loadFreeChatQuote to parse
+    const displayReply = reply.replace(/\nQUOTE_JSON:\{[\s\S]*?\}\*\s*$/,'').replace(/QUOTE_JSON:\{[\s\S]*?\}\*/g,'').trim();
+
     msgsEl.removeChild(thinkDiv);
     const replyDiv = document.createElement('div');
     replyDiv.style.cssText = 'display:flex;gap:10px;align-items:flex-start';
@@ -6122,7 +6125,7 @@ Respondé en texto plano limpio. Sin markdown, sin asteriscos para negritas, sin
     replyDiv.innerHTML = `<div style="flex-shrink:0;width:30px;height:30px;border-radius:50%;background:#7c3aed;display:flex;align-items:center;justify-content:center;font-family:Barlow,sans-serif;font-weight:800;font-size:10px;color:#fff">AI</div>
       <div style="max-width:82%;display:flex;flex-direction:column;">
         <div style="font-size:8px;color:#a78bfa;letter-spacing:2px;margin-bottom:4px;font-family:Barlow,sans-serif;font-weight:700">CLAUDE IA</div>
-        <div style="background:var(--bg2);border:1px solid var(--bd);border-left:3px solid #7c3aed;padding:10px 14px;font-size:12px;color:var(--tx2);line-height:1.8;white-space:pre-wrap">${reply}</div>
+        <div style="background:var(--bg2);border:1px solid var(--bd);border-left:3px solid #7c3aed;padding:10px 14px;font-size:12px;color:var(--tx2);line-height:1.8;white-space:pre-wrap">${displayReply}</div>
         ${btnHtml}
       </div>`;
     msgsEl.appendChild(replyDiv);
